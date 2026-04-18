@@ -9,7 +9,7 @@ A modern, PowerShell-native replacement for the classic `tree.com` command.
 
 - **Normal mode** (default): graphical Unicode tree with color, files, and depth control  
 - **Tree mode** (`-Tree`): faithful DOS `tree.com` compatibility mode  
-- **Listing mode** (`-Listing`): compact, indentation-only output ideal for piping, grepping, and exporting  
+- **Listing mode** (`-List`): compact, indentation-only output ideal for piping, grepping, and exporting  
 
 This module is designed to be fast, readable, and flexible, while still honoring the behavior of the original DOS tool when requested.
 
@@ -101,14 +101,13 @@ Show-Tree -Tree
 ### Compact listing mode
 
 ```powershell
-Show-Tree -Listing
+Show-Tree -List
 ```
 
 ### ASCII connector
 
 ```powershell
 Show-Tree -Ascii
-
 ```
 
 ---
@@ -118,7 +117,7 @@ Show-Tree -Ascii
 | Parameter | Description |
 | --- | --- |
 | `-Tree` | Enables DOS compatibility mode (`-MaxDepth` `-1` `-Mono` `-NoFiles` by default). |
-| `-Listing` | Compact indentation-only mode. |
+| `-List` / `-Listing` | Compact indentation-only mode. |
 | `-MaxDepth` / `-Depth` | Maximum recursion depth (`-1` = unlimited). |
 | `-Recurse` | Shortcut for unlimited depth. |
 | `-Mono` | Disable color. |
@@ -153,13 +152,13 @@ Show-Tree C:\ -Recurse
 Compact listing for scripting:
 
 ```powershell
-Show-Tree -Listing | Select-String src
+Show-Tree -List | Select-String src
 ```
 
 Export to a file:
 
 ```powershell
-Show-Tree C:\ -Listing | Out-File listing.txt
+Show-Tree C:\ -List | Out-File listing.txt
 ```
 
 ---
@@ -173,7 +172,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.0.0  
+Version 1.0.1  
 April 2026
 
 This module was developed as a modern, extensible reimplementation of the classic tree.com utility, with additional graphical and automation-friendly modes.

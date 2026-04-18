@@ -3,7 +3,7 @@ function Show-TreeInternal {
     param (
         [string]$Path,
         [switch]$Tree,
-        [switch]$Listing,
+        [switch]$List,
         [int]$MaxDepth,
         [switch]$Colorize,
         [switch]$IncludeFiles,
@@ -75,7 +75,7 @@ function Show-TreeInternal {
     for ($j = 0; $j -lt $fileCount; $j++) {
         $file = $files[$j]
         $isLastFile = ($j -eq $fileCount - 1) -and ($dirCount -eq 0)
-        $fileConnector = $Listing ?
+        $fileConnector = $List ?
                             " " :
                             $noSpan ?
                                 "    " :
@@ -127,7 +127,7 @@ function Show-TreeInternal {
     for ($i = 0; $i -lt $dirCount; $i++) {
         $dir = $dirs[$i]
         $isLastDir = ($i -eq $dirCount - 1)
-        $dirConnector = $Listing ?
+        $dirConnector = $List ?
                             " " :
                             $Tree ?
                                 $isLastDir ? # Tree
@@ -145,7 +145,7 @@ function Show-TreeInternal {
                                         "+== " :
                                         "╠══ "
         Write-Output "${colorGap}${Prefix}${colorConnector}${dirConnector}${colorDir}$($dir.Name)${colorReset}"
-        $newPrefix = $Prefix + ($Listing ?
+        $newPrefix = $Prefix + ($List ?
                                     " " :
                                     $Tree ?
                                         $isLastDir ? # Tree
@@ -163,7 +163,7 @@ function Show-TreeInternal {
         $params = @{
             Path = $dir.FullName
             Tree = $Tree
-            Listing = $Listing
+            List = $List
             IncludeFiles = $IncludeFiles
             Colorize = $Colorize
             Gap = $Gap
@@ -182,7 +182,7 @@ function Show-TreeInternal {
     }
 
     # Add a final newline only after the top-level call completes
-    if (-not $Tree -and $CurrentDepth -eq 0) {
+    if ($CurrentDepth -eq 0) {
         Write-Output ""
     }
 }

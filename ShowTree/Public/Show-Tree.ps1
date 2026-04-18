@@ -7,7 +7,7 @@
 
       • Normal mode (default)
       • Tree mode (-Tree) — compatible with DOS tree.com
-      • Listing mode (-Listing) — compact, indentation-only output
+      • Listing mode (-List) — compact, indentation-only output
 
     Each mode has its own defaults for depth, color, file inclusion, and layout,
     all of which can be overridden with parameters.
@@ -37,12 +37,15 @@
         -Files           (unless -NoFiles is used)
         -NoGap           (always)
 
+.PARAMETER List
+    Alias for -Listing
+
 .PARAMETER MaxDepth
     Maximum recursion depth. A value of -1 removes the depth limit.
 
     Defaults:
-        Normal mode: 6
-        Tree mode:   -1
+        Normal mode:   6
+        Tree mode:    -1
         Listing mode: -1
 
     If -Recurse is used, MaxDepth is forced to -1.
@@ -95,7 +98,7 @@
     Displays a tree.com-style listing of C:\ with paging.
 
 .EXAMPLE
-    PS> .\Show-Tree.ps1 -Listing C:\ > listing.txt
+    PS> .\Show-Tree.ps1 -List C:\ > listing.txt
     Writes a compact, indentation-only listing to a file.
 
 .LINK
@@ -103,7 +106,7 @@
 
 .NOTES
     Author: Ryan Beesley
-    Version: 1.0.0
+    Version: 1.0.1
     Last Updated: April 2026
 
     This script is a modern reimplementation of the classic DOS tree.com
@@ -124,7 +127,8 @@ function Show-Tree {
         [switch]$Tree,
         # No "graphical" output, just directories and files as a listing.
         [Parameter(ParameterSetName='Listing')]
-        [switch]$Listing,
+        [Alias("Listing")]
+        [switch]$List,
         # Maximum depth to recurse into. Normal mode: 6, Tree mode: -1.
         [Parameter(ParameterSetName='Normal')]
         [Parameter(ParameterSetName='Tree')]
@@ -177,22 +181,33 @@ function Show-Tree {
         $EffectiveGap = -not $NoGap
     }
 
-    # Fix empty or null path (module autoload quirk)
-    if ([string]::IsNullOrWhiteSpace($Path)) {
-        $Path = "."
-    }
-
     # Resolve relative paths to absolute literal paths
     try {
-        $Path = (Resolve-Path -LiteralPath $Path).ProviderPath
-    } catch {
-        # Leave as-is; Show-Tree will handle invalid paths
+        $resolved = Resolve-Path -LiteralPath $Path -ErrorAction Stop
+        $Path = $resolved.ProviderPath
+    }
+    catch {
+        # Reproduce Resolve-Path style error
+        $msg = "Cannot find path '$Path' because it does not exist."
+
+        $exception = New-Object System.Management.Automation.ItemNotFoundException $msg
+
+        $category = [System.Management.Automation.ErrorCategory]::ObjectNotFound
+
+        $errorRecord = New-Object System.Management.Automation.ErrorRecord `
+            $exception,
+            'ItemNotFound',
+            $category,
+            $Path
+
+        $PSCmdlet.WriteError($errorRecord)
+        return
     }
 
     $params = @{
         Path = $Path
         Tree = $Tree
-        Listing = $Listing
+        List = $List
         MaxDepth = $EffectiveMaxDepth
         Colorize = $EffectiveColorize
         IncludeFiles = $EffectiveFiles
