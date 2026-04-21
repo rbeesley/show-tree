@@ -1,0 +1,16 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Reload ShowTree Module",
+            "type": "shell",
+            "command": "Remove-Module ShowTree -Force -ErrorAction SilentlyContinue; Import-Module ./ShowTree/ShowTree.psd1 -Force -Verbose",
+            "options": {
+                "shell": {
+                    "executable": "pwsh",
+                    "args": [ "-NoLogo", "-NoProfile", "-Command" ]
+                }
+            }
+        }
+    ]
+}
