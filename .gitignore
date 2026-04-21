@@ -28,3 +28,6 @@
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/powershell,visualstudiocode
+
+# Project files and directories
+TestAttributes
