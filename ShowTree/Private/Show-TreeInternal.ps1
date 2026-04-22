@@ -1,3 +1,5 @@
+# Show-Tree\Private\Show-TreeInternal.ps1
+
 #region Entry Point
 <#
 .SYNOPSIS
@@ -12,7 +14,8 @@
       • Normalize and validate the root path
       • Initialize gap state
       • Enumerate directories/files (raw Win32 or PowerShell)
-      • Apply filtering (hidden/system)
+      • Applies stable-order filtering using Get-FilteredTreeItems
+        (Hidden/System/Include/Exclude with exact/glob precedence)
       • Render files, directories, and gap lines
       • Manage recursion depth and prefix construction
       • Maintain gap-mode state machine (Internal, Tail, Sibling)
@@ -56,6 +59,10 @@ function Show-TreeInternal {
         # Show reparse point targets
         [switch]$ShowTargets,
 
+        # Glob-based include/exclude filtering
+        [string[]]$Exclude,
+        [string[]]$Include,
+
         # Enable gap logic (blank lines between blocks)
         [switch]$Gap,
 
@@ -84,61 +91,6 @@ function Show-TreeInternal {
     $gapConnector = Get-Connector -Type Gap -Tree:$Tree -List:$List -Ascii:$Ascii
 
     #
-    # Root-level initialization
-    #
-    if ($CurrentDepth -eq 0) {
-
-        # Initialize gap state machine
-        $script:GapState = [PSCustomObject]@{
-            LastGapMode = [GapMode]::None
-        }
-
-        # Normalize path casing and separators
-        $Path = Get-NormalizedPath -Path $Path
-
-        # Validate existence
-        if (-not (Test-Path $Path)) {
-            $invalidPath = $true
-        }
-
-        # Tree.com header
-        if ($Tree) {
-            $nearestExistingParent = Get-NearestExistingParent -Path $Path
-            $fileSystemLabel       = Get-VolumeName -Path $nearestExistingParent
-            $serialNumber          = Get-VolumeSerialNumber -Path $nearestExistingParent
-
-            Write-Output "Folder PATH listing for volume $fileSystemLabel"
-            Write-Output "Volume serial number is $serialNumber"
-        }
-
-        # Render root directory name
-        $root = Get-Item $Path
-        $dir  = [PSCustomObject]@{
-            FullName      = $root.FullName
-            Name          = $root.Name
-            Attributes    = $root.Attributes
-            PSIsContainer = $true
-        }
-        $dir.PSObject.TypeNames.Insert(0, 'System.IO.DirectoryInfo')
-
-        $style = Get-ItemStyle -Item $dir -Colorize:$Colorize
-
-        # Optional attribute debug
-        if ($DebugAttributes) {
-            $styleName = $style.Name
-            $attrHex   = ('0x{0:X8}' -f [uint32]$dir.Attributes)
-            $attrNames = $dir.Attributes.ToString()
-            $debug     = " [$attrHex $attrNames | $styleName]"
-        }
-
-        Write-Output "$($style.Ansi)$Path${colorReset}${debug}"
-
-        if ($invalidPath) {
-            Write-Output "Invalid path - \$($Path -Split '\\' | Select-Object -Last 1)"
-        }
-    }
-
-    #
     # Depth cap enforcement
     #
     if ($MaxDepth -ne -1 -and $CurrentDepth -ge $MaxDepth) {
@@ -151,27 +103,20 @@ function Show-TreeInternal {
     if ($Tree) {
         # Raw Win32 enumeration for Tree.com compatibility
         $raw   = Get-RawDirectoryEntries -Path $Path
-        $dirs  = $raw.Directories
         $files = $IncludeFiles ? $raw.Files : @()
+        $dirs  = $raw.Directories
     }
     else {
         # Standard PowerShell enumeration
-        $dirs  = Get-ChildItem -Path $Path -Directory -Force -ErrorAction SilentlyContinue
         $files = $IncludeFiles ? (Get-ChildItem -Path $Path -File -Force -ErrorAction SilentlyContinue) : @()
+        $dirs  = Get-ChildItem -Path $Path -Directory -Force -ErrorAction SilentlyContinue
     }
 
     #
     # Filtering
     #
-    if ($HideHidden) {
-        $dirs  = $dirs  | Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::Hidden) }
-        $files = $files | Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::Hidden) }
-    }
-
-    if ($HideSystem) {
-        $dirs  = $dirs  | Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::System) }
-        $files = $files | Where-Object { -not ($_.Attributes -band [IO.FileAttributes]::System) }
-    }
+    $dirs  = Get‑FilteredTreeItems -Items $dirs  -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
+    $files = Get‑FilteredTreeItems -Items $files -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
 
     $fileCount = $files.Count
     $dirCount  = $dirs.Count
@@ -202,21 +147,11 @@ function Show-TreeInternal {
             -MaxDepth      $MaxDepth `
             -CurrentDepth  $CurrentDepth `
             -IncludeFiles:$IncludeFiles `
+            -Include       $Include `
+            -Exclude       $Exclude `
             -Gap:$Gap `
             -HideHidden:$HideHidden `
             -HideSystem:$HideSystem
-    }
-
-    #
-    # Early exit for empty directories
-    #
-    if ($invalidPath -or ($CurrentDepth -eq 0 -and $dirCount -eq 0)) {
-        if ($Tree) {
-            if (-not $invalidPath) { Write-Output "" }
-            Write-Output "No subfolders exist"
-        }
-        Write-Output ""
-        return
     }
 
     #
@@ -262,6 +197,8 @@ function Show-TreeInternal {
             -MaxDepth       $MaxDepth `
             -CurrentDepth   $CurrentDepth `
             -IncludeFiles:$IncludeFiles `
+            -Include       $Include `
+            -Exclude       $Exclude `
             -Gap:$Gap `
             -HideHidden:$HideHidden `
             -HideSystem:$HideSystem
@@ -290,13 +227,127 @@ function Show-TreeInternal {
             }
         }
     }
+}
+#endregion
+
+#region Filtering
+<#
+.SYNOPSIS
+    Returns a filtered subset of tree items using Hidden/System attributes and
+    PowerShell‑style Include/Exclude glob patterns while preserving original order.
+
+.DESCRIPTION
+    Get-FilteredTreeItems applies all Show-Tree filtering rules to a collection of
+    filesystem items and returns the resulting subset in stable, original order.
+
+    Filtering supports:
+    • Hidden and System attribute removal (-HideHidden, -HideSystem)
+    • PowerShell-style glob patterns for -Include and -Exclude
+    • Exact-match and glob-match precedence rules
+    • Include selectively overriding Exclude, Hidden, and System
+    • Exclude exact-match patterns taking precedence over globbed Include patterns
+
+    The function evaluates each item against four independent removal sets:
+    Hidden, System, ExcludedExact, and ExcludedGlob. It also computes two inclusion
+    sets: IncludedExact and IncludedGlob.
+
+    Final item selection follows these rules:
+
+    1. Exact Include always wins.
+    2. Exact Exclude always wins, even if the item matches a broader Include glob.
+    3. Glob Include resurrects items removed by Hidden, System, or glob Exclude.
+    4. Hidden and System remove items unless resurrected by Include.
+    5. Glob Exclude removes items unless resurrected by Include.
+    6. Items not affected by any rule are kept.
+
+    This produces intuitive, PowerShell-like filtering behavior while maintaining
+    the original enumeration order required for correct tree rendering.
+
+.PARAMETER Items
+    The collection of file or directory objects to filter. The function preserves
+    the original ordering of this list.
+#>
+function Get‑FilteredTreeItems {
+    param(
+        [array]$Items,
+
+        [string[]]$Include,
+        [string[]]$Exclude,
+
+        [switch]$HideHidden,
+        [switch]$HideSystem
+    )
+
+    if (-not $Items) {
+        return @()
+    }
 
     #
-    # Final newline for normal mode root
+    # Capture original order
     #
-    if ($CurrentDepth -eq 0 -and -not $Tree) {
-        Write-Output ""
+    $orig = $Items
+
+    #
+    # Hidden/System sets
+    #
+    $hidden = $HideHidden ? ($orig | Where-Object { $_.Attributes -band [IO.FileAttributes]::Hidden }) : @()
+    $system = $HideSystem ? ($orig | Where-Object { $_.Attributes -band [IO.FileAttributes]::System }) : @()
+
+    #
+    # Exclude sets (exact + glob)
+    #
+    $excludedExact = @()
+    $excludedGlob  = @()
+
+    if ($Exclude) {
+        foreach ($item in $orig) {
+            $name = $item.Name
+            if ($Exclude -contains $name) { $excludedExact += $item; continue }
+            if ($Exclude | Where-Object { $name -like $_ }) { $excludedGlob += $item }
+        }
     }
+
+    #
+    # Include sets (exact + glob)
+    #
+    $includedExact = @()
+    $includedGlob  = @()
+
+    if ($Include) {
+        foreach ($item in $orig) {
+            $name = $item.Name
+            if ($Include -contains $name) { $includedExact += $item; continue }
+            if ($Include | Where-Object { $name -like $_ }) { $includedGlob += $item }
+        }
+    }
+
+    #
+    # Final filtering (stable order)
+    #
+    $final = foreach ($item in $orig) {
+        $name = $item.Name
+
+        $isHidden        = $hidden        -contains $item
+        $isSystem        = $system        -contains $item
+        $isExcludedExact = $excludedExact -contains $item
+        $isExcludedGlob  = $excludedGlob  -contains $item
+        $isIncludedExact = $includedExact -contains $item
+        $isIncludedGlob  = $includedGlob  -contains $item
+
+        #
+        # Decision logic
+        #
+        if ($isIncludedExact) { $item; continue }   # exact include wins
+        if ($isExcludedExact) { continue }          # exact exclude wins
+        if ($isIncludedGlob)  { $item; continue }   # glob include resurrects
+        if ($isHidden)        { continue }          # hidden removes unless included
+        if ($isSystem)        { continue }          # system removes unless included
+        if ($isExcludedGlob)  { continue }          # glob exclude removes unless included
+
+        $item
+    }
+
+    return $final
 }
 #endregion
 
@@ -347,6 +398,8 @@ function Write-TreeItem {
 
         # Additional flags
         [switch]$IncludeFiles,
+        [string[]]$Exclude,
+        [string[]]$Include,        
         [switch]$Gap,
         [switch]$HideHidden,
         [switch]$HideSystem
@@ -393,7 +446,7 @@ function Write-TreeItem {
         $debug     = " [$attrHex $attrNames | $styleName]"
     }
 
-    Write-Output "${dim}${Prefix}${dim}${connector}$($style.Ansi)$($Item.Name)$reset$targetText $debug"
+    Write-Output "${dim}${Prefix}${dim}${connector}$($style.Ansi)$($Item.Name)$reset$targetText$debug"
 
     #
     # Reset gap state unless tail gap was printed
@@ -428,6 +481,8 @@ function Write-TreeItem {
             -HideHidden:$HideHidden `
             -HideSystem:$HideSystem `
             -ShowTargets:$ShowTargets `
+            -Exclude      $Exclude `
+            -Include      $Include `
             -Gap:$Gap `
             -Ascii:$Ascii `
             -DebugAttributes:$DebugAttributes `
@@ -610,7 +665,7 @@ function Get-Connector {
 function Get-ItemStyle {
     param(
         $Item,
-        $Colorize = $script:Colorize,
+        $Colorize,
         $StyleProfile = $script:StyleProfile
     )
 
@@ -747,7 +802,7 @@ function Get-NormalizedPath {
         $segment = $segments[$i]
 
         try {
-            $entries = Get-ChildItem -LiteralPath $current | Select-Object -ExpandProperty Name
+            $entries = Get-ChildItem -LiteralPath $current -ErrorAction Stop | Select-Object -ExpandProperty Name
             $match   = $entries | Where-Object { $_.ToLower() -eq $segment.ToLower() }
 
             if ($match) {
@@ -762,7 +817,7 @@ function Get-NormalizedPath {
         catch {
             # Parent doesn't exist — keep original casing
             $normalized += $segment
-            $current     = Join-Path $current $segment
+            $current     = Join-Path $current $segment -ErrorAction Stop
         }
     }
 
@@ -942,7 +997,8 @@ public class RawEnum {
     foreach ($e in $entries) {
         $isDir = ($e.dwFileAttributes -band [IO.FileAttributes]::Directory) -ne 0
 
-        $root = Get-Item (Join-Path $Path $e.cFileName) -Force
+        $root = Get-Item -LiteralPath (Join-Path $Path $e.cFileName) -Force -ErrorAction SilentlyContinue
+        if (-not $root) { continue }
 
         $item = [PSCustomObject]@{
             FullName      = $root.FullName

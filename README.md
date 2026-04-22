@@ -53,12 +53,11 @@ ShowTree adds:
 - Unicode connectors for clean, readable output  
 - Color support with attribute-aware styling  
 - Depth control and recursion shortcuts  
-- Hidden/system filtering that matches `tree.com`  
+- Glob-based include/exclude filtering with exact/glob precedence rules
+- Hidden/system filtering that matches `tree.com` in Tree mode
 - Reparse point detection and optional target display  
 - Gap logic for visually separating blocks  
 - A compact listing mode for automation  
-- Accurate path casing normalization  
-- Full support for NTFS, ReFS, FAT, and network paths  
 
 All implemented in pure PowerShell with no external dependencies.
 
@@ -73,9 +72,9 @@ All implemented in pure PowerShell with no external dependencies.
 - Depth control (`-MaxDepth`, `-Depth`, `-Recurse`)  
 - File inclusion/exclusion (`-Files`, `-NoFiles`)  
 - Gap control for readability (`-NoGap`)  
-- Hidden/system file filtering  
+- Glob-based include/exclude filtering with exact/glob precedence rules
+- Hidden/System filtering with Include override support
 - Reparse point target display (`-ShowTargets`)  
-- Accurate path casing normalization  
 - Works on NTFS, ReFS, FAT, and UNC paths  
 
 ---
@@ -162,6 +161,57 @@ Show-Tree -Ascii
 
 ---
 
+## Filtering (Include / Exclude)
+
+ShowTree supports PowerShell-style glob filtering with well-defined precedence
+rules. Filtering is applied after enumeration but before rendering, and always
+preserves the original item order.
+
+### Exclude
+
+```powershell
+-Exclude pattern1, pattern2, ...
+```
+
+Removes matching items. Exact matches take precedence over Include globs.
+
+### Include
+
+```powershell
+-Include pattern1, pattern2, ...
+```
+
+Selectively resurrects items removed by Hidden, System, or Exclude (glob).
+
+### Precedence Rules
+
+1. Exact Include always wins
+2. Exact Exclude always wins (even over glob Include)
+3. Glob Include resurrects items removed by Hidden/System/Exclude (glob)
+4. Hidden/System remove items unless resurrected
+5. Glob Exclude removes items unless resurrected
+6. Items unaffected by any rule are kept
+
+### Hide everything starting with a dot except `.vscode`
+
+```powershell
+Show-Tree -Exclude '.*' -Include '.vscode'
+```
+
+### Exclude `.git` exactly, but include `.gitignore`, `.github`, etc.
+
+```powershell
+Show-Tree -Exclude '.git' -Include '.git*'
+```
+
+### Hide hidden/system items but bring back `.config`
+
+```powershell
+Show-Tree -HideHidden -HideSystem -Include '.config'
+```
+
+---
+
 ## Parameter Summary
 
 | Parameter | Description |
@@ -176,6 +226,8 @@ Show-Tree -Ascii
 | `-NoFiles` | Hide files. |
 | `-HideHidden` / `-ShowHidden` | Control visibility of hidden items. |
 | `-HideSystem` / `-ShowSystem` | Control visibility of system items. |
+| `-Include` | Glob patterns that explicitly include items. Exact matches override all other filters. |
+| `-Exclude` | Glob patterns that remove items. Exact matches override Include (glob). |
 | `-ShowTargets` / `-NoTargets` | Show or hide reparse point targets. |
 | `-NoGap` | Disable gap lines. |
 | `-Ascii` | Use ASCII connectors instead of Unicode. |
@@ -226,7 +278,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.1.0  
+Version 1.1.1  
 April 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.
