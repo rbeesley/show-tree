@@ -10,18 +10,26 @@
             "name": "Debug ShowTree",
             "script": "${workspaceFolder}/tools/Debug-ShowTree.ps1",
             "args": [
+                // ".",
                 // ".\\TestAttributes\\FamilyRelations\\",
-                "D:/show-tree-1.1.0/",
+                "D:/show-tree/",
+                // "D:\\",
                 // "C:\\",
+                // "X:\\InvalidDrive",
+                // "C:\\InvalidPath",
                 // "-Tree",
-                // "-Files",
+                "-Files",
+                "-Exclude SYMBOLS, .*",
+                "-Include .vscode, .github",
+                // "-Exclude SYMBOLS, .git",
+                // "-Include .git*",
                 // "-Ascii"
                 // "-HideHidden",
                 // "-Mono",
-                // "-Color"
+                "-Color",
                 // "-NoTargets",
-                "-Depth 5",
-                // "-DebugAttributes"
+                "-Depth 3",
+                // "-DebugAttributes",
             ],
             "cwd": "${workspaceFolder}",
             "internalConsoleOptions": "neverOpen"

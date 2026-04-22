@@ -1,3 +1,5 @@
+# Show-Tree\Public\Show-Tree.ps1
+
 #region Style Profile
 <#
 .SYNOPSIS
@@ -55,6 +57,7 @@ $script:StyleProfile = @{
       • Which mode is active (Normal, Tree, Listing)
       • Effective defaults for depth, color, file inclusion, and gaps
       • Whether to show hidden/system items
+      • Applies glob-based Include/Exclude filtering with exact/glob precedence rules
       • Whether to show reparse point targets
       • Whether to use ASCII or Unicode connectors
 
@@ -91,6 +94,15 @@ $script:StyleProfile = @{
 .PARAMETER HideSystem / ShowSystem
     Control visibility of system items.
 
+.PARAMETER Include
+    Glob patterns that explicitly include matching items. Exact matches override
+    all other filtering rules. Glob matches resurrect items removed by Hidden,
+    System, or Exclude (glob).
+
+.PARAMETER Exclude
+    Glob patterns that remove matching items. Exact matches override Include
+    (glob). Glob matches are overridden by Include (exact or glob).
+
 .PARAMETER NoGap
     Disable gap lines between blocks.
 
@@ -117,7 +129,7 @@ $script:StyleProfile = @{
 
 .NOTES
     Author: Ryan Beesley
-    Version: 1.1.0
+    Version: 1.1.1
     Last Updated: April 2026
 #>
 function Show-Tree {
@@ -202,15 +214,23 @@ function Show-Tree {
         [Parameter(ParameterSetName='Listing')]
         [switch]$ShowTargets,
 
+        # Glob-based include/exclude filtering
+        [Parameter(ParameterSetName='Normal')]
+        [Parameter(ParameterSetName='Tree')]
+        [Parameter(ParameterSetName='Listing')]
+        [string[]]$Exclude,
+
+        [Parameter(ParameterSetName='Normal')]
+        [Parameter(ParameterSetName='Tree')]
+        [Parameter(ParameterSetName='Listing')]
+        [string[]]$Include,
+
         # ASCII connectors
         [Parameter(ParameterSetName='Normal')]
         [Parameter(ParameterSetName='Tree')]
         [switch]$Ascii,
 
         # Show attribute debug info
-        [Parameter(ParameterSetName='Normal')]
-        [Parameter(ParameterSetName='Tree')]
-        [Parameter(ParameterSetName='Listing')]
         [switch]$DebugAttributes,
 
         # Show color legend
@@ -222,6 +242,69 @@ function Show-Tree {
     #
     if ($Legend) {
         Show-TreeLegend
+        return
+    }
+
+    #
+    # Resolve the path (with proper error record)
+    #
+    # Tree Mode: Output should follow `tree.com` output
+    if ($Tree) {
+
+        # Expand relative paths safely ('.', '..', '.\foo', etc.)
+        if (-not ([System.IO.Path]::IsPathRooted($Path))) {
+            $Path = Join-Path (Get-Location).ProviderPath $Path
+        }
+        
+        # Extract drive letter
+        $drive = Split-Path $Path -Qualifier
+        $driveName = $drive.TrimEnd(':')
+
+        # 1. Invalid drive → tree.com behavior
+        if (-not (Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue)) {
+            Write-Output "Invalid drive specification"
+            return
+        }
+
+        # 2. Valid drive → print header
+        $nearestExistingParent = Get-NearestExistingParent -Path $Path
+        $fileSystemLabel       = Get-VolumeName -Path $nearestExistingParent
+        $serialNumber          = Get-VolumeSerialNumber -Path $nearestExistingParent
+
+        Write-Output "Folder PATH listing for volume $fileSystemLabel"
+        Write-Output "Volume serial number is $serialNumber"
+
+        Write-Output $Path
+
+        # 3. Invalid path on valid drive → tree.com behavior
+        if (-not (Test-Path $Path)) {
+            $sub = $Path.Substring(2)  # remove drive letter
+            Write-Output "Invalid path - $sub"
+            Write-Output "No subfolders exist"
+            return
+        }
+    }
+
+    try {
+        # Normalize path casing and separators
+        $Path = Get-NormalizedPath -Path $Path -ErrorAction Stop
+
+        # Resolve to provider path
+        $resolved = Resolve-Path -LiteralPath $Path -ErrorAction Stop
+        $Path = $resolved.ProviderPath
+    }
+    catch {
+        $msg = "Cannot find path '$Path' because it does not exist."
+        $exception = New-Object System.Management.Automation.ItemNotFoundException $msg
+        $category  = [System.Management.Automation.ErrorCategory]::ObjectNotFound
+
+        $errorRecord = New-Object System.Management.Automation.ErrorRecord `
+            $exception,
+            'ItemNotFound',
+            $category,
+            $Path
+
+        $PSCmdlet.WriteError($errorRecord)
         return
     }
 
@@ -257,26 +340,35 @@ function Show-Tree {
         $EffectiveGap         = -not $NoGap
     }
 
-    #
-    # Resolve the path (with proper error record)
-    #
-    try {
-        $resolved = Resolve-Path -LiteralPath $Path -ErrorAction Stop
-        $Path = $resolved.ProviderPath
+    if (-not $Tree) {
+        # Render root directory name (Normal + Listing modes only)
+        $root = Get-Item $Path
+        $dir  = [PSCustomObject]@{
+            FullName      = $root.FullName
+            Name          = $root.Name
+            Attributes    = $root.Attributes
+            PSIsContainer = $true
+        }
+        $dir.PSObject.TypeNames.Insert(0, 'System.IO.DirectoryInfo')
+
+        $style = Get-ItemStyle -Item $dir -Colorize:$EffectiveColorize
+
+        if ($DebugAttributes) {
+            $styleName = $style.Name
+            $attrHex   = ('0x{0:X8}' -f [uint32]$dir.Attributes)
+            $attrNames = $dir.Attributes.ToString()
+            $debug     = " [$attrHex $attrNames | $styleName]"
+        }
+
+        $esc = [char]27
+        $colorReset = $EffectiveColorize ? "${esc}[0m" : ""
+
+        Write-Output "$($style.Ansi)$Path${colorReset}${debug}"
     }
-    catch {
-        $msg = "Cannot find path '$Path' because it does not exist."
-        $exception = New-Object System.Management.Automation.ItemNotFoundException $msg
-        $category  = [System.Management.Automation.ErrorCategory]::ObjectNotFound
 
-        $errorRecord = New-Object System.Management.Automation.ErrorRecord `
-            $exception,
-            'ItemNotFound',
-            $category,
-            $Path
-
-        $PSCmdlet.WriteError($errorRecord)
-        return
+    # Initialize gap state machine
+    $script:GapState = [PSCustomObject]@{
+        LastGapMode = [GapMode]::None
     }
 
     #
@@ -292,9 +384,18 @@ function Show-Tree {
         -HideHidden:$EffectiveHideHidden `
         -HideSystem:$EffectiveHideSystem `
         -ShowTargets:$EffectiveShowTargets `
+        -Exclude $Exclude `
+        -Include $Include `
         -Gap:$EffectiveGap `
         -Ascii:$Ascii `
         -DebugAttributes:$DebugAttributes
+
+    #
+    # Final newline for normal mode root
+    #
+    if (-not $Tree) {
+        Write-Output ""
+    }    
 }
 #endregion
 
