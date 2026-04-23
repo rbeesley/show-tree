@@ -129,7 +129,7 @@ $script:StyleProfile = @{
 
 .NOTES
     Author: Ryan Beesley
-    Version: 1.1.1
+    Version: 1.1.2
     Last Updated: April 2026
 #>
 function Show-Tree {

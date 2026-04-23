@@ -12,7 +12,7 @@
 RootModule = 'ShowTree.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.1.1'
+ModuleVersion = '1.1.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -24,7 +24,7 @@ GUID = '8e2a5e4f-a567-4c38-be4e-fa4cd8bddb87'
 Author = 'Ryan Beesley'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+# CompanyName = 'Unknown'
 
 # Copyright statement for this module
 Copyright = '(c) Ryan Beesley. All rights reserved.'
