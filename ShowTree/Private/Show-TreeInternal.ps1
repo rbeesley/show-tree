@@ -42,7 +42,7 @@ function Show-TreeInternal {
         [switch]$List,
 
         # Maximum recursion depth (-1 = unlimited)
-        [int]$MaxDepth,
+        [int]$MaxDepth = -1,
 
         # Enable color output
         [switch]$Colorize,
@@ -82,14 +82,6 @@ function Show-TreeInternal {
         [bool]$IsLastParent = $false
     )
 
-    # Precompute ANSI sequences
-    $esc        = [char]27
-    $colorReset = $Colorize ? "${esc}[0m"  : ""
-    $colorGap   = $Colorize ? "${esc}[90m" : ""
-
-    # Precompute gap connector once per directory block
-    $gapConnector = Get-Connector -Type Gap -Tree:$Tree -List:$List -Ascii:$Ascii
-
     #
     # Depth cap enforcement
     #
@@ -115,8 +107,8 @@ function Show-TreeInternal {
     #
     # Filtering
     #
-    $dirs  = Get‑FilteredTreeItems -Items $dirs  -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
-    $files = Get‑FilteredTreeItems -Items $files -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
+    $dirs  = Get-FilteredTreeItems -Items $dirs  -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
+    $files = Get-FilteredTreeItems -Items $files -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
 
     $fileCount = $files.Count
     $dirCount  = $dirs.Count
@@ -157,6 +149,15 @@ function Show-TreeInternal {
     #
     # INTERNAL GAP (files → directories)
     #
+
+    # Precompute ANSI sequences
+    $esc        = [char]27
+    $colorReset = $Colorize ? "${esc}[0m"  : ""
+    $colorGap   = $Colorize ? "${esc}[90m" : ""
+
+    # Precompute gap connector
+    $gapConnector = Get-Connector -Type Gap -Tree:$Tree -List:$List -Ascii:$Ascii
+
     if ($Gap -and
         $script:GapState.LastGapMode -eq [GapMode]::None -and
         $IncludeFiles -and
@@ -234,7 +235,7 @@ function Show-TreeInternal {
 <#
 .SYNOPSIS
     Returns a filtered subset of tree items using Hidden/System attributes and
-    PowerShell‑style Include/Exclude glob patterns while preserving original order.
+    PowerShell-style Include/Exclude glob patterns while preserving original order.
 
 .DESCRIPTION
     Get-FilteredTreeItems applies all Show-Tree filtering rules to a collection of
@@ -267,7 +268,7 @@ function Show-TreeInternal {
     The collection of file or directory objects to filter. The function preserves
     the original ordering of this list.
 #>
-function Get‑FilteredTreeItems {
+function Get-FilteredTreeItems {
     param(
         [array]$Items,
 
@@ -622,7 +623,7 @@ function Get-Connector {
     }
 
     #
-    # Graphical Unicode mode (Show‑Tree default)
+    # Graphical Unicode mode (Show-Tree default)
     #
     switch ($Type) {
         'File' {

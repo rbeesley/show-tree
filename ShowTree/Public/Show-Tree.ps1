@@ -3,7 +3,7 @@
 #region Style Profile
 <#
 .SYNOPSIS
-    Defines the ANSI color style profile used by Show‑Tree.
+    Defines the ANSI color style profile used by Show-Tree.
 
 .DESCRIPTION
     This profile controls:
@@ -11,7 +11,7 @@
       • Attribute overlays (Hidden, System, Temporary, etc.)
       • Foreground overrides for specific attribute/type combinations
 
-    The profile is consumed by Get-ItemStyle in Show‑TreeInternal.ps1.
+    The profile is consumed by Get-ItemStyle in Show-TreeInternal.ps1.
 #>
 $script:StyleProfile = @{
     Base = @{
@@ -53,7 +53,7 @@ $script:StyleProfile = @{
     Displays a directory tree in graphical, tree.com, or listing mode.
 
 .DESCRIPTION
-    Show‑Tree is the public entry point for the module. It determines:
+    Show-Tree is the public entry point for the module. It determines:
       • Which mode is active (Normal, Tree, Listing)
       • Effective defaults for depth, color, file inclusion, and gaps
       • Whether to show hidden/system items
@@ -62,7 +62,7 @@ $script:StyleProfile = @{
       • Whether to use ASCII or Unicode connectors
 
     After computing effective settings, it delegates all rendering to
-    Show‑TreeInternal, which performs recursion, gap logic, and formatting.
+    Show-TreeInternal, which performs recursion, gap logic, and formatting.
 
 .PARAMETER Path
     The root path to display. Defaults to the current directory.
@@ -71,7 +71,7 @@ $script:StyleProfile = @{
     Enables DOS tree.com compatibility mode.
 
 .PARAMETER List
-    Enables indentation‑only listing mode.
+    Enables indentation-only listing mode.
 
 .PARAMETER MaxDepth
     Maximum recursion depth. -1 means unlimited.
@@ -129,7 +129,7 @@ $script:StyleProfile = @{
 
 .NOTES
     Author: Ryan Beesley
-    Version: 1.1.2
+    Version: 1.1.3
     Last Updated: April 2026
 #>
 function Show-Tree {
@@ -253,7 +253,7 @@ function Show-Tree {
 
         # Expand relative paths safely ('.', '..', '.\foo', etc.)
         if (-not ([System.IO.Path]::IsPathRooted($Path))) {
-            $Path = Join-Path (Get-Location).ProviderPath $Path
+            $Path = Resolve-Path (Join-Path (Get-Location).ProviderPath $Path)
         }
         
         # Extract drive letter
@@ -405,7 +405,7 @@ function Show-Tree {
     Displays a color legend for all base types and attribute overlays.
 
 .DESCRIPTION
-    Useful for understanding how Show‑Tree applies color to files,
+    Useful for understanding how Show-Tree applies color to files,
     directories, symlinks, junctions, and attribute combinations.
 #>
 function Show-TreeLegend {

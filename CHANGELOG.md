@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.1.3] - 2026-04-29
+
+### Added
+
+- Started creating Pester files to help catch subtle changes in the future
+
+### Changed
+
+### Fixed
+
+- Missing a Gap Connector between files and directories
+
+---
+
 ## [1.1.2] - 2026-04-22
 
 ### Added
@@ -57,17 +71,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Full gap‑logic engine with support for:
+- Full gap-logic engine with support for:
   - Internal gaps (files → directories)
-  - Tail gaps (end‑of‑block spacing)
+  - Tail gaps (end-of-block spacing)
   - Sibling/cousin gaps (between directory blocks)
-  - Depth‑aware gap suppression
-  - Reparse‑point‑aware gap suppression
+  - Depth-aware gap suppression
+  - Reparse-point-aware gap suppression
 - Inline documentation across all internal functions.
 - Region markers for improved navigation and maintainability.
-- Accurate path‑casing normalization for all platforms.
-- Attribute‑aware color styling with override support.
-- Optional reparse‑point target display (`-ShowTargets`).
+- Accurate path-casing normalization for all platforms.
+- Attribute-aware color styling with override support.
+- Optional reparse-point target display (`-ShowTargets`).
 - New `Show-TreeLegend` command for color/style visualization.
 
 ### Changed
@@ -81,11 +95,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Improved Tree.com compatibility mode:
   - Raw Win32 enumeration for exact ordering.
   - Accurate volume label and serial number retrieval.
-- Improved Listing mode to be more script‑friendly and predictable.
+- Improved Listing mode to be more script-friendly and predictable.
 
 ### Fixed
 
-- Incorrect sibling gap rendering when depth‑capped directories appeared non‑empty.
+- Incorrect sibling gap rendering when depth-capped directories appeared non-empty.
 - Tail gap incorrectly triggering sibling gap suppression in some cases.
 - Reparse points incorrectly treated as expandable directories.
 - Several edge cases involving hidden/system filtering.
