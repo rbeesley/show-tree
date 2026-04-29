@@ -238,6 +238,22 @@ Show-Tree C:\ -List | Out-File listing.txt
 
 ---
 
+## Testing
+
+Install Pester 5.7.1 or better:
+
+```powershell
+Install-Module -Name Pester -Force -MinimumVersion 5.7.1
+```
+
+Run validation tests:
+
+```powershell
+.\RunTests.ps1
+```
+
+---
+
 ## License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
@@ -247,7 +263,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.1.2  
+Version 1.1.3  
 April 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.
