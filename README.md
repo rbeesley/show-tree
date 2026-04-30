@@ -25,6 +25,8 @@ ShowTree adds:
 - Glob-based include/exclude filtering with exact/glob precedence rules
 - Hidden/system filtering that matches `tree.com` in Tree mode
 - Reparse point detection and optional target display  
+  - Legacy `tree.com` can follow Junctions and Symlinks recursively
+  - ShowTree in Tree Mode has depth control and shows link targets
 - Gap logic for visually separating blocks  
 - A compact listing mode for automation  
 
@@ -50,17 +52,34 @@ All implemented in pure PowerShell with no external dependencies.
 
 ## Screenshots
 
+### High level view of modes
+
+![Comparison of modes](docs/modes.png)
+
 ### Normal Mode
 
-![Normal mode](docs/normal-mode.png)
+![Normal mode](docs/normal-mode.png)  
+Normal mode is the standard way to use `Show-Tree`. It provides granular control and makes it a modern interpretation for `tree.com` for PowerShell.
 
-### Tree Mode
+### Legacy `tree.com` is broken
 
-![Tree mode](docs/tree-mode.png)
+![Legacy tree.com](docs/tree.com.png)  
+`tree.com` will follow all Junctions and Symlinks, and doesn't limit depth. This can get stuck in an unlimited recursion.
+
+### Tree Mode (legacy backwards compatibility)
+
+![Legacy tree mode](docs/tree-mode.png)  
+Tree mode follows the output and error messages of `tree.com` very closely. It also defaults to handle files the same way, but it can be customized.
+
+### Tree Mode (modern)
+
+![Modern tree mode](docs/tree-mode-modern.png)  
+`Show-Tree . -Files` is the equivalient to `tree.com . /F`, but `-ShowHidden`, `-ShowSystem`, `-Color`, and other options give you a mode which retains the look and feel of a modern `tree.com`. By showing link targets and not following them, `Show-Tree` resolves one of the biggest problems with `tree.com` on modern systems.
 
 ### Listing Mode
 
-![Listing mode](docs/listing-mode.png)
+![Listing mode](docs/listing-mode.png)  
+Listing mode gives you a tight listing of the files and directories on a system. It benefits the most from having color enabeled to see folders and files at a glance, and minimally shows the tree structure, making it an ideal mode for downstream processing.
 
 ---
 
@@ -185,23 +204,21 @@ Show-Tree -HideHidden -HideSystem -Include '.config'
 
 | Parameter | Description |
 | --------- | ----------- |
-| `-Mode Normal|Tree|List` | Selects the output mode. Replaces `-Tree` and `-List`. |
-| ~~`-Tree`~~ | Deprecated. Use `-Mode Tree`. |
-| ~~`-List` / `-Listing`~~ | Deprecated. Use `-Mode List`. |
-| `-MaxDepth` / `-Depth` | Maximum recursion depth (`-1` = unlimited). |
-| `-Recurse` | Shortcut for unlimited depth. |
-| `-Mono` | Disable color. |
-| `-Color` | Force color output. |
-| `-Files` | Show files (Tree mode default). |
-| `-NoFiles` | Hide files. |
-| `-HideHidden` / `-ShowHidden` | Control visibility of hidden items. |
-| `-HideSystem` / `-ShowSystem` | Control visibility of system items. |
-| `-Include` | Glob patterns that explicitly include items. Exact matches override all other filters. |
-| `-Exclude` | Glob patterns that remove items. Exact matches override Include (glob). |
-| `-ShowTargets` / `-NoTargets` | Show or hide reparse point targets. |
-| `-NoGap` | Disable gap lines. |
-| `-Ascii` | Use ASCII connectors instead of Unicode. |
-| `-DebugAttributes` | Show attribute debug info. |
+| `‑Mode Normal\|Tree\|List` | Selects the output mode. Replaces `‑Tree` and `‑List`. |
+| ~~`‑Tree`~~ | Deprecated. Use `‑Mode Tree`. |
+| ~~`‑List` / `‑Listing`~~ | Deprecated. Use `‑Mode List`. |
+| `‑MaxDepth` / `‑Depth` | Maximum recursion depth (`‑1` = unlimited). |
+| `‑Recurse` | Shortcut for unlimited depth. |
+| `‑Mono` / `‑Color` | Control color of items. For `tree.com` compatiblity, `‑Mono` for tree mode by default. |
+| `‑NoFiles` / `‑Files` | Control if *files* are shown in the listing. For `tree.com` compatiblity, `‑NoFiles` for tree mode by default. |
+| `‑HideHidden` / `‑ShowHidden` | Control visibility of hidden items. For `tree.com` compatiblity, `‑HideHidden` for tree mode by default. |
+| `‑HideSystem` / `‑ShowSystem` | Control visibility of system items. For `tree.com` compatiblity, `‑HideSystem` for tree mode by default. |
+| `‑Exclude` *pattern* / `‑Include` *pattern* | Glob patterns that explicitly exclude or include items. Exact matches override all other filters. |
+| `‑ShowTargets` / `‑NoTargets` | Show or hide reparse point targets. Enabled by default for normal and tree mode. |
+| `‑NoGap` | Disable gap lines. |
+| `‑Ascii` | Use ASCII connectors instead of Unicode. |
+| `‑DebugAttributes` | Show attribute debug info. |
+| `‑Legend` | Show a legend which helps understand what attributes colored items represent. |
 
 ---
 
@@ -277,7 +294,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.2.0  
+Version 1.2.1  
 April 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.

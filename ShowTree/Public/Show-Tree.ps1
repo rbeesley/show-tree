@@ -93,6 +93,16 @@ $script:StyleProfile = @{
 .PARAMETER List
     Backward-compatible alias for: -Mode Listing
 
+.PARAMETER Include
+    Glob patterns that explicitly include matching items.
+    Exact matches override all other filtering rules.
+    Glob matches resurrect items removed by Hidden, System, or Exclude (glob).
+
+.PARAMETER Exclude
+    Glob patterns that remove matching items.
+    Exact matches override Include (glob).
+    Glob matches are overridden by Include (exact or glob).
+
 .PARAMETER MaxDepth
     Maximum recursion depth. -1 means unlimited.
 
@@ -115,16 +125,6 @@ $script:StyleProfile = @{
 
 .PARAMETER HideSystem / ShowSystem
     Control visibility of system items.
-
-.PARAMETER Include
-    Glob patterns that explicitly include matching items.
-    Exact matches override all other filtering rules.
-    Glob matches resurrect items removed by Hidden, System, or Exclude (glob).
-
-.PARAMETER Exclude
-    Glob patterns that remove matching items.
-    Exact matches override Include (glob).
-    Glob matches are overridden by Include (exact or glob).
 
 .PARAMETER NoGap
     Disable gap lines between blocks (Normal and Tree modes).
@@ -152,7 +152,7 @@ $script:StyleProfile = @{
 
 .NOTES
     Author: Ryan Beesley
-    Version: 1.2.0
+    Version: 1.2.1
     Last Updated: April 2026
 #>
 function Show-Tree {
@@ -178,6 +178,12 @@ function Show-Tree {
         [Parameter(Position = 0)]
         [string]$Path = ".",
 
+
+        #
+        # GLOB FILTERING
+        #
+        [string[]]$Include,
+        [string[]]$Exclude,
 
         #
         # MODE-SPECIFIC SWITCHES

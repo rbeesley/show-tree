@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.1] - 2026-04-30
+
+### Fixed
+
+- Corrected caller-relative path resolution so that `Show-Tree .` resolves against
+  the caller's working directory rather than the module's import directory.
+- Fixed behavior when the module is auto-imported from `$PSModulePath`, ensuring
+  relative paths no longer resolve to the module installation directory.
+- Updated `Resolve-TreePath` to use the caller's session state and simplified the
+  path pipeline for correctness and maintainability.
+- Corrected `Get-NormalizedPath` so it no longer destroys relativity before
+  normalization.
+- Fixed Pester tests to correctly simulate caller semantics and avoid false
+  negatives caused by module session isolation.
+- `-Include` and `-Exclude` parameters were accidently removed from v1.2.0, and were
+  added back to restore the broken functionality.
+
+### Changed
+
+- Moved `Resolve-TreePath` into `PathUtilities.ps1` for clearer structure and
+  separation of concerns.
+- Simplified path resolution logic: `Resolve-TreePath` now owns caller-relative
+  behavior and error handling; `Get-NormalizedPath` now assumes absolute paths
+  and focuses solely on casing/segment normalization.
+- Updated test suite to distinguish between private helper tests (module scope)
+  and caller-behavior tests (outside module scope).
+
+### Notes
+
+This release focuses on correctness and predictability of path handling,
+especially when the module is installed from the PowerShell Gallery. All public
+behavior remains backward compatible.
+
+---
+
 ## [1.2.0] - 2026-04-30
 
 ### Added
@@ -53,8 +88,6 @@ All public behavior remains backward compatible, but internal logic has been sig
 
 - Started creating Pester files to help catch subtle changes in the future
 
-### Changed
-
 ### Fixed
 
 - Missing a Gap Connector between files and directories
@@ -63,13 +96,9 @@ All public behavior remains backward compatible, but internal logic has been sig
 
 ## [1.1.2] - 2026-04-22
 
-### Added
-
 ### Changed
 
 - Version bump (documentation, non-functional) to make documentation visible on PowerShell Gallery
-
-### Fixed
 
 ---
 
