@@ -4,6 +4,11 @@ InModuleScope ShowTree {
 
     BeforeAll {
         . "$PSScriptRoot/PrivateHelpers.ps1"
+
+        # Initialize gap state machine
+        $script:GapState = [PSCustomObject]@{
+            LastGapMode = [GapMode]::None
+        }
     }
 
     Describe "Tree.com compatibility" {
@@ -26,7 +31,7 @@ InModuleScope ShowTree {
                 Convert-TestTreeToRaw -Root $fixture -Path $Path
             }
 
-            $result = Show-TreeInternal -Path $fixture.FullName -Tree -IncludeFiles:$true | Out-String
+            $result = Show-TreeInternal -Path $fixture.FullName -Mode 'Tree' -IncludeFiles:$true | Out-String
 
             $expected = @"
 ├───a
