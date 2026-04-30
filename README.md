@@ -277,7 +277,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.2.0  
+Version 1.2.1  
 April 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.

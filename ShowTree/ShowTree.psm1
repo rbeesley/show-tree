@@ -2,7 +2,6 @@
 
 # Dot-source internal and public functions
 . $PSScriptRoot\Public\Show-Tree.ps1
-. $PSScriptRoot\Private\Resolve-TreePath.ps1
 . $PSScriptRoot\Private\Show-TreeInternal.ps1
 . $PSScriptRoot\Private\Filtering.ps1
 . $PSScriptRoot\Private\Rendering.ps1
