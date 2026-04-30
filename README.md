@@ -8,8 +8,8 @@ A modern, PowerShell-native replacement for the classic `tree.com` command — r
 ShowTree provides three display modes:
 
 - **Normal mode** (default): graphical Unicode tree with color, files, and depth control  
-- **Tree mode** (`-Tree`): faithful DOS `tree.com` compatibility mode  
-- **Listing mode** (`-List`): compact, indentation-only output ideal for piping, grepping, and exporting  
+- **Tree mode** (`-Mode Tree`, ~~`-Tree`~~): faithful DOS `tree.com` compatibility  
+- **Listing mode** (`-Mode List`, ~~`-List`~~): compact, indentation-only output ideal for piping, grepping, and exporting  
 
 ---
 
@@ -113,13 +113,13 @@ Show-Tree -Recurse
 ### DOS `tree.com` compatible mode
 
 ```powershell
-Show-Tree -Tree
+Show-Tree -Mode Tree
 ```
 
 ### Compact listing mode
 
 ```powershell
-Show-Tree -List
+Show-Tree -Mode List
 ```
 
 ### ASCII connectors
@@ -185,13 +185,14 @@ Show-Tree -HideHidden -HideSystem -Include '.config'
 
 | Parameter | Description |
 | --------- | ----------- |
-| `-Tree` | Enables DOS compatibility mode (`-MaxDepth -1`, `-Mono`, `-NoFiles` by default). |
-| `-List` / `-Listing` | Compact indentation-only mode. |
+| `-Mode Normal|Tree|List` | Selects the output mode. Replaces `-Tree` and `-List`. |
+| ~~`-Tree`~~ | Deprecated. Use `-Mode Tree`. |
+| ~~`-List` / `-Listing`~~ | Deprecated. Use `-Mode List`. |
 | `-MaxDepth` / `-Depth` | Maximum recursion depth (`-1` = unlimited). |
 | `-Recurse` | Shortcut for unlimited depth. |
 | `-Mono` | Disable color. |
-| `-Color` | Enable color in Tree mode. |
-| `-Files` | Show files in Tree mode. |
+| `-Color` | Force color output. |
+| `-Files` | Show files (Tree mode default). |
 | `-NoFiles` | Hide files. |
 | `-HideHidden` / `-ShowHidden` | Control visibility of hidden items. |
 | `-HideSystem` / `-ShowSystem` | Control visibility of system items. |
@@ -215,7 +216,7 @@ Show-Tree
 Tree.com-style output:
 
 ```powershell
-Show-Tree -Tree
+Show-Tree -Mode Tree
 ```
 
 List everything under C:\ with unlimited depth:
@@ -227,13 +228,13 @@ Show-Tree C:\ -Recurse
 Compact listing for scripting:
 
 ```powershell
-Show-Tree -List | Select-String src
+Show-Tree -Mode List | Select-String src
 ```
 
 Export to a file:
 
 ```powershell
-Show-Tree C:\ -List | Out-File listing.txt
+Show-Tree C:\ -Mode List | Out-File listing.txt
 ```
 
 ---
@@ -246,10 +247,23 @@ Install Pester 5.7.1 or better:
 Install-Module -Name Pester -Force -MinimumVersion 5.7.1
 ```
 
-Run validation tests:
+From the repo root, run:
 
 ```powershell
-.\RunTests.ps1
+.\ShowTree\Tests\RunTests.ps1
+```
+
+---
+
+## Deprecation Notice
+
+The legacy switches `-Tree` and `-List` are still supported for backward compatibility but are now deprecated.  
+Use the unified `-Mode` parameter instead:
+
+```powershell
+-Mode Normal
+-Mode Tree
+-Mode List
 ```
 
 ---
@@ -263,7 +277,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.1.3  
+Version 1.2.0  
 April 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.

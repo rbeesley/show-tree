@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.2.0] - 2026-04-30
+
+### Added
+
+- New `-Mode` parameter (`Normal`, `Tree`, `List`) for explicit mode selection.
+- Backward-compatible aliases `-Tree` and `-List` now map to `-Mode Tree` and `-Mode List`.
+- Mode resolution logic with clear, predictable behavior and no accidental mode switching.
+- Pester test suite for path resolution, mode binding, and paired-switch validation.
+- Internal helper `Resolve-TreePath` with full test coverage.
+- Structured private helper files under `Private\` for filtering, rendering, gap logic, connectors, styles, and path utilities.
+
+### Changed
+
+- `-Tree` and `-List` are now **deprecated** but still supported.
+- `-Mode List` replaces the previous `Listing` name for consistency.
+- `-Color` is now allowed in Normal mode and simply forces color on.
+- Paired switches (e.g., `-Color`/`-Mono`, `-Files`/`-NoFiles`) now validate mutual exclusivity.
+- Effective settings are now computed based on `$Mode` instead of parameter sets.
+- README updated to reflect new mode system and deprecations.
+- PowerShell Gallery description updated for clarity and accuracy.
+
+### Fixed
+
+- **Resolved major path-resolution bug** where relative paths were incorrectly resolved when the module was installed from the PowerShell Gallery.
+- Normalized path handling now guarantees rooted paths before resolution.
+- Tree mode now correctly reproduces `tree.com` error behavior for invalid drives and paths.
+- Several internal helpers updated to use `$Mode` instead of `$Tree`/`$List`.
+
+### Removed
+
+- Parameter-set-based mode selection (replaced by unified `-Mode` system).
+- Monolithic `Show-TreeInternal.ps1` structure (replaced with modular private helpers).
+
+### Notes
+
+This release focuses on correctness, predictability, and maintainability.  
+All public behavior remains backward compatible, but internal logic has been significantly modernized.
+
+---
+
 ## [1.1.3] - 2026-04-29
 
 ### Added
