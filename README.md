@@ -267,8 +267,26 @@ Install-Module -Name Pester -Force -MinimumVersion 5.7.1
 From the repo root, run:
 
 ```powershell
-.\ShowTree\Tests\RunTests.ps1
+.\Run-Tests.ps1
 ```
+
+You may also run an individual test file with this command:
+
+```powershell
+.\Run-TestFile.ps1 -Path <.[\Private|\Public]*.Tests.ps1>
+```
+
+From Visual Studio Code, and any time you've made changes you want to test, manually import the test module first by running the following in the PowerShell terminal window in Code:
+
+```powershell
+. .\Tests\Helpers\Import-ShowTreeUnderTest.ps1
+```
+
+This can also be done by making this file the focus in your editor and pressing the run button to the far right of the tabs. This has the added benefit of saving all modified files so that you are commiting them to the test state.
+
+Then you may use the Code Lens `Run Tests` / `Debug Tests` / `Run Test` / `Debug Test` buttons to have more grainular control over what you are testing.
+
+The Pester Test Explorer extension is not recommended for use as it handles the environment in a way which often conflicts.
 
 ---
 
@@ -294,7 +312,7 @@ This project is licensed under the MIT License. See the LICENSE file for details
 ## Author
 
 **Ryan Beesley**  
-Version 1.2.1  
-April 2026
+Version 2.0.0  
+May 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.
