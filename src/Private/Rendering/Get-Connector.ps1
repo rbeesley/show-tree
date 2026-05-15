@@ -43,7 +43,9 @@ function Get-Connector {
         }
 
         switch ($Type) {
-            'File'      { return $Ascii ? '|   '  : '│   ' }
+            'File'      {
+                if ($Ascii) {return '|   '} else {return '│   '}
+                return $Ascii ? '|   '  : '│   ' }
             'Directory' {
                 if ($IsLast) { return $Ascii ? '\---' : '└───' }
                 else         { return $Ascii ? '+---' : '├───' }

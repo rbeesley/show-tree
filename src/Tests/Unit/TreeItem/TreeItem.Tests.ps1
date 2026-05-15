@@ -1,7 +1,7 @@
-# src\Tests\Private\TreeItem.Tests.ps1
+# src\Tests\Unit\TreeItem\TreeItem.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
@@ -11,8 +11,8 @@ BeforeAll {
 
 Describe "New-TreeItem" {
     It "creates a basic file TreeItem with correct defaults" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TreeItem -FullPath 'C:\Test\File.txt' -IsDirectory:$false
 
@@ -29,8 +29,8 @@ Describe "New-TreeItem" {
     }
 
     It "creates a directory TreeItem with correct defaults" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TreeItem -FullPath 'C:\Test\Dir' -IsDirectory:$true
 
@@ -41,8 +41,8 @@ Describe "New-TreeItem" {
     }
 
     It "allows overriding Name and Type" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TreeItem `
                 -FullPath 'C:\X\Y' `
@@ -56,8 +56,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports attributes" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TreeItem `
                 -FullPath 'C:\Hidden\File.txt' `
@@ -70,8 +70,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports children" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $child = New-TreeItem -FullPath 'C:\Test\Child.txt' -IsDirectory:$false
             $parent = New-TreeItem -FullPath 'C:\Test' -IsDirectory:$true -Children @($child)
@@ -82,8 +82,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports symlink and junction flags" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TreeItem `
                 -FullPath 'C:\Link' `

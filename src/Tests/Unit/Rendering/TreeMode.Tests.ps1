@@ -1,7 +1,7 @@
-# src\Tests\Private\TreeMode.Tests.ps1
+# src\Tests\Unit\Rendering\TreeMode.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
@@ -18,8 +18,8 @@ BeforeAll {
 
 Describe "Tree.com compatibility" {
     It "Matches Tree.com output for a simple tree" {
-        InModuleScope ShowTree { 
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $fixture = New-TestTree ([ordered]@{
                 root = [ordered]@{

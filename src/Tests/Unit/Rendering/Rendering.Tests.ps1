@@ -1,7 +1,7 @@
-# src\Tests\Private\Get-Connector.Tests.ps1
+# src\Tests\Unit\Rendering\Rendering.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
@@ -48,7 +48,7 @@ BeforeAll {
 Describe "Get-ItemStyle" {
     It "Applies base directory style" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TestItem -Name "Dir" -IsDirectory:$true -Attributes ([IO.FileAttributes]::Directory)
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
@@ -59,7 +59,7 @@ Describe "Get-ItemStyle" {
 
     It "Applies Hidden overlay" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TestItem -Name "Hidden" -Attributes ([IO.FileAttributes]::Hidden)
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
@@ -71,7 +71,7 @@ Describe "Get-ItemStyle" {
 
     It "Applies System foreground override" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $item = New-TestItem -Name "Sys" -Attributes ([IO.FileAttributes]::System)
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile

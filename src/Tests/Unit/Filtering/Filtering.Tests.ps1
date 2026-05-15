@@ -1,7 +1,7 @@
-# src\Tests\Private\Get-FilteredTreeItems.Tests.ps1
+# src\Tests\Unit\Filtering\Filtering.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
@@ -12,7 +12,7 @@ BeforeAll {
 Describe "Get-FilteredTreeItems" {
     It "Excludes exact matches" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $items = @(
                 New-TestItem -Name ".git"
@@ -28,7 +28,7 @@ Describe "Get-FilteredTreeItems" {
 
     It "Glob include resurrects items excluded by glob" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $items = @(
                 New-TestItem -Name ".git"
@@ -44,7 +44,7 @@ Describe "Get-FilteredTreeItems" {
 
     It "Exact exclude beats glob include" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $items = @(
                 New-TestItem -Name ".git"
@@ -60,7 +60,7 @@ Describe "Get-FilteredTreeItems" {
 
     It "Include resurrects hidden items" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $items = @(
                 New-TestItem -Name ".config" -Attributes ([IO.FileAttributes]::Hidden)
@@ -75,7 +75,7 @@ Describe "Get-FilteredTreeItems" {
 
     It "Preserves original ordering" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\Helpers\PrivateHelpers.ps1"
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $items = @(
                 New-TestItem -Name "a"

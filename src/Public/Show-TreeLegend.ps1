@@ -42,6 +42,24 @@ function Show-TreeLegend {
         Write-Output ("{0,-22} {1}{2}{3}" -f ($Indent + $Name), $ansi, $Name, $reset)
     }
 
+    function ConvertTo-LegendFileAttributes {
+        param(
+            [Parameter(Mandatory)]
+            [string] $Name
+        )
+
+        if ($Name -eq 'None') {
+            return [IO.FileAttributes] 0
+        }
+
+        try {
+            return [IO.FileAttributes] [System.Enum]::Parse([IO.FileAttributes], $Name, $true)
+        }
+        catch {
+            throw "Style profile attribute '$Name' is not a valid System.IO.FileAttributes value."
+        }
+    }
+
     #
     # Base types
     #
@@ -50,7 +68,7 @@ function Show-TreeLegend {
     Show-Sample "File"      ([pscustomobject]@{ PSIsContainer = $false; Attributes = [IO.FileAttributes]::Archive }) " "
     Write-Output "  Attributes:"
     foreach ($attr in $StyleProfile.Attributes.Keys) {
-        $flag = [IO.FileAttributes]::$attr
+        $flag = ConvertTo-LegendFileAttributes -Name $attr
         $item = [pscustomobject]@{
             PSIsContainer = $false
             Attributes    = $flag
@@ -62,7 +80,7 @@ function Show-TreeLegend {
     Show-Sample "Directory" ([pscustomobject]@{ PSIsContainer = $true;  Attributes = [IO.FileAttributes]::Directory }) " "
     Write-Output "  Attributes:"
     foreach ($attr in $StyleProfile.Attributes.Keys) {
-        $flag = [IO.FileAttributes]::$attr
+        $flag = ConvertTo-LegendFileAttributes -Name $attr
         $item = [pscustomobject]@{
             PSIsContainer = $true
             Attributes    = $flag

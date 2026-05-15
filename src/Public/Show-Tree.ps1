@@ -194,6 +194,10 @@ function Show-Tree {
     if ($AsTree)    { $Mode = 'Tree' }
     if ($AsListing) { $Mode = 'List' }
 
+    if ($Mode -eq 'Tree' -and $PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
+        throw "ShowTree currently supports Windows only."
+    }
+
     #
     # Validate paired switches
     #

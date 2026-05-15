@@ -26,7 +26,20 @@ if ($ModuleInfo.SourceRootPath) {
 
 $fileEntries = foreach ($path in $allPaths | Select-Object -Unique) {
     $resolved = (Resolve-Path -LiteralPath $path).ProviderPath
-    $relative = [IO.Path]::GetRelativePath($ModuleInfo.ModuleBase, $resolved).Replace('\', '/')
+    # Fallback for Windows PowerShell where [IO.Path]::GetRelativePath is missing
+    $relative = if ([Type]::GetType('System.IO.Path') | Get-Member -Static -Name GetRelativePath) {
+        [IO.Path]::GetRelativePath($ModuleInfo.ModuleBase, $resolved)
+    }
+    else {
+        $base = $ModuleInfo.ModuleBase.TrimEnd('\') + '\'
+        if ($resolved.StartsWith($base, [StringComparison]::OrdinalIgnoreCase)) {
+            $resolved.Substring($base.Length)
+        }
+        else {
+            $resolved
+        }
+    }
+    $relative = $relative.Replace('\', '/')
 
     [pscustomobject]@{
         FullPath  = $resolved

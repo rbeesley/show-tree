@@ -31,3 +31,5 @@
 
 # Project files and directories
 TestAttributes
+/dist/
+/build/.cache/
