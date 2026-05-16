@@ -29,7 +29,7 @@ function Get-ItemStyle {
 
     $esc = [char]27
 
-    $isDir     = $Item.PSIsContainer
+    $isDir     = $Item.IsDirectory
     $attrs     = $Item.Attributes
 
     #

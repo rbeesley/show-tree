@@ -98,15 +98,33 @@ function Show-TreeInternal {
     }
     else {
         # Standard PowerShell enumeration
-        $files = $IncludeFiles ? (Get-ChildItem -Path $Path -File -Force -ErrorAction SilentlyContinue) : @()
-        $dirs  = Get-ChildItem -Path $Path -Directory -Force -ErrorAction SilentlyContinue
+        $rawItems = Get-ChildItem -Path $Path -Force -ErrorAction SilentlyContinue
+        
+        $files = @()
+        $dirs  = @()
+
+        foreach ($item in $rawItems) {
+            $treeItem = New-TreeItem `
+                -FullPath $item.FullName `
+                -IsDirectory $item.PSIsContainer `
+                -Name $item.Name `
+                -Attributes $item.Attributes `
+                -Depth $CurrentDepth
+
+            if ($item.PSIsContainer) {
+                $dirs += $treeItem
+            }
+            elseif ($IncludeFiles) {
+                $files += $treeItem
+            }
+        }
     }
 
     #
     # Filtering
     #
-    $dirs  = Get-FilteredTreeItems -Items $dirs  -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
-    $files = Get-FilteredTreeItems -Items $files -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem
+    $dirs  = @(Get-FilteredTreeItems -Items $dirs  -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem)
+    $files = @(Get-FilteredTreeItems -Items $files -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem)
 
     $fileCount = $files.Count
     $dirCount  = $dirs.Count

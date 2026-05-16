@@ -46,9 +46,6 @@ function Resolve-TreePath {
             $Path = Join-Path -Path $cwd -ChildPath $Path
         }
 
-        # Normalize casing/segments
-        $Path = Get-NormalizedPath -Path $Path -ErrorAction Stop
-
         # Resolve to provider path
         $resolved = Resolve-Path -LiteralPath $Path -ErrorAction Stop
         return $resolved.ProviderPath

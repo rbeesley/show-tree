@@ -16,7 +16,7 @@ BeforeAll {
     }
 }
 
-Describe "Tree.com compatibility" {
+Describe "Tree.com compatibility" -Skip:(-not $IsWindows) {
     It "Matches Tree.com output for a simple tree" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
@@ -38,7 +38,7 @@ Describe "Tree.com compatibility" {
                 Convert-TestTreeToRaw -Root $fixture -Path $Path
             }
 
-            $result = Show-TreeInternal -Path $fixture.FullName -Mode 'Tree' -IncludeFiles:$true | Out-String
+            $result = Show-TreeInternal -Path $fixture.FullPath -Mode 'Tree' -IncludeFiles:$true | Out-String
 
             $expected = @"
 ├───a

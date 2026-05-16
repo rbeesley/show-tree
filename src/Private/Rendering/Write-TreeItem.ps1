@@ -69,10 +69,15 @@ function Write-TreeItem {
     # Reparse target resolution
     #
     $target = $null
-    if ($ShowTargets -and ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-        $info = Get-Item -LiteralPath $Item.FullName -Force -ErrorAction SilentlyContinue
-        if ($info -and $info.PSObject.Properties.Match('Target')) {
-            $target = $info.Target
+    if ($ShowTargets -and $Item.IsReparsePoint) {
+        if ($Item.Target) {
+            $target = $Item.Target
+        }
+        else {
+            $info = Get-Item -LiteralPath $Item.FullPath -Force -ErrorAction SilentlyContinue
+            if ($info -and $info.PSObject.Properties.Match('Target')) {
+                $target = $info.Target
+            }
         }
     }
 
@@ -107,8 +112,8 @@ function Write-TreeItem {
     # Recursion into subdirectories
     #
     if ($Recurse -and
-        $Type -eq 'Directory' -and
-        -not ($Item.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+        $Item.IsDirectory -and
+        -not $Item.IsReparsePoint) {
 
         # Build next-level prefix
         $newPrefix = $Prefix + (Get-Connector `
@@ -119,7 +124,7 @@ function Write-TreeItem {
 
         # Recurse
         Show-TreeInternal `
-            -Path          $Item.FullName `
+            -Path          $Item.FullPath `
             -Mode          $Mode `
             -MaxDepth      $MaxDepth `
             -Colorize:$Colorize `

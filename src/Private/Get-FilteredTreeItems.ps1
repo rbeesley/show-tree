@@ -60,8 +60,8 @@ function Get-FilteredTreeItems {
     #
     # Hidden/System sets
     #
-    $hidden = $HideHidden ? ($orig | Where-Object { $_.Attributes -band [IO.FileAttributes]::Hidden }) : @()
-    $system = $HideSystem ? ($orig | Where-Object { $_.Attributes -band [IO.FileAttributes]::System }) : @()
+    [object[]]$hidden = $HideHidden ? ($orig | Where-Object { $_.IsHidden }) : @()
+    [object[]]$system = $HideSystem ? ($orig | Where-Object { $_.IsSystem }) : @()
 
     #
     # Exclude sets (exact + glob)
@@ -94,11 +94,11 @@ function Get-FilteredTreeItems {
     #
     # Final filtering (stable order)
     #
-    $final = foreach ($item in $orig) {
+    [object[]]$final = foreach ($item in $orig) {
         $name = $item.Name
 
-        $isHidden        = $hidden        -contains $item
-        $isSystem        = $system        -contains $item
+        $isHidden        = $HideHidden ? ($hidden -contains $item) : $false
+        $isSystem        = $HideSystem ? ($system -contains $item) : $false
         $isExcludedExact = $excludedExact -contains $item
         $isExcludedGlob  = $excludedGlob  -contains $item
         $isIncludedExact = $includedExact -contains $item

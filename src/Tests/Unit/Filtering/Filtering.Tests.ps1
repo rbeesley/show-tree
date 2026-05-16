@@ -88,4 +88,24 @@ Describe "Get-FilteredTreeItems" {
             $result.Name | Should -Be @("a","c")
         }
     }
+
+    It 'correctly filters a single directory even on Windows PowerShell 5.1' {
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+
+            $items = @(
+                New-TestItem -Name "Normal"
+                New-TestItem -Name "Hidden" -Attributes ([IO.FileAttributes]::Hidden)
+            )
+
+            # In 5.1, a single object return from a function might lose .Count if not handled as array
+            $filtered = @(Get-FilteredTreeItems -Items $items -HideHidden)
+            
+            $filtered.Count | Should -Be 1
+            $filtered[0].Name | Should -Be "Normal"
+            
+            # Verify that Hidden was actually identified as hidden
+            $items[1].IsHidden | Should -Be $true
+        }
+    }
 }

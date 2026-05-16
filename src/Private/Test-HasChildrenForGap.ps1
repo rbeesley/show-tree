@@ -15,7 +15,7 @@ function Test-HasChildrenForGap {
         [int]$MaxDepth
     )
 
-    if (Test-IsReparsePoint $Dir) {
+    if ($Dir.IsReparsePoint) {
         return $false
     }
 
@@ -24,6 +24,6 @@ function Test-HasChildrenForGap {
         return $false
     }
 
-    $children = Get-ChildItem -LiteralPath $Dir.FullName -Force -ErrorAction SilentlyContinue
+    $children = Get-ChildItem -LiteralPath $Dir.FullPath -Force -ErrorAction SilentlyContinue
     return $children.Count -gt 0
 }

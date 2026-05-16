@@ -1,4 +1,4 @@
-# src\Private\RawDirectoryEnumeration.ps1
+# src\Private\Get-RawDirectoryEnumeration.ps1
 
 <#
 .SYNOPSIS
@@ -78,23 +78,18 @@ public class RawEnum {
 
     foreach ($e in $entries) {
         $isDir = ($e.dwFileAttributes -band [IO.FileAttributes]::Directory) -ne 0
+        $fullPath = Join-Path $Path $e.cFileName
 
-        $root = Get-Item -LiteralPath (Join-Path $Path $e.cFileName) -Force -ErrorAction SilentlyContinue
-        if (-not $root) { continue }
-
-        $item = [PSCustomObject]@{
-            FullName      = $root.FullName
-            Name          = $root.Name
-            Attributes    = $root.Attributes
-            PSIsContainer = $isDir
-        }
+        $item = New-TreeItem `
+            -FullPath $fullPath `
+            -IsDirectory $isDir `
+            -Name $e.cFileName `
+            -Attributes $e.dwFileAttributes
 
         if ($isDir) {
-            $item.PSObject.TypeNames.Insert(0, 'System.IO.DirectoryInfo')
             $dirs += $item
         }
         else {
-            $item.PSObject.TypeNames.Insert(0, 'System.IO.FileInfo')
             $files += $item
         }
     }

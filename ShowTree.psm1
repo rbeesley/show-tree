@@ -23,7 +23,6 @@ else {
 . (Join-Path $moduleSrcRoot 'Private\New-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Resolve-TreePath.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-SetFileAttributes.ps1')
-. (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-NormalizedPath.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-NearestExistingParent.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-VolumeName.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-VolumeSerialNumber.ps1')
@@ -33,7 +32,6 @@ else {
 . (Join-Path $moduleSrcRoot 'Private\Rendering\Write-Gap.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Show-TreeInternal.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Test-HasChildrenForGap.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Test-IsReparsePoint.ps1')
 
 # Load the default style profile
 $script:DefaultStyleProfilePath = Join-Path $moduleSrcRoot 'Data\DefaultStyleProfile.psd1'

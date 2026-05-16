@@ -3,31 +3,38 @@
 function New-TestItem {
     param(
         [string]$Name,
-        [string]$ParentPath = "C:\Test",
+        [string]$ParentPath,
         [IO.FileAttributes]$Attributes = [IO.FileAttributes]::Normal,
         [bool]$IsDirectory = $false,
         [array]$Children = @()
     )
 
-    $fullPath = Join-Path $ParentPath $Name
-
-    $obj = [pscustomobject]@{
-        Name          = $Name
-        FullName      = $fullPath
-        Attributes    = $Attributes
-        PSIsContainer = $IsDirectory
-        Children      = $Children
+    if (-not $ParentPath) {
+        $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
     }
 
-    return $obj
+    $fullPath = Join-Path $ParentPath $Name
+
+    $treeItem = New-TreeItem `
+        -FullPath $fullPath `
+        -IsDirectory $IsDirectory `
+        -Name $Name `
+        -Attributes $Attributes `
+        -Children $Children
+
+    return $treeItem
 }
 
 function New-TestTree {
     param(
         [Parameter(Mandatory)]
         [hashtable]$Structure,
-        [string]$ParentPath = "C:\Test"
+        [string]$ParentPath
     )
+
+    if (-not $ParentPath) {
+        $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+    }
 
     function BuildNode($name, $value, $parentPath) {
 
@@ -104,7 +111,7 @@ function Convert-TestTreeToRaw {
     $dirs  = @()
 
     foreach ($child in $node.Children) {
-        if ($child.PSIsContainer) {
+        if ($child.IsDirectory) {
             $dirs += $child
         }
         else {
@@ -126,18 +133,18 @@ function Find-TestNodeByPath {
         [string]$Path
     )
 
-    if ($Root.FullName -eq $Path) {
+    if ($Root.FullPath -eq $Path) {
         return $Root
     }
 
     foreach ($child in $Root.Children) {
-        if ($child.PSIsContainer) {
+        if ($child.IsDirectory) {
             $found = Find-TestNodeByPath -Root $child -Path $Path
             if ($null -ne $found) {
                 return $found
             }
         }
-        elseif ($child.FullName -eq $Path) {
+        elseif ($child.FullPath -eq $Path) {
             return $child
         }
     }

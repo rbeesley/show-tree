@@ -44,16 +44,18 @@ function Get-Connector {
 
         switch ($Type) {
             'File'      {
-                if ($Ascii) {return '|   '} else {return '│   '}
-                return $Ascii ? '|   '  : '│   ' }
-            'Directory' {
-                if ($IsLast) { return $Ascii ? '\---' : '└───' }
-                else         { return $Ascii ? '+---' : '├───' }
+                return             ( $Ascii ? '|   ' : '│   ' )
             }
-            'Gap'       { return $Ascii ? '|'    : '│' }
+            'Directory' {
+                return ( $IsLast ? ( $Ascii ? '\---' : '└───' ) `
+                                 : ( $Ascii ? '+---' : '├───' ))
+            }
+            'Gap'       {
+                return             ( $Ascii ? '|'    : '│' )
+            }
             'Prefix'    {
-                if ($IsLast) { return '    ' }
-                else         { return $Ascii ? '|   ' : '│   ' }
+                return ( $IsLast ? '    ' `
+                                 : ( $Ascii ? '|   ' : '│   ' ))
             }
         }
     }
@@ -63,22 +65,22 @@ function Get-Connector {
     #
     switch ($Type) {
         'File' {
-            if ($IsLast) { return $Ascii ? '\-- ' : '╙── ' }
-            else         { return $Ascii ? '+-- ' : '╟── ' }
+            return ( $IsLast ? ( $Ascii ? '\-- ' : '╙── ' ) `
+                             : ( $Ascii ? '+-- ' : '╟── ' ))
         }
 
         'Directory' {
-            if ($IsLast) { return $Ascii ? '\== ' : '╚══ ' }
-            else         { return $Ascii ? '+== ' : '╠══ ' }
+            return ( $IsLast ? ( $Ascii ? '\== ' : '╚══ ' ) `
+                             : ( $Ascii ? '+== ' : '╠══ ' ))
         }
 
         'Gap' {
-            return $Ascii ? '|' : '║'
+            return             ( $Ascii ? '|' : '║' )
         }
 
         'Prefix' {
-            if ($IsLast) { return '    ' }
-            else         { return $Ascii ? '|   ' : '║   ' }
+            return ( $IsLast ? ( '    ' ) `
+                             : ( $Ascii ? '|   ' : '║   ' ))
         }
     }
 }
