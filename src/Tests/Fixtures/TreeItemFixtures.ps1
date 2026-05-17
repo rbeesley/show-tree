@@ -72,7 +72,7 @@ function New-FixtureTree {
         $isJunction = $false
         $target = $null
 
-        if ($value -is [System.Collections.Specialized.OrderedDictionary]) {
+        if ($value -is [System.Collections.Specialized.OrderedDictionary] -or ($value -is [hashtable] -and -not $value.ContainsKey('Children') -and -not $value.ContainsKey('IsSymlink') -and -not $value.ContainsKey('IsJunction'))) {
             $isDir = $true
             $children = foreach ($key in $value.Keys) {
                 BuildFixtureNode $key $value[$key] (Join-Path $parentPath $name) ($depth + 1)

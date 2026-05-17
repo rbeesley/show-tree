@@ -13,10 +13,11 @@ else {
 . (Join-Path $moduleSrcRoot 'Public\Show-Tree.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Show-TreeLegend.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Set-ShowTreeStyleProfile.ps1')
+. (Join-Path $moduleSrcRoot 'Public\Get-TreeItem.ps1')
+. (Join-Path $moduleSrcRoot 'Public\Get-FilteredTreeItems.ps1')
 
 # Dot-source private functions
 . (Join-Path $moduleSrcRoot 'Private\Get-ActiveShowTreeStyleProfile.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Get-FilteredTreeItems.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Get-RawDirectoryEntries.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Get-ShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Merge-ShowTreeHashtable.ps1')
@@ -43,4 +44,4 @@ $script:ShowTreeState = @{
 $script:ShowTreeState.StyleProfile = Import-PowerShellDataFile -LiteralPath $script:DefaultStyleProfilePath
 
 # Export only the public function
-Export-ModuleMember -Function Show-Tree, Show-TreeLegend, Set-ShowTreeStyleProfile
+Export-ModuleMember -Function Show-Tree, Show-TreeLegend, Set-ShowTreeStyleProfile, Get-TreeItem, Get-FilteredTreeItems

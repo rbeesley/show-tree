@@ -91,14 +91,14 @@ Describe 'Resolve-TreePath' {
         InModuleScope ShowTree {
             if ($IsWindows) {
                 Resolve-TreePath -Path 'c:\windows\..\windows\system32' |
-                    Should -Be 'C:\Windows\System32'
+                    Should -BeExactly 'C:\windows\system32'
             }
             else {
                 # Linux is case-sensitive, so we can't easily test normalization of casing
                 # unless we know a specific path that exists with different casing in input.
                 # But we can test segment collapse.
                 Resolve-TreePath -Path '/etc/../etc/pam.d' |
-                    Should -Be '/etc/pam.d'
+                    Should -BeExactly '/etc/pam.d'
             }
         }
     }
