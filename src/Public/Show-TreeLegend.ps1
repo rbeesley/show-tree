@@ -65,26 +65,20 @@ function Show-TreeLegend {
     #
     Write-Output "Types:"
 
-    Show-Sample "File"      ([pscustomobject]@{ PSIsContainer = $false; Attributes = [IO.FileAttributes]::Archive }) " "
+    Show-Sample "File"      (New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = [IO.FileAttributes]::Archive }) " "
     Write-Output "  Attributes:"
     foreach ($attr in $StyleProfile.Attributes.Keys) {
         $flag = ConvertTo-LegendFileAttributes -Name $attr
-        $item = [pscustomobject]@{
-            PSIsContainer = $false
-            Attributes    = $flag
-        }
+        $item = New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = $flag }
         Show-Sample $attr $item "   "
     }
     Write-Output ""
 
-    Show-Sample "Directory" ([pscustomobject]@{ PSIsContainer = $true;  Attributes = [IO.FileAttributes]::Directory }) " "
+    Show-Sample "Directory" (New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = [IO.FileAttributes]::Directory }) " "
     Write-Output "  Attributes:"
     foreach ($attr in $StyleProfile.Attributes.Keys) {
         $flag = ConvertTo-LegendFileAttributes -Name $attr
-        $item = [pscustomobject]@{
-            PSIsContainer = $true
-            Attributes    = $flag
-        }
+        $item = New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = $flag }
         Show-Sample $attr $item "   "
     }
     Write-Output ""

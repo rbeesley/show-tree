@@ -29,13 +29,14 @@ function Get-ItemStyle {
 
     $esc = [char]27
 
-    $isDir     = $Item.IsDirectory
-    $attrs     = $Item.Attributes
+    $isContainer = $Item.IsContainer
+    $attrs       = $Item.Native.FileAttributes
+    $kind        = $Item.Kind
 
     #
     # Determine base style
     #
-    if ($isDir) {
+    if ($isContainer) {
         $styleName = "Directory"
         $base      = $StyleProfile.Base.Directory
     }
@@ -66,24 +67,26 @@ function Get-ItemStyle {
     #
     # Apply attribute overlays
     #
-    foreach ($flag in Get-SetFileAttributes $attrs) {
-        $flagName = $flag.ToString()
+    if ($attrs -ne $null) {
+        foreach ($flag in Get-SetFileAttributes $attrs) {
+            $flagName = $flag.ToString()
 
-        if ($StyleProfile.Attributes.ContainsKey($flagName)) {
-            $overlay = $StyleProfile.Attributes[$flagName]
+            if ($StyleProfile.Attributes.ContainsKey($flagName)) {
+                $overlay = $StyleProfile.Attributes[$flagName]
 
-            # Add overlay attributes
-            if ($overlay.Attributes) {
-                $codes += ($overlay.Attributes -split ';')
-            }
-
-            # Foreground override
-            if ($overlay.OverrideForeground) {
-                if ($overlay.OverrideForeground -is [string]) {
-                    $fg = $overlay.OverrideForeground
+                # Add overlay attributes
+                if ($overlay.Attributes) {
+                    $codes += ($overlay.Attributes -split ';')
                 }
-                elseif ($overlay.OverrideForeground.ContainsKey($styleName)) {
-                    $fg = $overlay.OverrideForeground[$styleName]
+
+                # Foreground override
+                if ($overlay.OverrideForeground) {
+                    if ($overlay.OverrideForeground -is [string]) {
+                        $fg = $overlay.OverrideForeground
+                    }
+                    elseif ($overlay.OverrideForeground.ContainsKey($styleName)) {
+                        $fg = $overlay.OverrideForeground[$styleName]
+                    }
                 }
             }
         }

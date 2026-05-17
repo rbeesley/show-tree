@@ -3,6 +3,8 @@
 [CmdletBinding()]
 param(
     [string[]] $Task = @('Test'),
+    [string[]] $Test,
+    [string[]] $Tag,
     [switch] $Bootstrap
 )
 
@@ -36,4 +38,17 @@ catch {
     exit 1
 }
 
-Invoke-Build -File (Join-Path $PSScriptRoot 'build\tasks.build.ps1') -Task $Task
+$invokeBuildParams = @{
+    File = (Join-Path $PSScriptRoot 'build\tasks.build.ps1')
+    Task = $Task
+}
+
+if ($PSBoundParameters.ContainsKey('Test')) {
+    $invokeBuildParams.Test = $Test
+}
+
+if ($PSBoundParameters.ContainsKey('Tag')) {
+    $invokeBuildParams.Tag = $Tag
+}
+
+Invoke-Build @invokeBuildParams

@@ -298,19 +298,26 @@ function Show-Tree {
     if ($Mode -ne 'Tree') {
         # Render root directory name (Normal + Listing modes only)
         $root = Get-Item $Path
+        $native = [PSCustomObject]@{
+            Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+            FileAttributes = $root.Attributes
+        }
+        $kind = if ($root.PSIsContainer) { 'Directory' } else { 'File' }
         $treeItem = New-TreeItem `
             -FullPath $root.FullName `
-            -IsDirectory $root.PSIsContainer `
+            -IsContainer $root.PSIsContainer `
+            -Kind $kind `
             -Name $root.Name `
-            -Attributes $root.Attributes `
+            -Native $native `
             -Depth 0
 
         $style = Get-ItemStyle -Item $treeItem -Colorize:$EffectiveColorize
 
         if ($DebugAttributes) {
             $styleName = $style.Name
-            $attrHex   = ('0x{0:X8}' -f [uint32]$treeItem.Attributes)
-            $attrNames = $treeItem.Attributes.ToString()
+            $attributes = $treeItem.Native.FileAttributes
+            $attrHex   = if ($attributes -ne $null) { ('0x{0:X8}' -f [uint32]$attributes) } else { "n/a" }
+            $attrNames = if ($attributes -ne $null) { $attributes.ToString() } else { "n/a" }
             $debug     = " [$attrHex $attrNames | $styleName]"
         }
 

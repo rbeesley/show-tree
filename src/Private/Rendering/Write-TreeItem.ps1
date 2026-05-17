@@ -69,11 +69,12 @@ function Write-TreeItem {
     # Reparse target resolution
     #
     $target = $null
-    if ($ShowTargets -and $Item.IsReparsePoint) {
-        if ($Item.Target) {
-            $target = $Item.Target
+    if ($ShowTargets -and $Item.IsLink) {
+        if ($Item.Link.Target) {
+            $target = $Item.Link.Target
         }
         else {
+            # Fallback for partially populated Link objects
             $info = Get-Item -LiteralPath $Item.FullPath -Force -ErrorAction SilentlyContinue
             if ($info -and $info.PSObject.Properties.Match('Target')) {
                 $target = $info.Target
@@ -94,8 +95,9 @@ function Write-TreeItem {
     $debug = ""
     if ($DebugAttributes) {
         $styleName = $style.Name
-        $attrHex   = ('0x{0:X8}' -f [uint32]$Item.Attributes)
-        $attrNames = $Item.Attributes.ToString()
+        $attributes = $Item.Native.FileAttributes
+        $attrHex   = if ($attributes -ne $null) { ('0x{0:X8}' -f [uint32]$attributes) } else { "n/a" }
+        $attrNames = if ($attributes -ne $null) { $attributes.ToString() } else { "n/a" }
         $debug     = " [$attrHex $attrNames | $styleName]"
     }
 
@@ -113,7 +115,7 @@ function Write-TreeItem {
     #
     if ($Recurse -and
         $Item.IsDirectory -and
-        -not $Item.IsReparsePoint) {
+        -not $Item.IsLink) {
 
         # Build next-level prefix
         $newPrefix = $Prefix + (Get-Connector `

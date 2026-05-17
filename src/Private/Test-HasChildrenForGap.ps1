@@ -15,7 +15,7 @@ function Test-HasChildrenForGap {
         [int]$MaxDepth
     )
 
-    if ($Dir.IsReparsePoint) {
+    if ($Dir.IsLink) {
         return $false
     }
 

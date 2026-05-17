@@ -15,11 +15,20 @@ function New-TestItem {
 
     $fullPath = Join-Path $ParentPath $Name
 
+    $kind = if ($IsDirectory) { 'Directory' } else { 'File' }
+    if ($Attributes -band [IO.FileAttributes]::ReparsePoint) { $kind = 'Symlink' }
+
+    $native = [PSCustomObject]@{
+        Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+        FileAttributes = $Attributes
+    }
+
     $treeItem = New-TreeItem `
         -FullPath $fullPath `
-        -IsDirectory $IsDirectory `
+        -IsContainer $IsDirectory `
+        -Kind $kind `
         -Name $Name `
-        -Attributes $Attributes `
+        -Native $native `
         -Children $Children
 
     return $treeItem

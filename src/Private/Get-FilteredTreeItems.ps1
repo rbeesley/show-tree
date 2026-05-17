@@ -60,8 +60,13 @@ function Get-FilteredTreeItems {
     #
     # Hidden/System sets
     #
-    [object[]]$hidden = $HideHidden ? ($orig | Where-Object { $_.IsHidden }) : @()
-    [object[]]$system = $HideSystem ? ($orig | Where-Object { $_.IsSystem }) : @()
+    [object[]]$hidden = $HideHidden ? ($orig | Where-Object { 
+        $_.IsHidden -eq $true -or 
+        ($_.Native.FileAttributes -ne $null -and ($_.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0)
+    }) : @()
+    [object[]]$system = $HideSystem ? ($orig | Where-Object { 
+        ($_.Native.FileAttributes -ne $null -and ($_.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0)
+    }) : @()
 
     #
     # Exclude sets (exact + glob)

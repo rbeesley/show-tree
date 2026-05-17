@@ -80,11 +80,32 @@ public class RawEnum {
         $isDir = ($e.dwFileAttributes -band [IO.FileAttributes]::Directory) -ne 0
         $fullPath = Join-Path $Path $e.cFileName
 
+        $native = [PSCustomObject]@{
+            Platform = 'Windows'
+            FileAttributes = [IO.FileAttributes]$e.dwFileAttributes
+        }
+
+        $kind = if ($isDir) { 'Directory' } else { 'File' }
+        $link = $null
+        if (($e.dwFileAttributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+            $kind = if ($isDir) { 'Junction' } else { 'Symlink' }
+            # In raw mode (Win32 API), we don't have the target easily.
+            # We'll let Write-TreeItem resolve it via fallback if needed.
+            $link = [PSCustomObject]@{
+                Type       = if ($isDir) { 'Junction' } else { 'SymbolicLink' }
+                Target     = $null
+                TargetPath = $null
+                IsBroken   = $null
+            }
+        }
+
         $item = New-TreeItem `
             -FullPath $fullPath `
-            -IsDirectory $isDir `
+            -IsContainer $isDir `
+            -Kind $kind `
             -Name $e.cFileName `
-            -Attributes $e.dwFileAttributes
+            -Native $native `
+            -Link $link
 
         if ($isDir) {
             $dirs += $item

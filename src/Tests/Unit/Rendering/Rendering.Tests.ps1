@@ -79,6 +79,48 @@ Describe "Get-ItemStyle" {
             $style.Ansi | Should -Match "1-8" # System file override
         }
     }
+
+    It "Styles symlink to directory as Directory" {
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+
+            # Create a symlink that points to a directory
+            $item = New-TreeItem -FullPath "C:\Test\LinkToDir" -Name "LinkToDir" `
+                -Kind 'Symlink' -IsContainer:$true -Link @{ Type = 'SymbolicLink' }
+
+            $item.Native = [PSCustomObject]@{
+                Platform = 'Windows'
+                FileAttributes = [IO.FileAttributes]::ReparsePoint
+            }
+            
+            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
+            
+            $style.Name | Should -Be "Directory"
+            $style.Ansi | Should -Match "2"      # Should use Directory base
+            $style.Ansi | Should -Match "1024"   # Should still have ReparsePoint overlay
+        }
+    }
+
+    It "Styles symlink to file as File" {
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+
+            # Create a symlink that points to a file
+            $item = New-TreeItem -FullPath "C:\Test\LinkToFile" -Name "LinkToFile" `
+                -Kind 'Symlink' -IsContainer:$false -Link @{ Type = 'SymbolicLink' }
+
+            $item.Native = [PSCustomObject]@{
+                Platform = 'Windows'
+                FileAttributes = [IO.FileAttributes]::ReparsePoint
+            }
+
+            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
+            
+            $style.Name | Should -Be "File"
+            $style.Ansi | Should -Match "1"      # Should use File base
+            $style.Ansi | Should -Match "1024"   # Should still have ReparsePoint overlay
+        }
+    }
 }
 
 Describe "Get-Connector" {

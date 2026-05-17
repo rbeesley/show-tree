@@ -105,7 +105,7 @@ Describe "Get-FilteredTreeItems" {
             $filtered[0].Name | Should -Be "Normal"
             
             # Verify that Hidden was actually identified as hidden
-            $items[1].IsHidden | Should -Be $true
+            ($items[1].IsHidden -eq $true -or ($items[1].Native.FileAttributes -band [IO.FileAttributes]::Hidden)) | Should -Be $true
         }
     }
 }

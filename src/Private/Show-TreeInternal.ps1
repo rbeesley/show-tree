@@ -104,11 +104,47 @@ function Show-TreeInternal {
         $dirs  = @()
 
         foreach ($item in $rawItems) {
+            $native = [PSCustomObject]@{
+                Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                FileAttributes = $item.Attributes
+            }
+            $kind = if ($item.PSIsContainer) { 'Directory' } else { 'File' }
+            # Add basic link detection for Kind if it's a reparse point
+            $link = $null
+            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                $kind = 'Symlink' # Or more specific if we want to call Get-Item again, but let's keep it simple for now
+                
+                # Check if it has a Target property (PS 5.1+ / Core)
+                $target = $null
+                if ($item.PSObject.Properties.Match('Target')) {
+                    $target = $item.Target
+                }
+
+                $link = [PSCustomObject]@{
+                    Type       = 'SymbolicLink' # Default
+                    Target     = $target
+                    TargetPath = $target
+                    IsBroken   = $null
+                }
+
+                # Refine Type if possible
+                if ($item.Attributes -band [IO.FileAttributes]::Directory) {
+                    # Might be a junction on Windows
+                    if ($IsWindows -and $target) {
+                        # A quick way to tell Junction vs Symlink is sometimes hard from just Get-ChildItem 
+                        # but we can try to guess or just leave it as SymbolicLink for now.
+                        # Actually if we have Target, it's good enough for rendering.
+                    }
+                }
+            }
+
             $treeItem = New-TreeItem `
                 -FullPath $item.FullName `
-                -IsDirectory $item.PSIsContainer `
+                -IsContainer $item.PSIsContainer `
+                -Kind $kind `
                 -Name $item.Name `
-                -Attributes $item.Attributes `
+                -Native $native `
+                -Link $link `
                 -Depth $CurrentDepth
 
             if ($item.PSIsContainer) {

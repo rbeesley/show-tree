@@ -16,21 +16,20 @@ Describe "New-TreeItem" {
 
             $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
             $fullPath = Join-Path $root 'File.txt'
-            $item = New-TreeItem -FullPath $fullPath -IsDirectory:$false
+            $item = New-TreeItem -FullPath $fullPath -IsContainer:$false -Kind 'File'
 
             $item.PSObject.TypeNames[0] | Should -Be 'ShowTree.TreeItem'
             $item.Name           | Should -Be 'File.txt'
             $item.FullPath       | Should -Be $fullPath
-            $item.Parent         | Should -BeNullOrEmpty
-            $item.Type           | Should -Be 'File'
+            $item.ParentPath     | Should -BeNullOrEmpty
+            $item.Kind           | Should -Be 'File'
+            $item.IsContainer    | Should -Be $false
+            $item.IsFile         | Should -Be $true
             $item.IsDirectory    | Should -Be $false
-            $item.IsSymlink      | Should -Be $false
-            $item.IsJunction     | Should -Be $false
-            $item.IsReparsePoint | Should -Be $false
-            $item.IsHidden       | Should -Be $false
-            $item.IsSystem       | Should -Be $false
+            $item.IsLink         | Should -Be $false
+            $item.IsHidden       | Should -BeNull
             $item.Depth          | Should -Be 0
-            $item.Attributes     | Should -Be 0
+            $item.Native.FileAttributes | Should -BeNull
             $item.Children       | Should -Be @()
         }
     }
@@ -41,15 +40,16 @@ Describe "New-TreeItem" {
 
             $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
             $fullPath = Join-Path $root 'Dir'
-            $item = New-TreeItem -FullPath $fullPath -IsDirectory:$true
+            $item = New-TreeItem -FullPath $fullPath -IsContainer:$true -Kind 'Directory'
 
             $item.Name        | Should -Be 'Dir'
-            $item.Type        | Should -Be 'Directory'
+            $item.Kind        | Should -Be 'Directory'
+            $item.IsContainer | Should -Be $true
             $item.IsDirectory | Should -Be $true
         }
     }
 
-    It "allows overriding Name and Type" {
+    It "allows overriding Name and Kind" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
@@ -57,30 +57,33 @@ Describe "New-TreeItem" {
             $fullPath = Join-Path $root 'Y'
             $item = New-TreeItem `
                 -FullPath $fullPath `
-                -IsDirectory:$true `
+                -IsContainer:$true `
                 -Name 'CustomName' `
-                -Type 'CustomType'
+                -Kind 'Other'
 
             $item.Name | Should -Be 'CustomName'
-            $item.Type | Should -Be 'CustomType'
+            $item.Kind | Should -Be 'Other'
         }
     }
 
-    It "supports attributes and hidden/system detection" {
+    It "supports native attributes and hidden detection" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $root = if ($IsWindows) { 'C:\Hidden' } else { '/tmp/Hidden' }
             $fullPath = Join-Path $root 'File.txt'
+            $native = [PSCustomObject]@{
+                Platform = 'Windows'
+                FileAttributes = [IO.FileAttributes]::Hidden
+            }
             $item = New-TreeItem `
                 -FullPath $fullPath `
-                -IsDirectory:$false `
-                -Attributes ([IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System)
+                -IsContainer:$false `
+                -Native $native `
+                -IsHidden $true
 
-            $item.Attributes -band [IO.FileAttributes]::Hidden | Should -Not -Be 0
-            $item.Attributes -band [IO.FileAttributes]::System | Should -Not -Be 0
+            $item.Native.FileAttributes -band [IO.FileAttributes]::Hidden | Should -Not -Be 0
             $item.IsHidden | Should -Be $true
-            $item.IsSystem | Should -Be $true
         }
     }
 
@@ -90,36 +93,40 @@ Describe "New-TreeItem" {
 
             $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
             $childPath = Join-Path $root 'Child.txt'
-            $child = New-TreeItem -FullPath $childPath -IsDirectory:$false
-            $parent = New-TreeItem -FullPath $root -IsDirectory:$true -Children @($child)
+            $child = New-TreeItem -FullPath $childPath -IsContainer:$false -Kind 'File'
+            $parent = New-TreeItem -FullPath $root -IsContainer:$true -Kind 'Directory' -Children @($child)
 
             $parent.Children.Count | Should -Be 1
             $parent.Children[0].Name | Should -Be 'Child.txt'
         }
     }
 
-    It "supports symlink and junction flags and sets IsReparsePoint" {
+    It "supports link information" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
             $root = if ($IsWindows) { 'C:\' } else { '/tmp/' }
             $linkPath = Join-Path $root 'Link'
             $targetPath = Join-Path $root 'Target'
+            $link = [PSCustomObject]@{
+                Type = 'SymbolicLink'
+                Target = $targetPath
+                TargetPath = $targetPath
+                IsBroken = $false
+            }
             $item = New-TreeItem `
                 -FullPath $linkPath `
-                -IsDirectory:$true `
-                -IsSymlink:$true `
-                -IsJunction:$false `
-                -Target $targetPath
+                -IsContainer:$true `
+                -Kind 'Symlink' `
+                -Link $link
 
-            $item.IsSymlink      | Should -Be $true
-            $item.IsJunction     | Should -Be $false
-            $item.IsReparsePoint | Should -Be $true
-            $item.Target         | Should -Be $targetPath
+            $item.IsLink      | Should -Be $true
+            $item.Link.Type   | Should -Be 'SymbolicLink'
+            $item.Link.Target | Should -Be $targetPath
         }
     }
 
-    It "supports Parent and Depth" {
+    It "supports ParentPath and Depth" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
@@ -127,12 +134,13 @@ Describe "New-TreeItem" {
             $fullPath = Join-Path $parent 'B'
             $item = New-TreeItem `
                 -FullPath $fullPath `
-                -IsDirectory:$false `
-                -Parent $parent `
+                -IsContainer:$false `
+                -Kind 'File' `
+                -ParentPath $parent `
                 -Depth 2
 
-            $item.Parent | Should -Be $parent
-            $item.Depth  | Should -Be 2
+            $item.ParentPath | Should -Be $parent
+            $item.Depth      | Should -Be 2
         }
     }
 
@@ -156,7 +164,7 @@ Describe "New-TreeItem" {
                 Set-ItResult -Skip
             }
             else {
-                $item = New-TreeItem -FullPath '/home/user/.bashrc' -IsDirectory:$false
+                $item = New-TreeItem -FullPath '/home/user/.bashrc' -IsContainer:$false -Kind 'File' -IsHidden $true
                 $item.IsHidden | Should -Be $true
             }
         }
@@ -168,15 +176,20 @@ Describe "New-TreeItem" {
             $fileInfo = Get-Item -LiteralPath $tempFile
             
             try {
+                $native = [PSCustomObject]@{
+                    Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                    FileAttributes = $fileInfo.Attributes
+                }
                 $item = New-TreeItem `
                     -FullPath $fileInfo.FullName `
                     -Name $fileInfo.Name `
-                    -IsDirectory $fileInfo.PSIsContainer `
-                    -Attributes $fileInfo.Attributes
+                    -IsContainer $fileInfo.PSIsContainer `
+                    -Kind 'File' `
+                    -Native $native
                 
                 $item.Name | Should -Be $fileInfo.Name
                 $item.IsDirectory | Should -Be $false
-                $item.Attributes | Should -Be $fileInfo.Attributes
+                $item.Native.FileAttributes | Should -Be $fileInfo.Attributes
             }
             finally {
                 Remove-Item $tempFile -Force
@@ -187,15 +200,20 @@ Describe "New-TreeItem" {
             $dirInfo = Get-Item -LiteralPath $tempDir
 
             try {
+                $native = [PSCustomObject]@{
+                    Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                    FileAttributes = $dirInfo.Attributes
+                }
                 $item = New-TreeItem `
                     -FullPath $dirInfo.FullName `
                     -Name $dirInfo.Name `
-                    -IsDirectory $dirInfo.PSIsContainer `
-                    -Attributes $dirInfo.Attributes
+                    -IsContainer $dirInfo.PSIsContainer `
+                    -Kind 'Directory' `
+                    -Native $native
                 
                 $item.Name | Should -Be $dirInfo.Name
                 $item.IsDirectory | Should -Be $true
-                $item.Attributes -band [IO.FileAttributes]::Directory | Should -Not -Be 0
+                $item.Native.FileAttributes -band [IO.FileAttributes]::Directory | Should -Not -Be 0
             }
             finally {
                 Remove-Item $tempDir -Recurse -Force
@@ -233,9 +251,9 @@ Describe "New-TreeItem" {
             $folder.Children[0].Depth | Should -Be 2
             
             $link = $root.Children | Where-Object { $_.Name -eq 'Link' }
-            $link.IsSymlink | Should -Be $true
-            $link.IsReparsePoint | Should -Be $true
-            $link.Target | Should -Be $expectedTarget
+            $link.Kind | Should -Be 'Symlink'
+            $link.IsLink | Should -Be $true
+            $link.Link.Target | Should -Be $expectedTarget
         }
     }
 }

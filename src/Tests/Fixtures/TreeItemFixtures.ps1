@@ -7,7 +7,7 @@ function New-FixtureTreeItem {
         [string] $Name,
         [string] $ParentPath,
         [bool] $IsDirectory = $false,
-        [IO.FileAttributes] $Attributes = 0,
+        [IO.FileAttributes] $FileAttributes = 0,
         [object[]] $Children = @(),
         [bool] $IsSymlink = $false,
         [bool] $IsJunction = $false,
@@ -20,17 +20,36 @@ function New-FixtureTreeItem {
     }
 
     $fullPath = Join-Path $ParentPath $Name
+    
+    $kind = if ($IsDirectory) { 'Directory' } else { 'File' }
+    if ($IsSymlink) { $kind = 'Symlink' }
+    if ($IsJunction) { $kind = 'Junction' }
+
+    $link = if ($IsSymlink -or $IsJunction) {
+        [PSCustomObject]@{
+            Type = if ($IsSymlink) { 'SymbolicLink' } else { 'Junction' }
+            Target = $Target
+            TargetPath = $Target
+            IsBroken = $false
+        }
+    } else {
+        $null
+    }
+
+    $native = [PSCustomObject]@{
+        Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+        FileAttributes = $FileAttributes
+    }
 
     New-TreeItem -FullPath $fullPath `
                  -Name $Name `
-                 -IsDirectory $IsDirectory `
-                 -Attributes $Attributes `
+                 -Kind $kind `
+                 -IsContainer $IsDirectory `
                  -Children $Children `
-                 -IsSymlink $IsSymlink `
-                 -IsJunction $IsJunction `
-                 -Target $Target `
+                 -Link $link `
+                 -Native $native `
                  -Depth $Depth `
-                 -Parent $ParentPath
+                 -ParentPath $ParentPath
 }
 
 function New-FixtureTree {
@@ -48,7 +67,7 @@ function New-FixtureTree {
         # Case 1: Directory (OrderedDictionary or Hashtable with Children)
         $isDir = $false
         $children = @()
-        $attrs = [IO.FileAttributes]0
+        $fileAttrs = ([IO.FileAttributes]0)
         $isSymlink = $false
         $isJunction = $false
         $target = $null
@@ -58,11 +77,11 @@ function New-FixtureTree {
             $children = foreach ($key in $value.Keys) {
                 BuildFixtureNode $key $value[$key] (Join-Path $parentPath $name) ($depth + 1)
             }
-            $attrs = $attrs -bor [IO.FileAttributes]::Directory
+            $fileAttrs = $fileAttrs -bor [IO.FileAttributes]::Directory
         }
         elseif ($value -is [hashtable]) {
             if ($value.ContainsKey('Attributes')) {
-                $attrs = [IO.FileAttributes]$value.Attributes
+                $fileAttrs = [IO.FileAttributes]$value.Attributes
             }
             
             if ($value.ContainsKey('IsSymlink')) { $isSymlink = $value.IsSymlink }
@@ -83,8 +102,8 @@ function New-FixtureTree {
                 if ($value.ContainsKey('IsDirectory')) { $isDir = $value.IsDirectory }
             }
             
-            if ($isDir -and ($attrs -band [IO.FileAttributes]::Directory) -eq 0) {
-                $attrs = $attrs -bor [IO.FileAttributes]::Directory
+            if ($isDir -and ($fileAttrs -band [IO.FileAttributes]::Directory) -eq 0) {
+                $fileAttrs = $fileAttrs -bor [IO.FileAttributes]::Directory
             }
         }
         else {
@@ -94,7 +113,7 @@ function New-FixtureTree {
         return New-FixtureTreeItem -Name $name `
                                    -ParentPath $parentPath `
                                    -IsDirectory:$isDir `
-                                   -Attributes $attrs `
+                                   -FileAttributes $fileAttrs `
                                    -Children $children `
                                    -IsSymlink $isSymlink `
                                    -IsJunction $isJunction `

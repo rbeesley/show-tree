@@ -1,75 +1,117 @@
-# src\Private\New-TreeItem.ps1
-
 function New-TreeItem {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
         [string] $FullPath,
 
-        [Parameter(Mandatory)]
-        [bool] $IsDirectory,
-
         [string] $Name,
 
-        [string] $Type,
+        [string] $ParentPath,
 
-        [IO.FileAttributes] $Attributes = 0,
+        [ValidateSet(
+            'File',
+            'Directory',
+            'Symlink',
+            'Junction',
+            'MountPoint',
+            'Socket',
+            'Pipe',
+            'BlockDevice',
+            'CharacterDevice',
+            'Device',
+            'Other',
+            'Unknown'
+        )]
+        [string] $Kind = 'Unknown',
 
-        [string] $Parent,
+        [bool] $IsContainer,
 
         [int] $Depth = 0,
 
-        [bool] $IsSymlink = $false,
-        [bool] $IsJunction = $false,
+        [object] $IsHidden = $null,
+        [object] $IsExecutable = $null,
+        [object] $IsReadOnly = $null,
 
-        [string] $Target,
+        [long] $Length = -1,
+
+        [datetime] $CreationTime,
+        [datetime] $LastWriteTime,
+        [datetime] $LastAccessTime,
+
+        [object] $Link,
+        [object] $Permissions,
+        [object] $Native,
 
         [object[]] $Children
     )
 
-    # Default values
     if (-not $Name) {
         $Name = Split-Path -Path $FullPath -Leaf
-    }
-
-    if (-not $Type) {
-        $Type = if ($IsDirectory) { 'Directory' } else { 'File' }
     }
 
     if (-not $Children) {
         $Children = @()
     }
 
-    $isHidden = ($Attributes -band [IO.FileAttributes]::Hidden) -ne 0
-    $isSystem = ($Attributes -band [IO.FileAttributes]::System) -ne 0
-
-    $localIsWindows = $true
-    if ($PSVersionTable.PSEdition -eq 'Core') {
-        $localIsWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+    if (-not $Link) {
+        $Link = [PSCustomObject]@{
+            Type       = 'None'
+            Target     = $null
+            TargetPath = $null
+            IsBroken   = $null
+        }
     }
 
-    # Cross-platform hidden detection (files/dirs starting with '.' on non-Windows)
-    if (-not $localIsWindows -and $Name.StartsWith('.')) {
-        $isHidden = $true
+    if (-not $Permissions) {
+        $Permissions = [PSCustomObject]@{
+            Mode     = $null
+            Symbolic = $null
+            Owner    = $null
+            Group    = $null
+        }
     }
 
-    $isReparsePoint = ($Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or $IsSymlink -or $IsJunction
+    if (-not $Native) {
+        $Native = [PSCustomObject]@{
+            Platform       = $null
+            FileAttributes = $null
+            Raw            = $null
+        }
+    }
+
+    $isLink = $Link.Type -and $Link.Type -ne 'None'
+    $isLeaf = -not $IsContainer
+    $resolvedLength = if ($Length -ge 0) { $Length } else { $null }
 
     [PSCustomObject]@{
         PSTypeName     = 'ShowTree.TreeItem'
+
         Name           = $Name
         FullPath       = $FullPath
-        Parent         = $Parent
-        Type           = $Type
-        IsDirectory    = $IsDirectory
-        IsSymlink      = $IsSymlink
-        IsJunction     = $IsJunction
-        IsReparsePoint = $isReparsePoint
-        Target         = $Target
-        Attributes     = $Attributes
-        IsHidden       = $isHidden
-        IsSystem       = $isSystem
+        ParentPath     = $ParentPath
         Depth          = $Depth
+
+        Kind           = $Kind
+        IsContainer    = $IsContainer
+        IsLeaf         = $isLeaf
+        IsFile         = $Kind -eq 'File'
+        IsDirectory    = $Kind -eq 'Directory'
+
+        IsHidden       = $IsHidden
+        IsExecutable   = $IsExecutable
+        IsReadOnly     = $IsReadOnly
+
+        Length         = $resolvedLength
+        CreationTime   = $CreationTime
+        LastWriteTime  = $LastWriteTime
+        LastAccessTime = $LastAccessTime
+
+        IsLink         = $isLink
+        Link           = $Link
+
+        Permissions    = $Permissions
+        Native         = $Native
+
         Children       = $Children
     }
 }
