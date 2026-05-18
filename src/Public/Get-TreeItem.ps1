@@ -25,12 +25,19 @@
     #
     # Resolve Path
     #
-    $resolvedPath = Resolve-Path $Path -ErrorAction SilentlyContinue
-    if (-not $resolvedPath) {
+    $resolvedPath = $null
+    $errorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'SilentlyContinue'
+    try {
+        $resolved = Resolve-Path $Path
+        if ($null -ne $resolved) {
+            $resolvedPath = $resolved.Path
+        }
+    } catch {}
+    $ErrorActionPreference = $errorAction
+    
+    if ($null -eq $resolvedPath) {
         $resolvedPath = $Path
-    }
-    else {
-        $resolvedPath = $resolvedPath.Path
     }
 
     #
@@ -43,10 +50,11 @@
     #
     # Enumeration
     #
-    $items = @()
+    $items = New-Object System.Collections.Generic.List[object]
     if ($ProviderMode -eq 'Win32' -and $IsWindows) {
         $raw = Get-RawDirectoryEntries -Path $resolvedPath
-        $items = $raw.Directories + $raw.Files
+        foreach ($d in $raw.Directories) { [void]$items.Add($d) }
+        foreach ($f in $raw.Files) { [void]$items.Add($f) }
     }
     else {
         $rawItems = Get-ChildItem -Path $resolvedPath -Force -ErrorAction SilentlyContinue
@@ -95,7 +103,7 @@
                 -ParentPath $resolvedPath `
                 -IsHidden $isHidden
 
-            $items += $treeItem
+            [void]$items.Add($treeItem)
         }
     }
 
@@ -103,7 +111,9 @@
     # Normalization: Filtering
     #
     if ($Include -or $Exclude -or $HideHidden -or $HideSystem -or $DirectoryOnly) {
-        $items = @(Get-FilteredTreeItems -Items $items -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly)
+        $filteredItems = Get-FilteredTreeItems -Items $items -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly
+        $items = New-Object System.Collections.Generic.List[object]
+        foreach ($fi in $filteredItems) { [void]$items.Add($fi) }
     }
 
     #
@@ -115,7 +125,8 @@
     #
     # Output and Recursion
     #
-    foreach ($item in $items) {
+    $itemsArray = @($items)
+    foreach ($item in $itemsArray) {
         # Return the current item
         $item
 
