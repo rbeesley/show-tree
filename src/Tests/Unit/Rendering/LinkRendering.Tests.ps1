@@ -16,6 +16,7 @@ Describe "Link Target Rendering" {
                 $script:GapState = [PSCustomObject]@{
                     LastGapMode = 'None'
                 }
+                $script:testStyleProfile = Get-ShowTreeStyleProfile
             }
         }
 
@@ -33,7 +34,7 @@ Describe "Link Target Rendering" {
                 
                 $item = New-TreeItem -FullPath $linkPath -Kind 'Symlink' -IsContainer $false -Link $link
                 
-                $output = Write-TreeItem -Item $item -Type File -ShowTargets -Colorize:$false
+                $output = Write-TreeItem -Item $item -Type File -ShowTargets -Colorize:$false -StyleProfile $testStyleProfile
                 
                 $output | Should -Match "-> .*$([regex]::Escape($targetPath))"
             }
@@ -61,7 +62,7 @@ Describe "Link Target Rendering" {
                     # We need to at least mark it as a link for Write-TreeItem to try resolution
                     $item.IsLink = $true
                     
-                    $output = Write-TreeItem -Item $item -Type File -ShowTargets -Colorize:$false
+                    $output = Write-TreeItem -Item $item -Type File -ShowTargets -Colorize:$false -StyleProfile $testStyleProfile
                     $output | Should -Match "-> .*$([regex]::Escape($targetFile))"
                 }
                 finally {
@@ -72,6 +73,12 @@ Describe "Link Target Rendering" {
     }
 
     Context "Show-TreeInternal" {
+        BeforeEach {
+            InModuleScope ShowTree {
+                $script:testStyleProfile = Get-ShowTreeStyleProfile
+            }
+        }
+
         It "populates link targets for symlinks" {
             InModuleScope ShowTree {
                 $tempDir = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), [System.Guid]::NewGuid().ToString())
@@ -88,7 +95,7 @@ Describe "Link Target Rendering" {
                     # But better check if it creates TreeItems with Link info
                     # Show-TreeInternal doesn't return items, it writes to output.
                     
-                    $output = Show-TreeInternal -Path $tempDir -IncludeFiles -ShowTargets -Colorize:$false
+                    $output = Show-TreeInternal -Path $tempDir -IncludeFiles -ShowTargets -Colorize:$false -StyleProfile $testStyleProfile
                     $outputString = $output | Out-String
                     $outputString | Should -Match "Link.txt.*-> .*$([regex]::Escape($targetFile))"
                 }
@@ -111,7 +118,7 @@ Describe "Link Target Rendering" {
                 try {
                     New-Item -ItemType Junction -Path $linkDir -Target $targetDir | Out-Null
                     
-                    $output = Show-TreeInternal -Path $tempDir -ShowTargets -Colorize:$false
+                    $output = Show-TreeInternal -Path $tempDir -ShowTargets -Colorize:$false -StyleProfile $testStyleProfile
                     $outputString = $output | Out-String
                     $outputString | Should -Match "LinkDir.*-> .*$([regex]::Escape($targetDir))"
                 }

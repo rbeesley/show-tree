@@ -69,8 +69,9 @@ Description = 'Modern tree.com replacement with graphical, listing, and compatib
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = 'Get-FilteredTreeItems', 'Get-TreeItem', 'Set-ShowTreeStyleProfile', 
-               'Show-Tree', 'Show-TreeLegend'
+FunctionsToExport = 'Format-Tree', 'Invoke-FormatTreeInternal', 'Get-FilteredTreeItems', 
+               'Get-TreeItem', 'Set-ShowTreeStyleProfile', 'Show-Tree', 
+               'Show-TreeLegend'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -93,6 +94,12 @@ AliasesToExport = @()
 # Private data to pass to the module specified in RootModule/ModuleToProcess. This may also contain a PSData hashtable with additional module metadata used by PowerShell.
 PrivateData = @{
 
+    #ModuleRootModulePath of this module
+    ModuleRootModulePath = ''
+
+    #ModuleSourceFingerprint of this module
+    ModuleSourceFingerprint = ''
+
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
@@ -111,7 +118,7 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        Prerelease = '-alpha.5'
+        Prerelease = '-alpha.6'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         # RequireLicenseAcceptance = $false
@@ -121,7 +128,7 @@ PrivateData = @{
 
     } # End of PSData hashtable
 
- } # End of PrivateData hashtable
+} # End of PrivateData hashtable
 
 # HelpInfo URI of this module
 # HelpInfoURI = ''

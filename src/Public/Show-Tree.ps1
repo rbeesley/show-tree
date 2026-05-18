@@ -311,7 +311,13 @@ function Show-Tree {
             -Native $native `
             -Depth 0
 
-        $style = Get-ItemStyle -Item $treeItem -Colorize:$EffectiveColorize
+        $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
+
+        if ($null -eq $resolvedStyleProfile) {
+            $resolvedStyleProfile = Get-ShowTreeStyleProfile
+        }
+
+        $style = Get-ItemStyle -Item $treeItem -Colorize:$EffectiveColorize -StyleProfile $resolvedStyleProfile
 
         if ($DebugAttributes) {
             $styleName = $style.Name
@@ -332,6 +338,12 @@ function Show-Tree {
         LastGapMode = [GapMode]::None
     }
 
+    $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
+
+    if ($null -eq $resolvedStyleProfile) {
+        $resolvedStyleProfile = Get-ShowTreeStyleProfile
+    }
+
     #
     # Delegate to internal engine
     #
@@ -348,7 +360,8 @@ function Show-Tree {
         -Include $Include `
         -Gap:$EffectiveGap `
         -Ascii:$Ascii `
-        -DebugAttributes:$DebugAttributes
+        -DebugAttributes:$DebugAttributes `
+        -StyleProfile  $resolvedStyleProfile
 
     #
     # Final newline for normal mode root

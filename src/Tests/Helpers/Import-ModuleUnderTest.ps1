@@ -73,10 +73,12 @@ if (-not $needsReload) {
         $needsReload = $true
     }
     else {
-        $existingFingerprint = $matchingModule.PrivateData['ModuleSourceFingerprint']
-        $existingRootModule  = $matchingModule.PrivateData['ModuleRootModulePath']
+        $existingFingerprint = $null
+        try { $existingFingerprint = $matchingModule.PrivateData['ModuleSourceFingerprint'] } catch {}
+        $existingRootModule  = $null
+        try { $existingRootModule = $matchingModule.PrivateData['ModuleRootModulePath'] } catch {}
 
-        if (-not $existingFingerprint -or
+        if ($null -eq $existingFingerprint -or
             $existingFingerprint -ne $fingerprintInfo.Fingerprint -or
             $existingRootModule -ne $moduleInfo.RootModulePath) {
             $needsReload = $true

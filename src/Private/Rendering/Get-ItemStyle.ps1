@@ -67,10 +67,10 @@ function Get-ItemStyle {
     #
     # Apply attribute overlays
     #
-    if ($attrs -ne $null) {
+    if ($attrs -ne $null -and $StyleProfile.Attributes -ne $null) {
         foreach ($flag in Get-SetFileAttributes $attrs) {
             $flagName = $flag.ToString()
-
+            
             if ($StyleProfile.Attributes.ContainsKey($flagName)) {
                 $overlay = $StyleProfile.Attributes[$flagName]
 

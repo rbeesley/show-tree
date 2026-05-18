@@ -1,4 +1,4 @@
-# src\Data\DefaultStyleProfile.psd1
+﻿# src\Data\DefaultStyleProfile.psd1
 
 <#
 .SYNOPSIS
@@ -13,32 +13,107 @@
     The profile is consumed by Get-ItemStyle in Show-TreeInternal.ps1.
 #>
 @{
+    #
+    # Base representation for Kind File and Directory
+    #
     Base = @{
-        File      = "37"
-        Directory = "36"
+        File      = '37'
+        Directory = '36'
     }
+
+    #
+    # Additional modifications for attributes
+    #
     Attributes = @{
-        None              = @{ Attributes = "90" }
-        ReadOnly          = @{ Attributes = "3" }
-        Hidden            = @{ Attributes = "2" }
+        None              = @{ Attributes = '90' }
+        ReadOnly          = @{ Attributes = '3' }
+        Hidden            = @{ Attributes = '2' }
         System            = @{
             OverrideForeground = @{
-                File      = "31"
-                Directory = "35"
+                File      = '31'
+                Directory = '35'
             }
         }
-        Directory         = @{ Attributes = "" }
-        Archive           = @{ Attributes = "" }
-        Device            = @{ Attributes = "" }
-        Normal            = @{ Attributes = "" }
-        Temporary         = @{ Attributes = "7" }
-        SparseFile        = @{ Attributes = "7" }
-        ReparsePoint      = @{ Attributes = "4" }
-        Compressed        = @{ Attributes = "" }
-        Offline           = @{ Attributes = "7" }
-        NotContentIndexed = @{ Attributes = "" }
-        Encrypted         = @{ Attributes = "" }
-        IntegrityStream   = @{ Attributes = "" }
-        NoScrubData       = @{ Attributes = "" }
+        Directory         = @{ Attributes = '' }
+        Archive           = @{ Attributes = '' }
+        Device            = @{ Attributes = '' }
+        Normal            = @{ Attributes = '' }
+        Temporary         = @{ Attributes = '7' }
+        SparseFile        = @{ Attributes = '7' }
+        ReparsePoint      = @{ Attributes = '4' }
+        Compressed        = @{ Attributes = '' }
+        Offline           = @{ Attributes = '7' }
+        NotContentIndexed = @{ Attributes = '' }
+        Encrypted         = @{ Attributes = '' }
+        IntegrityStream   = @{ Attributes = '' }
+        NoScrubData       = @{ Attributes = '' }
+    }
+
+    #
+    # Connectors and Gaps
+    #
+    # Symbols are mapped by Mode and Encoding (Unicode/Ascii)
+    #
+    Connectors = @{
+        Normal = @{
+            Unicode = @{
+                File          = '╟── '
+                FileLast      = '╙── '
+                Directory     = '╠══ '
+                DirectoryLast = '╚══ '
+                Prefix        = '║   '
+                PrefixLast    = '    '
+                Gap           = '║'
+            }
+            Ascii = @{
+                File          = '+-- '
+                FileLast      = '\-- '
+                Directory     = '+== '
+                DirectoryLast = '\== '
+                Prefix        = '|   '
+                PrefixLast    = '    '
+                Gap           = '|'
+            }
+        }
+        Tree = @{
+            Unicode = @{
+                File          = '│   '
+                FileLast      = '│   '
+                Directory     = '├───'
+                DirectoryLast = '└───'
+                Prefix        = '│   '
+                PrefixLast    = '    '
+                Gap           = '│'
+            }
+            Ascii = @{
+                File          = '|   '
+                FileLast      = '|   '
+                Directory     = '+---'
+                DirectoryLast = '\---'
+                Prefix        = '|   '
+                PrefixLast    = '    '
+                Gap           = '|'
+            }
+        }
+        List = @{
+            Unicode = @{
+                File          = ' '
+                FileLast      = ' '
+                Directory     = ' '
+                DirectoryLast = ' '
+                Prefix        = ' '
+                PrefixLast    = ' '
+                Gap           = ' '
+            }
+            Ascii = @{
+                File          = ' '
+                FileLast      = ' '
+                Directory     = ' '
+                DirectoryLast = ' '
+                Prefix        = ' '
+                PrefixLast    = ' '
+                Gap           = ' '
+            }
+        }
     }
 }

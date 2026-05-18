@@ -55,7 +55,8 @@ function Get-FilteredTreeItems {
         [string[]]$Exclude,
 
         [switch]$HideHidden,
-        [switch]$HideSystem
+        [switch]$HideSystem,
+        [switch]$DirectoryOnly
     )
 
     begin {
@@ -130,11 +131,13 @@ function Get-FilteredTreeItems {
             $isExcludedGlob  = $excludedGlob  -contains $item
             $isIncludedExact = $includedExact -contains $item
             $isIncludedGlob  = $includedGlob  -contains $item
+            $isFileToRemove  = $DirectoryOnly -and -not $item.IsContainer
 
             #
             # Decision logic
             #
             if ($isIncludedExact) { $item; continue }   # exact include wins
+            if ($isFileToRemove)  { continue }          # directory only removes files
             if ($isExcludedExact) { continue }          # exact exclude wins
             if ($isIncludedGlob)  { $item; continue }   # glob include resurrects
             if ($isHidden)        { continue }          # hidden removes unless included

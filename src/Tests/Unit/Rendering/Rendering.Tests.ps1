@@ -9,6 +9,9 @@ BeforeAll {
         -PassThru
 
     InModuleScope ShowTree {        
+        # Load real default style profile for connector tests
+        $script:realProfile = Get-ShowTreeStyleProfile
+
         # Define a style profile for testing
         $script:styleProfile = @{
             Base = @{
@@ -126,28 +129,28 @@ Describe "Get-ItemStyle" {
 Describe "Get-Connector" {
     It "Returns Unicode directory connector (non-last)" {
         InModuleScope ShowTree {
-            Get-Connector -Type Directory -IsLast:$false |
+            Get-Connector -Type Directory -IsLast:$false -StyleProfile $realProfile |
                 Should -Be "╠══ "
         }
     }
 
     It "Returns Unicode directory connector (last)" {
         InModuleScope ShowTree {
-            Get-Connector -Type Directory -IsLast:$true |
+            Get-Connector -Type Directory -IsLast:$true -StyleProfile $realProfile |
                 Should -Be "╚══ "
         }
     }
 
     It "Returns ASCII connectors when -Ascii is used" {
         InModuleScope ShowTree {
-            Get-Connector -Type File -Ascii |
+            Get-Connector -Type File -Ascii -StyleProfile $realProfile |
                 Should -Be "+-- "
         }
     }
 
     It "Returns Tree.com connectors in -Tree mode" {
         InModuleScope ShowTree {
-            Get-Connector -Type Directory -Mode 'Tree' -IsLast:$false |
+            Get-Connector -Type Directory -Mode 'Tree' -IsLast:$false -StyleProfile $realProfile |
                 Should -Be "├───"
         }
     }

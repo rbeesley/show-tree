@@ -51,7 +51,10 @@ function Write-TreeItem {
         [string[]]$Include,        
         [switch]$Gap,
         [switch]$HideHidden,
-        [switch]$HideSystem
+        [switch]$HideSystem,
+
+        [Parameter(Mandatory)]
+        [object]$StyleProfile
     )
 
     # Compute connector for this item
@@ -60,10 +63,11 @@ function Write-TreeItem {
         -Mode   $Mode `
         -Ascii:$Ascii `
         -IsLast $IsLast `
-        -NoSpan $NoSpan
+        -NoSpan $NoSpan `
+        -StyleProfile $StyleProfile
 
     # Compute style
-    $style = Get-ItemStyle -Item $Item -Colorize:$Colorize
+    $style = Get-ItemStyle -Item $Item -Colorize:$Colorize -StyleProfile $StyleProfile
 
     #
     # Reparse target resolution
@@ -122,7 +126,8 @@ function Write-TreeItem {
             -Type   Prefix `
             -Mode   $Mode `
             -Ascii:$Ascii `
-            -IsLast $IsLast)
+            -IsLast $IsLast `
+            -StyleProfile $StyleProfile)
 
         # Recurse
         Show-TreeInternal `
@@ -141,7 +146,8 @@ function Write-TreeItem {
             -DebugAttributes:$DebugAttributes `
             -CurrentDepth  ($CurrentDepth + 1) `
             -Prefix        $newPrefix `
-            -IsLastParent  $IsLast
+            -IsLastParent  $IsLast `
+            -StyleProfile  $StyleProfile
     }
 
     #

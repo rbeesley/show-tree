@@ -4,8 +4,8 @@ function Get-ActiveShowTreeStyleProfile {
     [CmdletBinding()]
     param()
 
-    if (-not $script:ShowTreeState.StyleProfile) {
-        $script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile
+    if ($null -eq $script:ShowTreeState -or $null -eq $script:ShowTreeState.StyleProfile) {
+        return Get-ShowTreeStyleProfile
     }
 
     return $script:ShowTreeState.StyleProfile

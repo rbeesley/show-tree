@@ -85,9 +85,9 @@ $finalEntries = foreach ($entry in $fileEntries) {
     if ($isIncludedGlob)  { $entry; continue }
     if ($isExcludedGlob)  { continue }
 
-    if ($Include) {
-        continue
-    }
+    # if ($Include) {
+    #     continue
+    # }
 
     $entry
 }

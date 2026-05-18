@@ -13,6 +13,7 @@ BeforeAll {
         $script:GapState = [PSCustomObject]@{
             LastGapMode = [GapMode]::None
         }
+        $script:testStyleProfile = Get-ShowTreeStyleProfile
     }
 }
 
@@ -38,7 +39,7 @@ Describe "Tree.com compatibility" -Skip:(-not $IsWindows) {
                 Convert-TestTreeToRaw -Root $fixture -Path $Path
             }
 
-            $result = Show-TreeInternal -Path $fixture.FullPath -Mode 'Tree' -IncludeFiles:$true | Out-String
+            $result = Show-TreeInternal -Path $fixture.FullPath -Mode 'Tree' -IncludeFiles:$true -StyleProfile $testStyleProfile | Out-String
 
             $expected = @"
 ├───a

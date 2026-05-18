@@ -11,6 +11,13 @@
 
         [switch]$FollowLinks,
 
+        # Filtering parameters
+        [string[]]$Include,
+        [string[]]$Exclude,
+        [switch]$HideHidden,
+        [switch]$HideSystem,
+        [switch]$DirectoryOnly,
+
         # Internal recursion parameters
         [int]$CurrentDepth = 0
     )
@@ -95,12 +102,15 @@
     #
     # Normalization: Filtering
     #
+    if ($Include -or $Exclude -or $HideHidden -or $HideSystem -or $DirectoryOnly) {
+        $items = @(Get-FilteredTreeItems -Items $items -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly)
+    }
 
     #
     # Normalization: Ordering (Deterministic)
     #
-    # Deterministic order: Directories first, then Files, both sorted by Name.
-    $items = $items | Sort-Object @{Expression="IsContainer"; Descending=$true}, @{Expression="Name"; Ascending=$true}
+    # Deterministic order: Files first, then Directories, both sorted by Name.
+    $items = $items | Sort-Object @{Expression="IsContainer"; Ascending=$true}, @{Expression="Name"; Ascending=$true}
 
     #
     # Output and Recursion
@@ -117,7 +127,7 @@
             }
 
             if ($shouldRecurse) {
-                Get-TreeItem -Path $item.FullPath -Depth $Depth -FollowLinks:$FollowLinks -ProviderMode $ProviderMode -CurrentDepth ($CurrentDepth + 1)
+                Get-TreeItem -Path $item.FullPath -Depth $Depth -FollowLinks:$FollowLinks -ProviderMode $ProviderMode -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly -CurrentDepth ($CurrentDepth + 1)
             }
         }
     }

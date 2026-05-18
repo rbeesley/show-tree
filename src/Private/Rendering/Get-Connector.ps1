@@ -24,63 +24,36 @@ function Get-Connector {
         [switch]$Ascii,
 
         [bool]$IsLast = $false,
-        [bool]$NoSpan = $false
+        [bool]$NoSpan = $false,
+
+        [Parameter(Mandatory)]
+        [object]$StyleProfile
     )
 
-    #
-    # Listing mode: indentation only
-    #
-    if ($Mode -eq 'List') {
-        return ' '
+    if ($Mode -eq 'Tree' -and $Type -eq 'File' -and $NoSpan) {
+        return '    '
     }
 
-    #
-    # Tree.com compatibility mode
-    #
-    if ($Mode -eq 'Tree') {
-        if ($Type -eq 'File' -and $NoSpan) {
-            return '    '
-        }
+    $encoding = $Ascii ? 'Ascii' : 'Unicode'
+    $connectorSet = $StyleProfile.Connectors[$Mode][$encoding]
 
-        switch ($Type) {
-            'File'      {
-                return             ( $Ascii ? '|   ' : '│   ' )
-            }
-            'Directory' {
-                return ( $IsLast ? ( $Ascii ? '\---' : '└───' ) `
-                                 : ( $Ascii ? '+---' : '├───' ))
-            }
-            'Gap'       {
-                return             ( $Ascii ? '|'    : '│' )
-            }
-            'Prefix'    {
-                return ( $IsLast ? '    ' `
-                                 : ( $Ascii ? '|   ' : '│   ' ))
-            }
-        }
+    if ($null -eq $connectorSet) {
+        # Fallback to Normal if mode not found
+        $connectorSet = $StyleProfile.Connectors['Normal'][$encoding]
     }
 
-    #
-    # Graphical Unicode mode (Show-Tree default)
-    #
     switch ($Type) {
         'File' {
-            return ( $IsLast ? ( $Ascii ? '\-- ' : '╙── ' ) `
-                             : ( $Ascii ? '+-- ' : '╟── ' ))
+            return $IsLast ? $connectorSet.FileLast : $connectorSet.File
         }
-
         'Directory' {
-            return ( $IsLast ? ( $Ascii ? '\== ' : '╚══ ' ) `
-                             : ( $Ascii ? '+== ' : '╠══ ' ))
+            return $IsLast ? $connectorSet.DirectoryLast : $connectorSet.Directory
         }
-
-        'Gap' {
-            return             ( $Ascii ? '|' : '║' )
-        }
-
         'Prefix' {
-            return ( $IsLast ? ( '    ' ) `
-                             : ( $Ascii ? '|   ' : '║   ' ))
+            return $IsLast ? $connectorSet.PrefixLast : $connectorSet.Prefix
+        }
+        'Gap' {
+            return $connectorSet.Gap
         }
     }
 }

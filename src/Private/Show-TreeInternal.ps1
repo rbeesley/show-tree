@@ -70,6 +70,9 @@ function Show-TreeInternal {
         # Show attribute debug info
         [switch]$DebugAttributes,
 
+        # Style profile to use
+        [object]$StyleProfile,
+
         # Current recursion depth (internal)
         [int]$CurrentDepth = 0,
 
@@ -194,7 +197,8 @@ function Show-TreeInternal {
             -Exclude       $Exclude `
             -Gap:$Gap `
             -HideHidden:$HideHidden `
-            -HideSystem:$HideSystem
+            -HideSystem:$HideSystem `
+            -StyleProfile  $StyleProfile
     }
 
     #
@@ -207,7 +211,7 @@ function Show-TreeInternal {
     $colorGap   = $Colorize ? "${esc}[90m" : ""
 
     # Precompute gap connector
-    $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii
+    $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $StyleProfile
 
     if ($Gap -and
         $script:GapState.LastGapMode -eq [GapMode]::None -and
@@ -252,7 +256,8 @@ function Show-TreeInternal {
             -Exclude       $Exclude `
             -Gap:$Gap `
             -HideHidden:$HideHidden `
-            -HideSystem:$HideSystem
+            -HideSystem:$HideSystem `
+            -StyleProfile   $StyleProfile
 
         #
         # SIBLING / COUSIN GAP LOGIC
