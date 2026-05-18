@@ -25,19 +25,12 @@
     #
     # Resolve Path
     #
-    $resolvedPath = $null
-    $errorAction = $ErrorActionPreference
-    $ErrorActionPreference = 'SilentlyContinue'
-    try {
-        $resolved = Resolve-Path $Path
-        if ($null -ne $resolved) {
-            $resolvedPath = $resolved.Path
-        }
-    } catch {}
-    $ErrorActionPreference = $errorAction
-    
-    if ($null -eq $resolvedPath) {
+    $resolvedPath = Resolve-Path $Path -ErrorAction SilentlyContinue
+    if (-not $resolvedPath) {
         $resolvedPath = $Path
+    }
+    else {
+        $resolvedPath = $resolvedPath.Path
     }
 
     #
@@ -50,7 +43,7 @@
     #
     # Enumeration
     #
-    $items = New-Object System.Collections.Generic.List[object]
+    $items = [System.Collections.Generic.List[object]]::new()
     if ($ProviderMode -eq 'Win32' -and $IsWindows) {
         $raw = Get-RawDirectoryEntries -Path $resolvedPath
         foreach ($d in $raw.Directories) { [void]$items.Add($d) }
@@ -62,14 +55,14 @@
         foreach ($item in $rawItems) {
             $isDir = $item.PSIsContainer
             $native = [PSCustomObject]@{
-                Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                Platform = $IsWindows ? 'Windows' : 'Unix'
                 FileAttributes = $item.Attributes
             }
             
-            $kind = if ($isDir) { 'Directory' } else { 'File' }
+            $kind = $isDir ? 'Directory' : 'File'
             $link = $null
             if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-                $kind = if ($isDir -and $IsWindows) { 'Junction' } else { 'Symlink' }
+                $kind = ($isDir -and $IsWindows) ? 'Junction' : 'Symlink'
                 
                 $target = $null
                 if ($item.PSObject.Properties.Match('Target')) {
@@ -77,7 +70,7 @@
                 }
 
                 $link = [PSCustomObject]@{
-                    Type       = if ($kind -eq 'Junction') { 'Junction' } else { 'SymbolicLink' }
+                    Type       = ($kind -eq 'Junction') ? 'Junction' : 'SymbolicLink'
                     Target     = $target
                     TargetPath = $target
                     IsBroken   = $null
@@ -111,9 +104,7 @@
     # Normalization: Filtering
     #
     if ($Include -or $Exclude -or $HideHidden -or $HideSystem -or $DirectoryOnly) {
-        $filteredItems = Get-FilteredTreeItems -Items $items -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly
-        $items = New-Object System.Collections.Generic.List[object]
-        foreach ($fi in $filteredItems) { [void]$items.Add($fi) }
+        $items = @(Get-FilteredTreeItems -Items $items -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly)
     }
 
     #
@@ -125,8 +116,7 @@
     #
     # Output and Recursion
     #
-    $itemsArray = @($items)
-    foreach ($item in $itemsArray) {
+    foreach ($item in $items) {
         # Return the current item
         $item
 

@@ -23,7 +23,7 @@
         }
 
         $state = [PSCustomObject]@{
-            AllItems     = New-Object System.Collections.Generic.List[object]
+            AllItems     = [System.Collections.Generic.List[object]]::new()
             InputItems   = @{} # FullPath -> TreeItem
             SeenItems    = @{} # FullPath -> bool
             StyleProfile = $resolvedStyleProfile
@@ -54,37 +54,33 @@
         if ($state.AllItems.Count -eq 0) { return }
 
         # Identify roots in the input set (items whose parent is NOT in the input set)
-        $roots = New-Object System.Collections.Generic.List[object]
+        $roots = [System.Collections.Generic.List[object]]::new()
         foreach ($item in $state.AllItems) {
             $isRoot = $true
             if ($null -ne $item.ParentPath -and $state.InputItems.ContainsKey($item.ParentPath)) {
                 $isRoot = $false
             }
-            if ($isRoot) { 
-                [void]$roots.Add($item) 
-            }
+            if ($isRoot) { [void]$roots.Add($item) }
         }
 
-        if ($roots.Count -eq 0) { $roots = $state.AllItems }
-        else { $roots = $roots.ToArray() }
+        if ($roots.Count -eq 0) { $roots = $state.AllItems.ToArray() }
 
-        $topLevelNoSpan = $false
-        if ($Mode -eq 'Tree') {
+        $topLevelNoSpan = $Mode -eq 'Tree'
+        if ($topLevelNoSpan) {
             $hasContainer = $false
             foreach ($r in $roots) { if ($r.IsContainer) { $hasContainer = $true; break } }
-            $topLevelNoSpan = -not $hasContainer
+            if ($hasContainer) { $topLevelNoSpan = $false }
         }
 
-        $rootsArray = @($roots)
-        for ($i = 0; $i -lt $rootsArray.Count; $i++) {
-            $item = $rootsArray[$i]
+        for ($i = 0; $i -lt $roots.Count; $i++) {
+            $item = $roots[$i]
             if ($null -ne $item.FullPath -and $state.SeenItems.ContainsKey($item.FullPath)) { continue }
 
-            $isLast = ($i -eq $rootsArray.Count - 1)
+            $isLast = ($i -eq $roots.Count - 1)
             
             # Gap logic before directory root if previous was file root
             if ($Gap -and ($state.LastGapMode -eq 'None' -or $state.LastGapMode -eq 'TailGapDone') -and $i -gt 0) {
-                $prevRoot = $rootsArray[$i-1]
+                $prevRoot = $roots[$i-1]
                 $prevWasFile = $prevRoot.IsLeaf
                 $currIsDirectory = $item.IsContainer
                 
@@ -115,20 +111,14 @@
 
             # If we didn't just render a tail gap, check for sibling gap
             if ($Gap -and $Mode -ne 'Tree' -and $state.LastGapMode -ne 'TailGapDone' -and $i -gt 0) {
-                 $prevRoot = $rootsArray[$i-1]
-                 
+                 $prevRoot = $roots[$i-1]
                  $prevHasChildren = $false
                  if ($prevRoot.IsContainer) {
-                    foreach ($val in $state.InputItems.Values) {
-                        if ($val.ParentPath -eq $prevRoot.FullPath) { $prevHasChildren = $true; break }
-                    }
+                    foreach ($v in $state.InputItems.Values) { if ($v.ParentPath -eq $prevRoot.FullPath) { $prevHasChildren = $true; break } }
                  }
-                 
                  $currHasChildren = $false
                  if ($item.IsContainer) {
-                    foreach ($val in $state.InputItems.Values) {
-                        if ($val.ParentPath -eq $item.FullPath) { $currHasChildren = $true; break }
-                    }
+                    foreach ($v in $state.InputItems.Values) { if ($v.ParentPath -eq $item.FullPath) { $currHasChildren = $true; break } }
                  }
                  
                  if ($prevHasChildren -and $currHasChildren) {
@@ -170,7 +160,7 @@ function Invoke-FormatTreeInternal {
     [CmdletBinding()]
     param($Item, $Mode, $Ascii, $Colorize, $ShowTargets, $Gap, $State, $Prefix, $IsLast, $NoSpan)
 
-    $results = @()
+    $results = [System.Collections.Generic.List[object]]::new()
     $type = $Item.IsContainer ? 'Directory' : 'File'
     $connector = Get-Connector -Type $type -Mode $Mode -Ascii:$Ascii -IsLast $IsLast -NoSpan $NoSpan -StyleProfile $State.StyleProfile
 
@@ -191,21 +181,28 @@ function Invoke-FormatTreeInternal {
     $State.LastSubtreeRenderedLines = $false
 
     # Discover children strictly from the input stream
+    $children = [System.Collections.Generic.List[object]]::new()
     if ($Item.IsContainer) {
         $parentPath = $Item.FullPath
-        $childList = New-Object System.Collections.Generic.List[object]
-        foreach ($i in $State.AllItems) {
-            if ($i.ParentPath -eq $parentPath) { [void]$childList.Add($i) }
+        $childrenFound = $null
+        foreach ($iAll in $State.AllItems) {
+            if ($iAll.ParentPath -eq $parentPath) {
+                if ($null -eq $childrenFound) { $childrenFound = [System.Collections.Generic.List[object]]::new() }
+                [void]$childrenFound.Add($iAll)
+            }
         }
-        $children = $childList.ToArray()
-    }
-    else {
-        $children = @()
+        if ($null -ne $childrenFound) {
+            if ($childrenFound -is [System.Collections.IEnumerable] -and $childrenFound -isnot [string]) {
+                foreach ($c in $childrenFound) { [void]$children.Add($c) }
+            } else {
+                [void]$children.Add($childrenFound)
+            }
+        }
     }
     
     # Fallback to .Children if they are present but were NOT in AllItems
     # This is needed for tests that don't pass the full stream
-    if ($children.Count -eq 0 -and $null -ne $Item.Children -and $Item.Children.Count -gt 0) {
+    if (($null -eq $children -or $children.Count -eq 0) -and $null -ne $Item.Children -and $Item.Children.Count -gt 0) {
         $children = $Item.Children
     }
     
@@ -214,27 +211,25 @@ function Invoke-FormatTreeInternal {
         # If we have a full stream (AllItems), only show children that are in it.
         # This handles cases like -DirectoryOnly where files are excluded from the stream.
         if ($State.AllItems.Count -gt 1) {
-             $childPoolList = New-Object System.Collections.Generic.List[object]
+             $childPool = [System.Collections.Generic.List[object]]::new()
              foreach ($c in $children) {
-                 if ($State.InputItems.ContainsKey($c.FullPath) -or $null -eq $c.FullPath) {
-                     [void]$childPoolList.Add($c)
-                 }
+                if ($State.InputItems.ContainsKey($c.FullPath) -or $null -eq $c.FullPath) {
+                    [void]$childPool.Add($c)
+                }
              }
-             $childPool = $childPoolList.ToArray()
         }
         else {
-             $childPool = @($children)
+             $childPool = $children
         }
 
         if ($childPool.Count -gt 0) {
             $prefixSymbol = Get-Connector -Type Prefix -Mode $Mode -Ascii:$Ascii -IsLast $IsLast -StyleProfile $State.StyleProfile
             $newPrefix = $Prefix + $prefixSymbol
-            
-            $currentLevelNoSpan = $false
-            if ($Mode -eq 'Tree') {
+            $currentLevelNoSpan = $Mode -eq 'Tree'
+            if ($currentLevelNoSpan) {
                 $hasContainer = $false
                 foreach ($cp in $childPool) { if ($cp.IsContainer) { $hasContainer = $true; break } }
-                $currentLevelNoSpan = -not $hasContainer
+                if ($hasContainer) { $currentLevelNoSpan = $false }
             }
 
             $hasRenderedChildren = $false
@@ -259,20 +254,27 @@ function Invoke-FormatTreeInternal {
                     }
                 }
 
-                $res = Invoke-FormatTreeInternal -Item $child -Mode $Mode -Ascii:$Ascii -Colorize:$Colorize -ShowTargets:$ShowTargets -Gap:$Gap -State $State -Prefix $newPrefix -IsLast $isLastChild -NoSpan ($child.IsLeaf -and $currentLevelNoSpan)
-                if ($null -ne $res) { 
-                    $results += $res 
-                    $hasRenderedChildren = $true
-                    $State.LastSubtreeRenderedLines = $true
-                }
+    $res = Invoke-FormatTreeInternal -Item $child -Mode $Mode -Ascii:$Ascii -Colorize:$Colorize -ShowTargets:$ShowTargets -Gap:$Gap -State $State -Prefix $newPrefix -IsLast $isLastChild -NoSpan ($child.IsLeaf -and $currentLevelNoSpan)
+    if ($null -ne $res) { 
+        $subtreeResults = $res
+        $results += $subtreeResults
+        $hasRenderedChildren = $true
+        $State.LastSubtreeRenderedLines = $true
+    }
 
                 # Gap logic between children
                 if ($Gap -and $i -lt $childPool.Count - 1) {
                     $next = $childPool[$i+1]
                     
                     # Discover children for gap logic
-                    $childHasVisibleChildren = $child.IsContainer -and ($State.AllItems | Where-Object { $_.ParentPath -eq $child.FullPath })
-                    $nextHasVisibleChildren = $next.IsContainer -and ($State.AllItems | Where-Object { $_.ParentPath -eq $next.FullPath })
+                    $childHasVisibleChildren = $false
+                    if ($child.IsContainer) {
+                        foreach ($iAll in $State.AllItems) { if ($iAll.ParentPath -eq $child.FullPath) { $childHasVisibleChildren = $true; break } }
+                    }
+                    $nextHasVisibleChildren = $false
+                    if ($next.IsContainer) {
+                        foreach ($iAll in $State.AllItems) { if ($iAll.ParentPath -eq $next.FullPath) { $nextHasVisibleChildren = $true; break } }
+                    }
 
                     # Reset tail gap done flag for next sibling
                     if ($State.LastGapMode -eq 'TailGapDone') { $State.LastGapMode = 'None' }
@@ -312,6 +314,10 @@ function Invoke-FormatTreeInternal {
                 }
             }
         }
+    }
+    # Standardize results to a flat array of strings to avoid unrolling issues in PS 5.1
+    if ($results -is [System.Collections.Generic.List[object]]) {
+        return ,$results.ToArray()
     }
     return $results
 }

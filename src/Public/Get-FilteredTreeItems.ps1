@@ -84,14 +84,23 @@ function Get-FilteredTreeItems {
         #
         # Hidden/System sets
         #
-        [object[]]$hidden = $HideHidden ? ($orig | Where-Object {
-            $_.IsHidden -eq $true -or
-                    ($_.Native.FileAttributes -ne $null -and ($_.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0)
-        }) : @()
+        $hidden = [System.Collections.Generic.List[object]]::new()
+        if ($HideHidden) {
+            foreach ($item in $orig) {
+                if ($item.IsHidden -eq $true -or ($item.Native.FileAttributes -ne $null -and ($item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0)) {
+                    $hidden.Add($item)
+                }
+            }
+        }
 
-        [object[]]$system = $HideSystem ? ($orig | Where-Object {
-            ($_.Native.FileAttributes -ne $null -and ($_.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0)
-        }) : @()
+        $system = [System.Collections.Generic.List[object]]::new()
+        if ($HideSystem) {
+            foreach ($item in $orig) {
+                if ($item.Native.FileAttributes -ne $null -and ($item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0) {
+                    $system.Add($item)
+                }
+            }
+        }
 
         #
         # Exclude sets (exact + glob)
@@ -103,7 +112,11 @@ function Get-FilteredTreeItems {
             foreach ($item in $orig) {
                 $name = $item.Name
                 if ($Exclude -contains $name) { $excludedExact += $item; continue }
-                if ($Exclude | Where-Object { $name -like $_ }) { $excludedGlob += $item }
+                if ($Exclude) {
+                    foreach ($pattern in $Exclude) {
+                        if ($name -like $pattern) { $excludedGlob += $item; break }
+                    }
+                }
             }
         }
 
@@ -117,7 +130,11 @@ function Get-FilteredTreeItems {
             foreach ($item in $orig) {
                 $name = $item.Name
                 if ($Include -contains $name) { $includedExact += $item; continue }
-                if ($Include | Where-Object { $name -like $_ }) { $includedGlob += $item }
+                if ($Include) {
+                    foreach ($pattern in $Include) {
+                        if ($name -like $pattern) { $includedGlob += $item; break }
+                    }
+                }
             }
         }
 

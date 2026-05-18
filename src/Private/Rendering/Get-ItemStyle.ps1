@@ -58,11 +58,20 @@ function Get-ItemStyle {
     #
     # Parse base style codes
     #
-    $codes = @() + ($base -split ';' | Where-Object { $_ -ne '' })
+    $codesList = [System.Collections.Generic.List[object]]::new()
+        foreach ($c in ($base -split ';')) {
+            if ($c -ne '') { [void]$codesList.Add($c) }
+        }
 
     # Extract foreground codes (30–37, 90–97)
-    $fg    = @() + ($codes | Where-Object { $_ -match '^(3[0-7]|9[0-7])$' })
-    $codes = @() + ($codes | Where-Object { $_ -notmatch '^(3[0-7]|9[0-7])$' })
+    $fgList = [System.Collections.Generic.List[object]]::new()
+    $remainingCodes = [System.Collections.Generic.List[object]]::new()
+    foreach ($c in $codesList) {
+        if ($c -match '^(3[0-7]|9[0-7])$') { [void]$fgList.Add($c) }
+        else { [void]$remainingCodes.Add($c) }
+    }
+    $fg = $fgList.ToArray()
+    $codes = $remainingCodes
 
     #
     # Apply attribute overlays
@@ -76,7 +85,7 @@ function Get-ItemStyle {
 
                 # Add overlay attributes
                 if ($overlay.Attributes) {
-                    $codes += ($overlay.Attributes -split ';')
+                    foreach ($a in ($overlay.Attributes -split ';')) { [void]$codes.Add($a) }
                 }
 
                 # Foreground override
@@ -95,9 +104,12 @@ function Get-ItemStyle {
     #
     # Build final ANSI sequence
     #
-    $final = @()
-    if ($fg) { $final += $fg }
-    $final += $codes
+    $final = [System.Collections.Generic.List[object]]::new()
+    if ($fg) {
+        if ($fg -is [array]) { foreach ($f in $fg) { [void]$final.Add($f) } }
+        else { [void]$final.Add($fg) }
+    }
+    foreach ($c in $codes) { [void]$final.Add($c) }
 
     $ansi = "${esc}[$($final -join ';')m"
 
