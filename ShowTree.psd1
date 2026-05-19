@@ -71,7 +71,7 @@ Description = 'Modern tree.com replacement with graphical, listing, and compatib
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
 FunctionsToExport = 'Format-Tree', 'Invoke-FormatTreeInternal', 'Get-FilteredTreeItems', 
                'Get-TreeItem', 'Set-ShowTreeStyleProfile', 'Show-Tree', 
-               'Show-TreeLegend'
+               'Show-TreeLegend', 'Show-TreeNew'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = @()
@@ -118,7 +118,7 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        Prerelease = '-alpha.8'
+        Prerelease = '-alpha.9'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         # RequireLicenseAcceptance = $false

@@ -16,6 +16,7 @@ else {
 . (Join-Path $moduleSrcRoot 'Public\Get-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Get-FilteredTreeItems.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Format-Tree.ps1')
+. (Join-Path $moduleSrcRoot 'Public\Show-TreeNew.ps1')
 
 # Dot-source private functions
 . (Join-Path $moduleSrcRoot 'Private\Get-ActiveShowTreeStyleProfile.ps1')
@@ -34,6 +35,7 @@ else {
 . (Join-Path $moduleSrcRoot 'Private\Rendering\Write-Gap.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Show-TreeInternal.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Test-HasChildrenForGap.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Get-TreeModeHeader.ps1')
 
 # Load the default style profile
 $script:DefaultStyleProfilePath = Join-Path $moduleSrcRoot 'Data\DefaultStyleProfile.psd1'
@@ -45,4 +47,4 @@ $script:ShowTreeState = @{
 $script:ShowTreeState.StyleProfile = Import-PowerShellDataFile -LiteralPath $script:DefaultStyleProfilePath
 
 # Export only the public function
-Export-ModuleMember -Function Show-Tree, Show-TreeLegend, Set-ShowTreeStyleProfile, Get-TreeItem, Get-FilteredTreeItems, Format-Tree
+Export-ModuleMember -Function Show-Tree, Show-TreeLegend, Set-ShowTreeStyleProfile, Get-TreeItem, Get-FilteredTreeItems, Format-Tree, Show-TreeNew

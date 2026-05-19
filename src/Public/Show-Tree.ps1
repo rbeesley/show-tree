@@ -68,9 +68,11 @@
     Enable color output. In Tree mode, this matches tree.com behavior.
     In Normal mode, this simply forces color on.
 
-.PARAMETER NoFiles / Files
-    Control whether files are included. Files is Tree-only; NoFiles applies to
-    Normal and Listing modes.
+.PARAMETER Files
+    Displays files as well as directories. In Tree mode, this matches tree.com /f behavior.
+
+.PARAMETER ShowFiles
+    Alias for -Files.
 
 .PARAMETER HideHidden / ShowHidden
     Control visibility of hidden items.
@@ -147,6 +149,7 @@ function Show-Tree {
         [switch]$Mono,       # Normal/Listing
 
         # Files
+        [Alias('ShowFiles')]
         [switch]$Files,      # Tree
         [switch]$NoFiles,    # Normal/Listing
 
@@ -206,7 +209,7 @@ function Show-Tree {
     }
 
     if ($Files -and $NoFiles) {
-        throw "Cannot specify both -Files and -NoFiles."
+        throw "Cannot specify both -Files (or -ShowFiles) and -NoFiles."
     }
 
     if ($ShowHidden -and $HideHidden) {
@@ -229,32 +232,9 @@ function Show-Tree {
 
     # Tree Mode: Output should follow `tree.com` output
     if ($Mode -eq 'Tree') {
-
-        # Extract drive letter
-        $drive = Split-Path $Path -Qualifier
-        $driveName = $drive.TrimEnd(':')
-
-        # 1. Invalid drive → tree.com behavior
-        if (-not (Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue)) {
-            Write-Output "Invalid drive specification"
-            return
-        }
-
-        # 2. Valid drive → print header
-        $nearestExistingParent = Get-NearestExistingParent -Path $Path
-        $fileSystemLabel       = Get-VolumeName -Path $nearestExistingParent
-        $serialNumber          = Get-VolumeSerialNumber -Path $nearestExistingParent
-
-        Write-Output "Folder PATH listing for volume $fileSystemLabel"
-        Write-Output "Volume serial number is $serialNumber"
-
-        Write-Output $Path
-
-        # 3. Invalid path on valid drive → tree.com behavior
-        if (-not (Test-Path $Path)) {
-            $sub = $Path.Substring(2)  # remove drive letter
-            Write-Output "Invalid path - $sub"
-            Write-Output "No subfolders exist"
+        $header = Get-TreeModeHeader -Path $Path
+        $header | Where-Object { $_ -is [string] }
+        if ($header -contains $false) {
             return
         }
     }
