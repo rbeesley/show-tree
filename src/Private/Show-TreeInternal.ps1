@@ -162,8 +162,11 @@ function Show-TreeInternal {
     #
     # Filtering
     #
-    $dirs  = @(Get-FilteredTreeItems -Items $dirs  -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem)
-    $files = @(Get-FilteredTreeItems -Items $files -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem)
+    $dirs  = $dirs | Where-Object { Test-TreeItemVisible -Item $_ -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem }
+    $files = $files | Where-Object { Test-TreeItemVisible -Item $_ -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem }
+
+    $dirs  = @($dirs)
+    $files = @($files)
 
     $fileCount = $files.Count
     $dirCount  = $dirs.Count

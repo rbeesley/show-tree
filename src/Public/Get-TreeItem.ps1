@@ -1,4 +1,6 @@
-﻿function Get-TreeItem {
+﻿# \src\Public\Get-TreeItem.ps1
+
+function Get-TreeItem {
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)]
@@ -46,8 +48,20 @@
     $items = [System.Collections.Generic.List[object]]::new()
     if ($ProviderMode -eq 'Win32' -and $IsWindows) {
         $raw = Get-RawDirectoryEntries -Path $resolvedPath
-        foreach ($d in $raw.Directories) { [void]$items.Add($d) }
-        foreach ($f in $raw.Files) { [void]$items.Add($f) }
+        
+        $rawDirectories = foreach ($d in $raw.Directories) {
+            if (Test-TreeItemVisible -Item $d -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
+                $d
+            }
+        }
+        $rawFiles = foreach ($f in $raw.Files) {
+            if (Test-TreeItemVisible -Item $f -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
+                $f
+            }
+        }
+
+        foreach ($d in $rawDirectories) { [void]$items.Add($d) }
+        foreach ($f in $rawFiles) { [void]$items.Add($f) }
     }
     else {
         $rawItems = Get-ChildItem -Path $resolvedPath -Force -ErrorAction SilentlyContinue
@@ -96,15 +110,10 @@
                 -ParentPath $resolvedPath `
                 -IsHidden $isHidden
 
-            [void]$items.Add($treeItem)
+            if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
+                [void]$items.Add($treeItem)
+            }
         }
-    }
-
-    #
-    # Normalization: Filtering
-    #
-    if ($Include -or $Exclude -or $HideHidden -or $HideSystem -or $DirectoryOnly) {
-        $items = @(Get-FilteredTreeItems -Items $items -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly)
     }
 
     #
@@ -122,12 +131,7 @@
 
         # Recurse if it's a container and we haven't reached MaxDepth
         if ($item.IsContainer -and ($Depth -eq -1 -or $CurrentDepth -lt $Depth)) {
-            $shouldRecurse = $true
-            if ($item.IsLink -and -not $FollowLinks) {
-                $shouldRecurse = $false
-            }
-
-            if ($shouldRecurse) {
+            if (Test-TreeItemRecurse -Item $item -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -FollowLinks:$FollowLinks) {
                 Get-TreeItem -Path $item.FullPath -Depth $Depth -FollowLinks:$FollowLinks -ProviderMode $ProviderMode -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly -CurrentDepth ($CurrentDepth + 1)
             }
         }

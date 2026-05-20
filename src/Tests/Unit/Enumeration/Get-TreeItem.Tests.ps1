@@ -1,4 +1,6 @@
-﻿Describe "Get-TreeItem" {
+﻿# src\Tests\Unit\Enumeration\Get-TreeItem.Tests.ps1
+
+Describe "Get-TreeItem" {
     BeforeAll {
         # Load necessary scripts
         $sutDir = Join-Path $PSScriptRoot '..\..\..\Public'
@@ -6,8 +8,9 @@
         $fixDir = Join-Path $PSScriptRoot '..\..\Fixtures'
 
         . (Join-Path $sutDir 'Get-TreeItem.ps1')
-        . (Join-Path $privDir 'New-TreeItem.ps1')
+        . (Join-Path $sutDir 'New-TreeItem.ps1')
         . (Join-Path $privDir 'Get-RawDirectoryEntries.ps1')
+        . (Join-Path $privDir 'TreeItemPredicates.ps1')
         . (Join-Path $fixDir 'TreeItemFixtures.ps1')
 
         $script:TestRoot = Join-Path $PSScriptRoot "GetTreeItemTest"
@@ -137,10 +140,6 @@
     }
 
     Context "Filtering" {
-        BeforeAll {
-            $sutDir = Join-Path $PSScriptRoot '..\..\..\Public'
-            . (Join-Path $sutDir 'Get-FilteredTreeItems.ps1')
-        }
 
         It "Excludes items by name" {
             $items = Get-TreeItem -Path $script:TestRoot -Depth 0 -Exclude "Dir1"

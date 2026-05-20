@@ -1,3 +1,5 @@
+# \src\Public\New-TreeItem.ps1
+
 function New-TreeItem {
     [CmdletBinding()]
     param(

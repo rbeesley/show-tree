@@ -55,10 +55,14 @@ function New-FixtureTreeItem {
 function New-FixtureTree {
     param(
         [Parameter(Mandatory)]
-        [hashtable]$Structure,
+        [System.Collections.IDictionary]$Structure,
         [string]$ParentPath
     )
 
+    if ($Structure -is [hashtable] -and $Structure -isnot [System.Collections.Specialized.OrderedDictionary]) {
+        throw "New-FixtureTree requires an ordered dictionary. Use [ordered]@{ ... } for deterministic fixture order."
+    }
+    
     if (-not $ParentPath) {
         $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
     }
@@ -83,7 +87,7 @@ function New-FixtureTree {
             if ($value.ContainsKey('Attributes')) {
                 $fileAttrs = [IO.FileAttributes]$value.Attributes
             }
-            
+
             if ($value.ContainsKey('IsSymlink')) { $isSymlink = $value.IsSymlink }
             if ($value.ContainsKey('IsJunction')) { $isJunction = $value.IsJunction }
             if ($value.ContainsKey('Target')) { $target = $value.Target }
@@ -101,7 +105,7 @@ function New-FixtureTree {
                 $isDir = $false
                 if ($value.ContainsKey('IsDirectory')) { $isDir = $value.IsDirectory }
             }
-            
+
             if ($isDir -and ($fileAttrs -band [IO.FileAttributes]::Directory) -eq 0) {
                 $fileAttrs = $fileAttrs -bor [IO.FileAttributes]::Directory
             }
@@ -121,6 +125,7 @@ function New-FixtureTree {
                                    -Depth $depth
     }
 
-    $rootName = ($Structure.GetEnumerator() | Select-Object -First 1).Key
-    BuildFixtureNode $rootName $Structure[$rootName] $ParentPath 0
+    foreach ($key in $Structure.Keys) {
+        BuildFixtureNode $key $Structure[$key] $ParentPath 0
+    }
 }

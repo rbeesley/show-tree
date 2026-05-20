@@ -1,4 +1,6 @@
-﻿function Format-Tree {
+﻿# \src\Public\Format-Tree.ps1
+
+function Format-Tree {
     [CmdletBinding()]
     param(
         [Parameter(ValueFromPipeline, Mandatory)]
@@ -22,302 +24,101 @@
             Get-ActiveShowTreeStyleProfile
         }
 
-        $state = [PSCustomObject]@{
-            AllItems     = [System.Collections.Generic.List[object]]::new()
-            InputItems   = @{} # FullPath -> TreeItem
-            SeenItems    = @{} # FullPath -> bool
-            StyleProfile = $resolvedStyleProfile
-            LastGapMode  = 'None'
-            LastSubtreeRenderedLines = $false
-        }
+        $allInputItems = [System.Collections.Generic.List[object]]::new()
     }
 
     process {
-        if ($null -ne $Items) {
-            foreach ($i in $Items) {
-                if ($null -ne $i) {
-                    $state.AllItems.Add($i)
-                    if ($null -ne $i.FullPath) { $state.InputItems[$i.FullPath] = $i }
-                }
-            }
-        }
         if ($null -ne $_) {
-            if ($null -ne $_.FullPath -and -not $state.InputItems.ContainsKey($_.FullPath)) {
-                $state.AllItems.Add($_)
-                $state.InputItems[$_.FullPath] = $_
-            }
-            elseif ($null -eq $_.FullPath) { $state.AllItems.Add($_) }
+            $allInputItems.Add($_)
         }
     }
 
     end {
-        if ($state.AllItems.Count -eq 0) { return }
+        if ($allInputItems.Count -eq 0 -and $null -ne $Items) {
+            foreach ($i in $Items) { if ($null -ne $i) { $allInputItems.Add($i) } }
+        }
+        
+        if ($allInputItems.Count -eq 0) { return }
 
-        # Identify roots in the input set (items whose parent is NOT in the input set)
-        $roots = [System.Collections.Generic.List[object]]::new()
-        foreach ($item in $state.AllItems) {
-            $isRoot = $true
-            if ($null -ne $item.ParentPath -and $state.InputItems.ContainsKey($item.ParentPath)) {
-                $isRoot = $false
+        $esc = [char]27
+        $reset = $Colorize ? "${esc}[0m" : ""
+        $dim = $Colorize ? "${esc}[90m" : ""
+
+        $itemCount = $allInputItems.Count
+        
+        # Calculate minimum depth to avoid leading indentation when roots are skipped
+        $minDepth = 999
+        foreach ($item in $allInputItems) {
+            if ($item.Depth -lt $minDepth) { $minDepth = $item.Depth }
+        }
+
+        for ($i = 0; $i -lt $itemCount; $i++) {
+            $item = $allInputItems[$i]
+            $depth = $item.Depth
+
+            # 1. Build Prefix (Vertical bars for ancestors)
+            $prefixes = ""
+            for ($d = $minDepth; $d -lt $depth; $d++) {
+                $ancestorIsLast = $true
+                # Check if there are any more items at this depth (d) later in the stream
+                # that share the same ancestor as our current item.
+                # Simplified: find the latest item at depth $d that is an ancestor of the current item
+                # and see if it was the last sibling.
+                for ($j = $i + 1; $j -lt $itemCount; $j++) {
+                    if ($allInputItems[$j].Depth -eq $d) {
+                        $ancestorIsLast = $false
+                        break
+                    }
+                    if ($allInputItems[$j].Depth -lt $d) { break }
+                }
+                $prefixes += Get-Connector -Type Prefix -Mode $Mode -Ascii:$Ascii -IsLast $ancestorIsLast -StyleProfile $resolvedStyleProfile
             }
-            if ($isRoot) { [void]$roots.Add($item) }
-        }
 
-        if ($roots.Count -eq 0) { $roots = $state.AllItems.ToArray() }
+            # 2. Determine if this item is the last sibling
+            $isLast = $true
+            for ($j = $i + 1; $j -lt $itemCount; $j++) {
+                if ($allInputItems[$j].Depth -lt $depth) { break }
+                if ($allInputItems[$j].Depth -eq $depth -and $allInputItems[$j].ParentPath -eq $item.ParentPath) {
+                    $isLast = $false
+                    break
+                }
+            }
 
-        $topLevelNoSpan = $Mode -eq 'Tree'
-        if ($topLevelNoSpan) {
-            $hasContainer = $false
-            foreach ($r in $roots) { if ($r.IsContainer) { $hasContainer = $true; break } }
-            if ($hasContainer) { $topLevelNoSpan = $false }
-        }
+            # 3. Connector
+            $connector = Get-Connector -Type ($item.IsContainer ? 'Directory' : 'File') -Mode $Mode -Ascii:$Ascii -IsLast $isLast -StyleProfile $resolvedStyleProfile
 
-        for ($i = 0; $i -lt $roots.Count; $i++) {
-            $item = $roots[$i]
-            if ($null -ne $item.FullPath -and $state.SeenItems.ContainsKey($item.FullPath)) { continue }
-
-            $isLast = ($i -eq $roots.Count - 1)
-            
-            # Gap logic before directory root if previous was file root
-            if ($Gap -and ($state.LastGapMode -eq 'None' -or $state.LastGapMode -eq 'TailGapDone') -and $i -gt 0) {
-                $prevRoot = $roots[$i-1]
-                $prevWasFile = $prevRoot.IsLeaf
-                $currIsDirectory = $item.IsContainer
+            # 4. Gaps
+            if ($Gap -and $Mode -ne 'Tree' -and $i -gt 0) {
+                $prev = $allInputItems[$i-1]
+                $needsGap = $false
                 
-                if ($prevWasFile -and $currIsDirectory) {
-                    if ($state.LastGapMode -ne 'TailGapDone') {
-                        $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $state.StyleProfile
-                        $escG = [char]27
-                        $colorGap = $Colorize ? "${escG}[90m" : ""
-                        $colorReset = $Colorize ? "${escG}[0m" : ""
-                        Write-Output "${colorGap}${gapConnector}${colorReset}"
+                if ($item.Depth -eq $prev.Depth) {
+                    # Sibling gap: if previous had children
+                    $prevHadChildren = $false
+                    for ($j = $i; $j -lt $itemCount; $j++) {
+                        if ($allInputItems[$j].ParentPath -eq $prev.FullPath) { $prevHadChildren = $true; break }
                     }
-                    $state.LastGapMode = 'Internal'
+                    if ($prevHadChildren -or ($prev.IsLeaf -and $item.IsContainer)) { $needsGap = $true }
+                } elseif ($item.Depth -lt $prev.Depth) {
+                    # Tail gap: we moved up
+                    # Look back to find if the sibling of the current item we just finished had children
+                    $needsGap = $true 
+                }
+
+                if ($needsGap) {
+                    $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $resolvedStyleProfile
+                    Write-Output "${dim}${prefixes}${gapConnector}${reset}"
                 }
             }
 
-            if ($state.LastGapMode -eq 'Tail') {
-                $state.LastGapMode = 'None'
-                if ($Gap -and $Mode -ne 'Tree' -and $state.LastSubtreeRenderedLines) {
-                    $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $state.StyleProfile
-                    $escG = [char]27
-                    $colorGap = $Colorize ? "${escG}[90m" : ""
-                    $colorReset = $Colorize ? "${escG}[0m" : ""
-                    Write-Output "${colorGap}${gapConnector}${colorReset}"
-                    $state.LastGapMode = 'TailGapDone'
-                }
-                else { $state.LastGapMode = 'TailGapDone' }
+            # 5. Render Item
+            $style = Get-ItemStyle -Item $item -Colorize:$Colorize -StyleProfile $resolvedStyleProfile
+            $targetText = ""
+            if ($ShowTargets -and $item.IsLink -and $item.Link.Target) {
+                $targetText = " ${dim}->${reset} $($item.Link.Target)"
             }
 
-            # If we didn't just render a tail gap, check for sibling gap
-            if ($Gap -and $Mode -ne 'Tree' -and $state.LastGapMode -ne 'TailGapDone' -and $i -gt 0) {
-                 $prevRoot = $roots[$i-1]
-                 $prevHasChildren = $false
-                 if ($prevRoot.IsContainer) {
-                    foreach ($v in $state.InputItems.Values) { if ($v.ParentPath -eq $prevRoot.FullPath) { $prevHasChildren = $true; break } }
-                 }
-                 $currHasChildren = $false
-                 if ($item.IsContainer) {
-                    foreach ($v in $state.InputItems.Values) { if ($v.ParentPath -eq $item.FullPath) { $currHasChildren = $true; break } }
-                 }
-                 
-                 if ($prevHasChildren -and $currHasChildren) {
-                     # Suppress sibling gap if next root will trigger internal gap
-                     $prevWasFile = $prevRoot.IsLeaf
-                     $currIsDirectory = $item.IsContainer
-                     $nextWillTriggerInternal = $prevWasFile -and $currIsDirectory
-
-                     if (-not $nextWillTriggerInternal) {
-                        $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $state.StyleProfile
-                        $escG = [char]27
-                        $colorGap = $Colorize ? "${escG}[90m" : ""
-                        $colorReset = $Colorize ? "${escG}[0m" : ""
-                        Write-Output "${colorGap}${gapConnector}${colorReset}"
-                        $state.LastGapMode = 'Sibling'
-                     }
-                 }
-            }
-
-            # State.LastGapMode = 'None' # removed reset as we now use it
-            $results = Invoke-FormatTreeInternal `
-                -Item $item `
-                -Mode $Mode `
-                -Ascii:$Ascii `
-                -Colorize:$Colorize `
-                -ShowTargets:$ShowTargets `
-                -Gap:$Gap `
-                -State $state `
-                -Prefix "" `
-                -IsLast $isLast `
-                -NoSpan ($item.IsLeaf -and $topLevelNoSpan)
-            
-            if ($null -ne $results) { foreach ($line in $results) { Write-Output $line } }
+            Write-Output "${dim}${prefixes}${dim}${connector}${reset}$($style.Ansi)$($item.Name)$reset$targetText".TrimEnd()
         }
     }
-}
-
-function Invoke-FormatTreeInternal {
-    [CmdletBinding()]
-    param($Item, $Mode, $Ascii, $Colorize, $ShowTargets, $Gap, $State, $Prefix, $IsLast, $NoSpan)
-
-    $results = [System.Collections.Generic.List[object]]::new()
-    $type = $Item.IsContainer ? 'Directory' : 'File'
-    $connector = Get-Connector -Type $type -Mode $Mode -Ascii:$Ascii -IsLast $IsLast -NoSpan $NoSpan -StyleProfile $State.StyleProfile
-
-    $targetText = ""
-    if ($ShowTargets -and $Item.IsLink -and $Item.Link.Target) {
-        $escT = [char]27; $resetT = $Colorize ? "${escT}[0m" : ""; $dimT = $Colorize ? "${escT}[90m" : ""
-        $targetText = " ${dimT}->${resetT} $($Item.Link.Target)"
-    }
-
-    $style = Get-ItemStyle -Item $Item -Colorize:$Colorize -StyleProfile $State.StyleProfile
-    if ($null -ne $Item.FullPath) { $State.SeenItems[$Item.FullPath] = $true }
-
-    $esc = [char]27; $reset = $Colorize ? "${esc}[0m" : ""; $dim = $Colorize ? "${esc}[90m" : ""
-    $results += "${dim}${Prefix}${dim}${connector}$($style.Ansi)$($Item.Name)$reset$targetText"
-
-    # Reset gap mode when starting new item
-    $State.LastGapMode = 'None'
-    $State.LastSubtreeRenderedLines = $false
-
-    # Discover children strictly from the input stream
-    $children = [System.Collections.Generic.List[object]]::new()
-    if ($Item.IsContainer) {
-        $parentPath = $Item.FullPath
-        $childrenFound = $null
-        foreach ($iAll in $State.AllItems) {
-            if ($iAll.ParentPath -eq $parentPath) {
-                if ($null -eq $childrenFound) { $childrenFound = [System.Collections.Generic.List[object]]::new() }
-                [void]$childrenFound.Add($iAll)
-            }
-        }
-        if ($null -ne $childrenFound) {
-            if ($childrenFound -is [System.Collections.IEnumerable] -and $childrenFound -isnot [string]) {
-                foreach ($c in $childrenFound) { [void]$children.Add($c) }
-            } else {
-                [void]$children.Add($childrenFound)
-            }
-        }
-    }
-    
-    # Fallback to .Children if they are present but were NOT in AllItems
-    # This is needed for tests that don't pass the full stream
-    if (($null -eq $children -or $children.Count -eq 0) -and $null -ne $Item.Children -and $Item.Children.Count -gt 0) {
-        $children = $Item.Children
-    }
-    
-    if ($null -ne $children -and $children.Count -gt 0) {
-        # Filter child pool to only those that should be rendered
-        # If we have a full stream (AllItems), only show children that are in it.
-        # This handles cases like -DirectoryOnly where files are excluded from the stream.
-        if ($State.AllItems.Count -gt 1) {
-             $childPool = [System.Collections.Generic.List[object]]::new()
-             foreach ($c in $children) {
-                if ($State.InputItems.ContainsKey($c.FullPath) -or $null -eq $c.FullPath) {
-                    [void]$childPool.Add($c)
-                }
-             }
-        }
-        else {
-             $childPool = $children
-        }
-
-        if ($childPool.Count -gt 0) {
-            $prefixSymbol = Get-Connector -Type Prefix -Mode $Mode -Ascii:$Ascii -IsLast $IsLast -StyleProfile $State.StyleProfile
-            $newPrefix = $Prefix + $prefixSymbol
-            $currentLevelNoSpan = $Mode -eq 'Tree'
-            if ($currentLevelNoSpan) {
-                $hasContainer = $false
-                foreach ($cp in $childPool) { if ($cp.IsContainer) { $hasContainer = $true; break } }
-                if ($hasContainer) { $currentLevelNoSpan = $false }
-            }
-
-            $hasRenderedChildren = $false
-            for ($i = 0; $i -lt $childPool.Count; $i++) {
-                $child = $childPool[$i]; $isLastChild = ($i -eq $childPool.Count - 1)
-                
-                # Gap logic before directory if previous was file
-                if ($Gap -and ($State.LastGapMode -eq 'None' -or $State.LastGapMode -eq 'TailGapDone') -and $i -gt 0) {
-                    $prev = $childPool[$i-1]
-                    $prevWasFile = $prev.IsLeaf
-                    $currIsDirectory = $child.IsContainer
-                    
-                    if ($prevWasFile -and $currIsDirectory) {
-                        # Only add a gap if we didn't just add one via TailGapDone
-                        if ($State.LastGapMode -ne 'TailGapDone') {
-                            $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $State.StyleProfile
-                            $cGap = $Colorize ? "$esc[90m" : ""
-                            $cReset = $Colorize ? "$esc[0m" : ""
-                            $results += "${cGap}${newPrefix}${gapConnector}${cReset}"
-                        }
-                        $State.LastGapMode = 'Internal'
-                    }
-                }
-
-    $res = Invoke-FormatTreeInternal -Item $child -Mode $Mode -Ascii:$Ascii -Colorize:$Colorize -ShowTargets:$ShowTargets -Gap:$Gap -State $State -Prefix $newPrefix -IsLast $isLastChild -NoSpan ($child.IsLeaf -and $currentLevelNoSpan)
-    if ($null -ne $res) { 
-        $subtreeResults = $res
-        $results += $subtreeResults
-        $hasRenderedChildren = $true
-        $State.LastSubtreeRenderedLines = $true
-    }
-
-                # Gap logic between children
-                if ($Gap -and $i -lt $childPool.Count - 1) {
-                    $next = $childPool[$i+1]
-                    
-                    # Discover children for gap logic
-                    $childHasVisibleChildren = $false
-                    if ($child.IsContainer) {
-                        foreach ($iAll in $State.AllItems) { if ($iAll.ParentPath -eq $child.FullPath) { $childHasVisibleChildren = $true; break } }
-                    }
-                    $nextHasVisibleChildren = $false
-                    if ($next.IsContainer) {
-                        foreach ($iAll in $State.AllItems) { if ($iAll.ParentPath -eq $next.FullPath) { $nextHasVisibleChildren = $true; break } }
-                    }
-
-                    # Reset tail gap done flag for next sibling
-                    if ($State.LastGapMode -eq 'TailGapDone') { $State.LastGapMode = 'None' }
-
-                    if ($State.LastGapMode -eq 'Tail') {
-                        $State.LastGapMode = 'None'
-                        # Print a gap connector if the previous subtree had a tail gap
-                        if ($Mode -ne 'Tree' -and -not $isLastChild -and $State.LastSubtreeRenderedLines) {
-                            $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $State.StyleProfile
-                            $cGap = $Colorize ? "$esc[90m" : ""
-                            $cReset = $Colorize ? "$esc[0m" : ""
-                            $results += "${cGap}${newPrefix}${gapConnector}${cReset}"
-                            $State.LastGapMode = 'TailGapDone'
-                        }
-                        else { $State.LastGapMode = 'TailGapDone' }
-                    }
-                    elseif ($Mode -ne 'Tree' -and $childHasVisibleChildren -and $nextHasVisibleChildren) {
-                        # Sibling gap between two branches with children
-                        $prevWasFile = $child.IsLeaf
-                        $currIsDirectory = $next.IsContainer
-                        $nextWillTriggerInternal = $prevWasFile -and $currIsDirectory
-
-                        if (-not $nextWillTriggerInternal) {
-                            $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $State.StyleProfile
-                            $cGap = $Colorize ? "${esc}[90m" : ""
-                            $cReset = $Colorize ? "${esc}[0m" : ""
-                            $results += "${cGap}${newPrefix}${gapConnector}${cReset}"
-                            $State.LastGapMode = 'Sibling'
-                        }
-                    }
-                }
-                elseif ($Gap -and $isLastChild -and $State.LastGapMode -ne 'Tail') {
-                    # Mark tail gap needed after children if we are NOT the last sibling
-                    if ($hasRenderedChildren -and -not $IsLast) {
-                        $State.LastGapMode = 'Tail'
-                    }
-                }
-            }
-        }
-    }
-    # Standardize results to a flat array of strings to avoid unrolling issues in PS 5.1
-    if ($results -is [System.Collections.Generic.List[object]]) {
-        return ,$results.ToArray()
-    }
-    return $results
 }

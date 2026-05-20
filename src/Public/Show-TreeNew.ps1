@@ -73,9 +73,6 @@ function Show-TreeNew {
         # ASCII connectors
         [switch]$Ascii,
 
-        # Debugging
-        [switch]$DebugAttributes,
-
         # Show the color legend
         [switch]$Legend
     )
@@ -177,18 +174,9 @@ function Show-TreeNew {
 
         $style = Get-ItemStyle -Item $treeItem -Colorize:$EffectiveColorize -StyleProfile $resolvedStyleProfile
 
-        $debug = ""
-        if ($DebugAttributes) {
-            $styleName = $style.Name
-            $attributes = $treeItem.Native.FileAttributes
-            $attrHex   = if ($null -ne $attributes) { ('0x{0:X8}' -f [uint32]$attributes) } else { "n/a" }
-            $attrNames = if ($null -ne $attributes) { $attributes.ToString() } else { "n/a" }
-            $debug     = " [$attrHex $attrNames | $styleName]"
-        }
-
         $esc = [char]27
         $colorReset = $EffectiveColorize ? "${esc}[0m" : ""
-        Write-Output "$($style.Ansi)$resolvedPath${colorReset}${debug}"
+        Write-Output "$($style.Ansi)$resolvedPath${colorReset}"
     }
 
     # Initialize gap state machine
@@ -200,23 +188,42 @@ function Show-TreeNew {
     if ($null -eq $resolvedStyleProfile) { $resolvedStyleProfile = Get-ShowTreeStyleProfile }
 
     #
-    # Delegate to internal engine
+    # Enumerate -> Select -> Render
     #
-    Show-TreeInternal `
-        -Path          $resolvedPath `
-        -Mode          $Mode `
-        -MaxDepth      $EffectiveMaxDepth `
-        -Colorize:$EffectiveColorize `
-        -IncludeFiles:$EffectiveFiles `
-        -HideHidden:$EffectiveHideHidden `
-        -HideSystem:$EffectiveHideSystem `
-        -ShowTargets:$EffectiveShowTargets `
-        -Exclude $Exclude `
-        -Include $Include `
-        -Gap:$EffectiveGap `
-        -Ascii:$Ascii `
-        -DebugAttributes:$DebugAttributes `
-        -StyleProfile  $resolvedStyleProfile
+    $providerMode = if ($Mode -eq 'Tree') { 'Win32' } else { 'PowerShell' }
+
+    $treeItemDepth = if ($EffectiveMaxDepth -eq -1) {
+        -1
+    }
+    elseif ($EffectiveMaxDepth -le 0) {
+        0
+    }
+    else {
+        $EffectiveMaxDepth - 1
+    }
+
+    $treeItems = Get-TreeItem `
+            -Path $resolvedPath `
+            -Depth $treeItemDepth `
+            -ProviderMode $providerMode `
+            -Include $Include `
+            -Exclude $Exclude `
+            -HideHidden:$EffectiveHideHidden `
+            -HideSystem:$EffectiveHideSystem `
+            -DirectoryOnly:(!$EffectiveFiles)
+
+    $selectedItems = $treeItems | Select-TreeItem
+
+    $formatParams = @{
+        Mode         = $Mode
+        Colorize    = $EffectiveColorize
+        ShowTargets = $EffectiveShowTargets
+        Ascii       = $Ascii
+        NoGap       = -not $EffectiveGap
+        StyleProfile = $resolvedStyleProfile
+    }
+
+    $selectedItems | Format-Tree @formatParams
 
     #
     # Footer / Last Line logic

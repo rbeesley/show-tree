@@ -9,20 +9,18 @@ BeforeAll {
         -PassThru
 }
 
-Describe "Get-FilteredTreeItems" {
+Describe "TreeItem Visibility" {
     It "Excludes exact matches" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
-            $items = @(
-                New-TestItem -Name ".git"
-                New-TestItem -Name ".github"
-            )
+            $item = New-TestItem -Name ".git"
+            $visible = Test-TreeItemVisible -Item $item -Exclude ".git"
+            $visible | Should -Be $false
 
-            $result = Get-FilteredTreeItems -Items $items -Exclude ".git"
-
-            $result.Name | Should -Not -Contain ".git"
-            $result.Name | Should -Contain ".github"
+            $item2 = New-TestItem -Name ".github"
+            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".git"
+            $visible2 | Should -Be $true
         }
     }
 
@@ -30,15 +28,13 @@ Describe "Get-FilteredTreeItems" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
-            $items = @(
-                New-TestItem -Name ".git"
-                New-TestItem -Name ".github"
-            )
+            $item = New-TestItem -Name ".github"
+            $visible = Test-TreeItemVisible -Item $item -Exclude ".*" -Include ".github"
+            $visible | Should -Be $true
 
-            $result = Get-FilteredTreeItems -Items $items -Exclude ".*" -Include ".github"
-
-            $result.Name | Should -Contain ".github"
-            $result.Name | Should -Not -Contain ".git"
+            $item2 = New-TestItem -Name ".git"
+            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".*" -Include ".github"
+            $visible2 | Should -Be $false
         }
     }
 
@@ -46,15 +42,13 @@ Describe "Get-FilteredTreeItems" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
-            $items = @(
-                New-TestItem -Name ".git"
-                New-TestItem -Name ".gitignore"
-            )
+            $item = New-TestItem -Name ".git"
+            $visible = Test-TreeItemVisible -Item $item -Exclude ".git" -Include ".git*"
+            $visible | Should -Be $false
 
-            $result = Get-FilteredTreeItems -Items $items -Exclude ".git" -Include ".git*"
-
-            $result.Name | Should -Not -Contain ".git"
-            $result.Name | Should -Contain ".gitignore"
+            $item2 = New-TestItem -Name ".gitignore"
+            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".git" -Include ".git*"
+            $visible2 | Should -Be $true
         }
     }
 
@@ -62,50 +56,88 @@ Describe "Get-FilteredTreeItems" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
-            $items = @(
-                New-TestItem -Name ".config" -Attributes ([IO.FileAttributes]::Hidden)
-                New-TestItem -Name "visible.txt"
-            )
+            $item = New-TestItem -Name ".config" -Attributes ([IO.FileAttributes]::Hidden)
+            $visible = Test-TreeItemVisible -Item $item -HideHidden -Include ".config"
+            $visible | Should -Be $true
+        }
+    }
+}
 
-            $result = Get-FilteredTreeItems -Items $items -HideHidden -Include ".config"
-
-            $result.Name | Should -Contain ".config"
+Describe "TreeItem Recursion" {
+    It "Does not recurse into files" {
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+            $item = New-TestItem -Name "file.txt" -IsContainer $false
+            Test-TreeItemRecurse -Item $item | Should -Be $false
         }
     }
 
-    It "Preserves original ordering" {
+    It "Does not recurse into links if FollowLinks is false" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
 
-            $items = @(
-                New-TestItem -Name "a"
-                New-TestItem -Name "b"
-                New-TestItem -Name "c"
-            )
+            $item = New-TestItem -Name "link"
 
-            $result = Get-FilteredTreeItems -Items $items -Exclude "b"
+            # Manually mark as link and container since New-TestItem does not have link support
+            $item | Add-Member -MemberType NoteProperty -Name IsContainer -Value $true -Force
+            $item | Add-Member -MemberType NoteProperty -Name IsLink -Value $true -Force
+            
+            # Manually create a link using New-TreeItem since New-TestItem does not have link support
+            # $name = "link"
+            # $fullPath = Join-Path ($IsWindows ? 'C:\Test' : '/tmp/test') $name
+            # $isContainer = $true
+            # $kind = 'Symlink'
+            # $link = [PSCustomObject]@{
+            #     Type = 'SymbolicLink'
+            #     Target = if ($IsWindows) { 'C:\Target' } else { '/tmp/target' }
+            #     TargetPath = if ($IsWindows) { 'C:\Target' } else { '/tmp/target' }
+            #     IsBroken = $false
+            # }
+            # $item = New-TreeItem `
+            #     -FullPath $fullPath `
+            #     -IsContainer $isContainer `
+            #     -Kind $kind `
+            #     -Link $link
 
-            $result.Name | Should -Be @("a","c")
+            Test-TreeItemRecurse -Item $item -FollowLinks:$false | Should -Be $false
+            Test-TreeItemRecurse -Item $item -FollowLinks:$true | Should -Be $true
         }
     }
 
-    It 'correctly filters a single directory even on Windows PowerShell 5.1' {
+    It "Prunes traversal for excluded directories" {
         InModuleScope ShowTree {
             . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+            $item = New-TestItem -Name "node_modules" -IsContainer $true
+            Test-TreeItemRecurse -Item $item -Exclude "node_modules" | Should -Be $false
+        }
+    }
 
-            $items = @(
-                New-TestItem -Name "Normal"
-                New-TestItem -Name "Hidden" -Attributes ([IO.FileAttributes]::Hidden)
-            )
+    It "Does NOT prune traversal for directories that don't match Include" {
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+            $item = New-TestItem -Name "src" -IsContainer $true
 
-            # In 5.1, a single object return from a function might lose .Count if not handled as array
-            $filtered = @(Get-FilteredTreeItems -Items $items -HideHidden)
-            
-            $filtered.Count | Should -Be 1
-            $filtered[0].Name | Should -Be "Normal"
-            
-            # Verify that Hidden was actually identified as hidden
-            ($items[1].IsHidden -eq $true -or ($items[1].Native.FileAttributes -band [IO.FileAttributes]::Hidden)) | Should -Be $true
+            # Manually mark as container and hidden since New-TestItem does not have support
+            $item | Add-Member -MemberType NoteProperty -Name IsContainer -Value $true -Force
+
+            # We want *.ps1 files, 'src' doesn't match but we must recurse to find them
+            Test-TreeItemRecurse -Item $item -Include "*.ps1" | Should -Be $true
+        }
+    }
+
+    It "Prunes traversal for hidden directories unless rescued" {
+        InModuleScope ShowTree {
+            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+            $item = New-TestItem -Name ".config"
+
+            # Manually mark as container and hidden since New-TestItem does not have support
+            $item | Add-Member -MemberType NoteProperty -Name IsContainer -Value $true -Force
+            $item | Add-Member -MemberType NoteProperty -Name Native -Value ([PSCustomObject]@{
+                FileAttributes = [IO.FileAttributes]::Hidden
+            }) -Force
+
+            Test-TreeItemRecurse -Item $item -HideHidden | Should -Be $false
+            Test-TreeItemRecurse -Item $item -HideHidden -Include ".config" | Should -Be $true
         }
     }
 }
