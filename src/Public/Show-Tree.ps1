@@ -63,6 +63,7 @@ function Show-Tree {
         [switch]$NoTargets,   # Normal/Tree
 
         # Gap lines
+        [switch]$Gap,         # Tree
         [switch]$NoGap,       # Normal/Tree
 
         # Depth
@@ -103,7 +104,8 @@ function Show-Tree {
     if ($ShowHidden -and $HideHidden) { throw "Cannot specify both -ShowHidden and -HideHidden." }
     if ($ShowSystem -and $HideSystem) { throw "Cannot specify both -ShowSystem and -HideSystem." }
     if ($ShowTargets -and $NoTargets) { throw "Cannot specify both -ShowTargets and -NoTargets." }
-
+    if ($Gap -and $NoGap) { throw "Cannot specify both -Gap and -NoGap." }
+    
     #
     # Resolve the path
     #
@@ -121,7 +123,7 @@ function Show-Tree {
             $EffectiveHideHidden  = -not $ShowHidden.IsPresent
             $EffectiveHideSystem  = -not $ShowSystem.IsPresent
             $EffectiveShowTargets = -not $NoTargets.IsPresent
-            $EffectiveGap         = -not $NoGap.IsPresent
+            $EffectiveGap         = ($Files.IsPresent -or $Gap.IsPresent) -and -not $NoGap.IsPresent
         }
         'List' {
             $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : -1

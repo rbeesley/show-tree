@@ -11,7 +11,10 @@
       • Files       = [...]
 #>
 function Get-RawDirectoryEntries {
-    param([string]$Path)
+    param(
+        [string]$Path,
+        [int]$Depth = 0
+    )
 
     #
     # Load RawEnum type once
@@ -110,7 +113,9 @@ public class RawEnum {
             -Kind $kind `
             -Name $e.cFileName `
             -Native $native `
-            -Link $link
+            -Link $link `
+            -Depth $Depth `
+            -ParentPath $Path
 
         if ($isDir) {
             $dirs += $item

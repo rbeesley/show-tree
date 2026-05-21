@@ -85,10 +85,34 @@ function Format-Tree {
             }
 
             # 3. Connector
-            $connector = Get-Connector -Type ($item.IsContainer ? 'Directory' : 'File') -Mode $Mode -Ascii:$Ascii -IsLast $isLast -StyleProfile $resolvedStyleProfile
+            $noSpan = $false
+            if ($Mode -eq 'Tree' -and -not $item.IsContainer) {
+                $hasLaterSiblingDirectory = $false
+
+                for ($j = $i + 1; $j -lt $itemCount; $j++) {
+                    if ($allInputItems[$j].Depth -lt $depth) { break }
+
+                    if ($allInputItems[$j].Depth -eq $depth -and
+                            $allInputItems[$j].ParentPath -eq $item.ParentPath -and
+                            $allInputItems[$j].IsContainer) {
+                        $hasLaterSiblingDirectory = $true
+                        break
+                    }
+                }
+
+                $noSpan = -not $hasLaterSiblingDirectory
+            }
+
+            $connector = Get-Connector `
+                        -Type ($item.IsContainer ? 'Directory' : 'File') `
+                        -Mode $Mode `
+                        -Ascii:$Ascii `
+                        -IsLast $isLast `
+                        -NoSpan:$noSpan `
+                        -StyleProfile $resolvedStyleProfile
 
             # 4. Gaps
-            if ($Gap -and $Mode -ne 'Tree' -and $i -gt 0) {
+            if ($Gap -and $i -gt 0) {
                 $prev = $allInputItems[$i-1]
                 $needsGap = $false
                 

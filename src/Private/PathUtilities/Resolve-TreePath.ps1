@@ -39,8 +39,8 @@ function Resolve-TreePath {
     )
 
     try {
-        # Caller’s working directory, not module’s
-        $cwd = $ExecutionContext.SessionState.Path.CurrentLocation.ProviderPath
+        # Use the caller/runspace working directory, not the module session state's location.
+        $cwd = $PWD.ProviderPath
 
         if (-not [System.IO.Path]::IsPathRooted($Path)) {
             $Path = Join-Path -Path $cwd -ChildPath $Path
@@ -55,7 +55,7 @@ function Resolve-TreePath {
             $msg = "Cannot find path '$Path' because it does not exist."
             $exception = New-Object System.Management.Automation.ItemNotFoundException $msg
             $category  = [System.Management.Automation.ErrorCategory]::ObjectNotFound
-
+            
             $errorRecord = New-Object System.Management.Automation.ErrorRecord `
                 $exception,
                 'ItemNotFound',

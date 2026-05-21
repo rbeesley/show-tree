@@ -106,15 +106,42 @@ Describe 'Resolve-TreePath' {
 
 Describe 'Show-Tree path resolution' {
     It "uses the caller's working directory, not the module directory" {
-        InModuleScope ShowTree {
-            $tempPath = [System.IO.Path]::GetTempPath()
-            Push-Location $tempPath
-            try {
-                $result = Show-Tree '.' -List -Mono -Depth 0
-                $result[0] | Should -Match ([regex]::Escape((Get-Location).ProviderPath))
+        $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
+
+        New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
+
+        Push-Location $testRoot
+        try {
+            $result = @(Show-Tree '.' -List -Mono -Depth 0)
+
+            $result[0] | Should -Be (Get-Location).ProviderPath
+        }
+        finally {
+            Pop-Location
+
+            if (Test-Path -LiteralPath $testRoot) {
+                Remove-Item -LiteralPath $testRoot -Recurse -Force
             }
-            finally {
-                Pop-Location
+        }
+    }
+
+    It "resolves explicit relative child paths against the caller's working directory" {
+        $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
+        $childPath = Join-Path $testRoot 'child'
+
+        New-Item -ItemType Directory -Path $childPath -Force | Out-Null
+
+        Push-Location $testRoot
+        try {
+            $result = @(Show-Tree '.\child' -List -Mono -Depth 0)
+
+            $result[0] | Should -Be (Get-Item -LiteralPath $childPath).FullName
+        }
+        finally {
+            Pop-Location
+
+            if (Test-Path -LiteralPath $testRoot) {
+                Remove-Item -LiteralPath $testRoot -Recurse -Force
             }
         }
     }

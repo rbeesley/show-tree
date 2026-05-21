@@ -47,8 +47,8 @@ function Get-TreeItem {
     #
     $items = [System.Collections.Generic.List[object]]::new()
     if ($ProviderMode -eq 'Win32' -and $IsWindows) {
-        $raw = Get-RawDirectoryEntries -Path $resolvedPath
-        
+        $raw = Get-RawDirectoryEntries -Path $resolvedPath -Depth $CurrentDepth
+
         $rawDirectories = foreach ($d in $raw.Directories) {
             if (Test-TreeItemVisible -Item $d -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 $d
@@ -60,24 +60,28 @@ function Get-TreeItem {
             }
         }
 
-        foreach ($d in $rawDirectories) { [void]$items.Add($d) }
+        # Tree.com-compatible ordering:
+        #   - files first
+        #   - directories second
+        #   - preserve Win32 enumeration order inside each group
         foreach ($f in $rawFiles) { [void]$items.Add($f) }
+        foreach ($d in $rawDirectories) { [void]$items.Add($d) }
     }
     else {
         $rawItems = Get-ChildItem -Path $resolvedPath -Force -ErrorAction SilentlyContinue
-        
+
         foreach ($item in $rawItems) {
             $isDir = $item.PSIsContainer
             $native = [PSCustomObject]@{
                 Platform = $IsWindows ? 'Windows' : 'Unix'
                 FileAttributes = $item.Attributes
             }
-            
+
             $kind = $isDir ? 'Directory' : 'File'
             $link = $null
             if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
                 $kind = ($isDir -and $IsWindows) ? 'Junction' : 'Symlink'
-                
+
                 $target = $null
                 if ($item.PSObject.Properties.Match('Target')) {
                     $target = $item.Target
@@ -100,27 +104,28 @@ function Get-TreeItem {
             }
 
             $treeItem = New-TreeItem `
-                -FullPath $item.FullName `
-                -IsContainer $isDir `
-                -Kind $kind `
-                -Name $item.Name `
-                -Native $native `
-                -Link $link `
-                -Depth $CurrentDepth `
-                -ParentPath $resolvedPath `
-                -IsHidden $isHidden
+                    -FullPath $item.FullName `
+                    -IsContainer $isDir `
+                    -Kind $kind `
+                    -Name $item.Name `
+                    -Native $native `
+                    -Link $link `
+                    -Depth $CurrentDepth `
+                    -ParentPath $resolvedPath `
+                    -IsHidden $isHidden
 
             if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 [void]$items.Add($treeItem)
             }
         }
-    }
 
-    #
-    # Normalization: Ordering (Deterministic)
-    #
-    # Deterministic order: Files first, then Directories, both sorted by Name.
-    $items = $items | Sort-Object @{Expression="IsContainer"; Ascending=$true}, @{Expression="Name"; Ascending=$true}
+        #
+        # Normalization: Ordering (Deterministic)
+        #
+        # Deterministic order for PowerShell provider mode.
+        # Win32 provider mode intentionally preserves tree.com-compatible enumeration order.
+        $items = $items | Sort-Object @{Expression="IsContainer"; Ascending=$true}, @{Expression="Name"; Ascending=$true}
+    }
 
     #
     # Output and Recursion
