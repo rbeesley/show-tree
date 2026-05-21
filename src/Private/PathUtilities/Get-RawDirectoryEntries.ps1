@@ -1,4 +1,4 @@
-# src\Private\Get-RawDirectoryEnumeration.ps1
+# src\Private\PathUtilities\Get-RawDirectoryEnumeration.ps1
 
 <#
 .SYNOPSIS
@@ -89,12 +89,17 @@ public class RawEnum {
         $link = $null
         if (($e.dwFileAttributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
             $kind = if ($isDir) { 'Junction' } else { 'Symlink' }
+
             # In raw mode (Win32 API), we don't have the target easily.
-            # We'll let Write-TreeItem resolve it via fallback if needed.
+            $info = Get-Item -LiteralPath $fullPath -Force -ErrorAction SilentlyContinue
+            if ($info -and $info.PSObject.Properties.Match('Target')) {
+                $target = $info.Target
+            }
+            
             $link = [PSCustomObject]@{
                 Type       = if ($isDir) { 'Junction' } else { 'SymbolicLink' }
-                Target     = $null
-                TargetPath = $null
+                Target     = $target
+                TargetPath = $target
                 IsBroken   = $null
             }
         }

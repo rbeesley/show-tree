@@ -10,9 +10,6 @@ BeforeAll {
 
     InModuleScope ShowTree {  
         # Initialize gap state machine
-        $script:GapState = [PSCustomObject]@{
-            LastGapMode = [GapMode]::None
-        }
         $script:testStyleProfile = Get-ShowTreeStyleProfile
     }
 }
@@ -20,36 +17,37 @@ BeforeAll {
 Describe "Tree.com compatibility" -Skip:(-not $IsWindows) {
     It "Matches Tree.com output for a simple tree" {
         InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+            . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
 
-            $fixture = New-TestTree ([ordered]@{
-                root = [ordered]@{
-                    a = [ordered]@{
-                        a1 = $null
-                        a2 = $null
-                    }
-                    b = [ordered]@{
-                        b1 = $null
-                    }
+            $structure = [ordered]@{
+                a = [ordered]@{
+                    a1 = $null
+                    a2 = $null
                 }
-            })
-
-            Mock Get-RawDirectoryEntries {
-                param($Path)
-                Convert-TestTreeToRaw -Root $fixture -Path $Path
+                b = [ordered]@{
+                    b1 = $null
+                }
             }
+            
+            $root = New-FixtureTree -Structure $structure
 
-            $result = Show-TreeInternal -Path $fixture.FullPath -Mode 'Tree' -IncludeFiles:$true -StyleProfile $testStyleProfile | Out-String
+#            Mock Get-RawDirectoryEntries {
+#                param($Path)
+#                Convert-TestTreeToRaw -Root $fixture -Path $Path
+#            }
 
-            $expected = @"
-├───a
-│       a1
-│       a2
-└───b
-        b1
-"@.Trim()
+            $items = $root | Select-TreeItem -Flatten
 
-            $result.Trim() | Should -Be $expected
+            $output = @($items | Format-Tree -Mode Tree)
+
+            $output[0] | Should -Be "├───a"
+            $output[1] | Should -Be "│       a1"
+            $output[2] | Should -Be "│       a2"
+            $output[3] | Should -Be "└───b"
+            $output[4] | Should -Be "        b1"
+
+            $output.Count | Should -Be 5
         }
     }
 }

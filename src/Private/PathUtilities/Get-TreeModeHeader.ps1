@@ -1,4 +1,4 @@
-﻿# src\Private\Get-TreeModeHeader.ps1
+﻿# src\Private\PathUtilities\Get-TreeModeHeader.ps1
 
 <#
 .SYNOPSIS

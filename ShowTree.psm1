@@ -11,33 +11,27 @@ else {
 
 # Dot-source public functions
 . (Join-Path $moduleSrcRoot 'Public\Format-Tree.ps1')
-# . (Join-Path $moduleSrcRoot 'Public\Get-FilteredTreeItems.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Get-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Public\New-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Select-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Set-ShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Show-Tree.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Show-TreeLegend.ps1')
-. (Join-Path $moduleSrcRoot 'Public\Show-TreeNew.ps1')
 
 # Dot-source private functions
 . (Join-Path $moduleSrcRoot 'Private\TreeItemPredicates.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Get-ActiveShowTreeStyleProfile.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Get-RawDirectoryEntries.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Get-ShowTreeStyleProfile.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Get-TreeModeHeader.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Merge-ShowTreeHashtable.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Resolve-TreePath.ps1')
-. (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-SetFileAttributes.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-NearestExistingParent.ps1')
+. (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-RawDirectoryEntries.ps1')
+. (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-SetFileAttributes.ps1')
+. (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-TreeModeHeader.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-VolumeName.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-VolumeSerialNumber.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Rendering\Get-Connector.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Rendering\Get-ItemStyle.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Rendering\Write-TreeItem.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Rendering\Write-Gap.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Show-TreeInternal.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Test-HasChildrenForGap.ps1')
+. (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ActiveShowTreeStyleProfile.ps1')
+. (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ShowTreeStyleProfile.ps1')
+. (Join-Path $moduleSrcRoot 'Private\StyleProfile\Merge-ShowTreeHashtable.ps1')
 
 # Load the default style profile
 $script:DefaultStyleProfilePath = Join-Path $moduleSrcRoot 'Data\DefaultStyleProfile.psd1'

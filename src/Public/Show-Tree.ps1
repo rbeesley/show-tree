@@ -1,113 +1,10 @@
-# src\Public\Show-Tree.ps1
+﻿# src\Public\Show-Tree.ps1
 
 <#
 .SYNOPSIS
     Displays a directory tree in Normal, Tree.com-compatible, or Listing mode.
-
 .DESCRIPTION
-    Show-Tree renders directory structures using one of three modes:
-
-      • Normal   - Modern, colorized output with Unicode connectors (default)
-      • Tree     - DOS tree.com compatibility mode
-      • List     - Indentation-only listing mode
-
-    The active mode is determined by:
-      • -Mode Normal|Tree|List
-      • -Tree or -List (backward-compatible aliases)
-      • Defaulting to Normal when no mode is specified
-
-    After resolving the mode, Show-Tree computes effective settings for:
-      • Depth (MaxDepth, Recurse)
-      • Colorization (Color, Mono)
-      • File visibility (Files, NoFiles)
-      • Hidden/system filtering (ShowHidden/HideHidden, ShowSystem/HideSystem)
-      • Reparse point targets (ShowTargets/NoTargets)
-      • Gap lines (NoGap)
-      • ASCII vs Unicode connectors (Ascii)
-
-    Paired switches (e.g., Color/Mono, Files/NoFiles) are mutually exclusive.
-    If both halves of a pair are supplied, an error is raised.
-
-    Once effective settings are computed, rendering is delegated to
-    Show-TreeInternal, which performs recursion, gap logic, connector selection,
-    and formatting.
-
-.PARAMETER Path
-    The root path to display. Defaults to the current directory.
-
-.PARAMETER Mode
-    Explicitly selects the output mode: Normal, Tree, or Listing.
-    Defaults to Normal.
-
-.PARAMETER Tree
-    Backward-compatible alias for: -Mode Tree
-
-.PARAMETER List
-    Backward-compatible alias for: -Mode Listing
-
-.PARAMETER Include
-    Glob patterns that explicitly include matching items.
-    Exact matches override all other filtering rules.
-    Glob matches resurrect items removed by Hidden, System, or Exclude (glob).
-
-.PARAMETER Exclude
-    Glob patterns that remove matching items.
-    Exact matches override Include (glob).
-    Glob matches are overridden by Include (exact or glob).
-
-.PARAMETER MaxDepth
-    Maximum recursion depth. -1 means unlimited.
-
-.PARAMETER Recurse
-    Shortcut for unlimited depth (equivalent to -MaxDepth -1).
-
-.PARAMETER Mono
-    Disable color output (Normal and Listing modes).
-
-.PARAMETER Color
-    Enable color output. In Tree mode, this matches tree.com behavior.
-    In Normal mode, this simply forces color on.
-
-.PARAMETER Files
-    Displays files as well as directories. In Tree mode, this matches tree.com /f behavior.
-
-.PARAMETER ShowFiles
-    Alias for -Files.
-
-.PARAMETER HideHidden / ShowHidden
-    Control visibility of hidden items.
-
-.PARAMETER HideSystem / ShowSystem
-    Control visibility of system items.
-
-.PARAMETER NoGap
-    Disable gap lines between blocks (Normal and Tree modes).
-
-.PARAMETER NoTargets / ShowTargets
-    Control whether reparse point targets are shown.
-
-.PARAMETER Ascii
-    Use ASCII connectors instead of Unicode.
-
-.PARAMETER DebugAttributes
-    Show attribute debug info for each item.
-
-.PARAMETER Legend
-    Display a color legend instead of rendering a tree.
-
-.EXAMPLE
-    Show-Tree C:\
-
-.EXAMPLE
-    Show-Tree -Tree C:\Windows
-
-.EXAMPLE
-    Show-Tree -List -Recurse
-
-.NOTES
-    Author: Ryan Beesley
-    Version: 2.0.0
-    Last Updated: May 2026
+    Displays a directory tree using Get-TreeItem, Select-TreeItem, and Format-Tree.
 #>
 function Show-Tree {
     [CmdletBinding()]
@@ -176,9 +73,6 @@ function Show-Tree {
         # ASCII connectors
         [switch]$Ascii,
 
-        # Debugging
-        [switch]$DebugAttributes,
-
         # Show the color legend
         [switch]$Legend
     )
@@ -198,52 +92,28 @@ function Show-Tree {
     if ($AsListing) { $Mode = 'List' }
 
     if ($Mode -eq 'Tree' -and $PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
-        throw "ShowTree currently supports Windows only."
+        throw "ShowTree currently supports Windows only for Tree mode."
     }
 
     #
     # Validate paired switches
     #
-    if ($Color -and $Mono) {
-        throw "Cannot specify both -Color and -Mono."
-    }
-
-    if ($Files -and $NoFiles) {
-        throw "Cannot specify both -Files (or -ShowFiles) and -NoFiles."
-    }
-
-    if ($ShowHidden -and $HideHidden) {
-        throw "Cannot specify both -ShowHidden and -HideHidden."
-    }
-
-    if ($ShowSystem -and $HideSystem) {
-        throw "Cannot specify both -ShowSystem and -HideSystem."
-    }
-
-    if ($ShowTargets -and $NoTargets) {
-        throw "Cannot specify both -ShowTargets and -NoTargets."
-    }
+    if ($Color -and $Mono) { throw "Cannot specify both -Color and -Mono." }
+    if ($Files -and $NoFiles) { throw "Cannot specify both -Files (or -ShowFiles) and -NoFiles." }
+    if ($ShowHidden -and $HideHidden) { throw "Cannot specify both -ShowHidden and -HideHidden." }
+    if ($ShowSystem -and $HideSystem) { throw "Cannot specify both -ShowSystem and -HideSystem." }
+    if ($ShowTargets -and $NoTargets) { throw "Cannot specify both -ShowTargets and -NoTargets." }
 
     #
-    # Resolve the path (with proper error record)
+    # Resolve the path
     #
-    $Path = Resolve-TreePath -Path $Path -Mode $Mode
-    if (-not $Path) { return }
-
-    # Tree Mode: Output should follow `tree.com` output
-    if ($Mode -eq 'Tree') {
-        $header = Get-TreeModeHeader -Path $Path
-        $header | Where-Object { $_ -is [string] }
-        if ($header -contains $false) {
-            return
-        }
-    }
+    $resolvedPath = Resolve-TreePath -Path $Path -Mode $Mode
+    if (-not $resolvedPath) { return }
 
     #
     # Compute effective settings
     #
     switch ($Mode) {
-
         'Tree' {
             $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : -1
             $EffectiveColorize    = $Color.IsPresent
@@ -253,7 +123,6 @@ function Show-Tree {
             $EffectiveShowTargets = -not $NoTargets.IsPresent
             $EffectiveGap         = -not $NoGap.IsPresent
         }
-
         'List' {
             $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : -1
             $EffectiveColorize    = -not $Mono.IsPresent
@@ -263,7 +132,6 @@ function Show-Tree {
             $EffectiveShowTargets = $ShowTargets.IsPresent
             $EffectiveGap         = $false
         }
-
         'Normal' {
             $EffectiveMaxDepth    = $Recurse.IsPresent ? -1 : ($PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : 6)
             $EffectiveColorize    = -not $Mono.IsPresent
@@ -275,78 +143,87 @@ function Show-Tree {
         }
     }
 
-    if ($Mode -ne 'Tree') {
-        # Render root directory name (Normal + Listing modes only)
-        $root = Get-Item $Path
+    #
+    # Header Rendering
+    #
+    if ($Mode -eq 'Tree') {
+        $header = Get-TreeModeHeader -Path $resolvedPath
+        $header | Where-Object { $_ -is [string] }
+        if ($header -contains $false) {
+            return
+        }
+    }
+    else {
+        # Normal + Listing modes: Print resolved path with style
+        $rootItem = Get-Item $resolvedPath
         $native = [PSCustomObject]@{
             Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
-            FileAttributes = $root.Attributes
+            FileAttributes = $rootItem.Attributes
         }
-        $kind = if ($root.PSIsContainer) { 'Directory' } else { 'File' }
+        $kind = if ($rootItem.PSIsContainer) { 'Directory' } else { 'File' }
         $treeItem = New-TreeItem `
-            -FullPath $root.FullName `
-            -IsContainer $root.PSIsContainer `
+            -FullPath $rootItem.FullName `
+            -IsContainer $rootItem.PSIsContainer `
             -Kind $kind `
-            -Name $root.Name `
+            -Name $rootItem.Name `
             -Native $native `
             -Depth 0
 
         $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
-
-        if ($null -eq $resolvedStyleProfile) {
-            $resolvedStyleProfile = Get-ShowTreeStyleProfile
-        }
+        if ($null -eq $resolvedStyleProfile) { $resolvedStyleProfile = Get-ShowTreeStyleProfile }
 
         $style = Get-ItemStyle -Item $treeItem -Colorize:$EffectiveColorize -StyleProfile $resolvedStyleProfile
 
-        if ($DebugAttributes) {
-            $styleName = $style.Name
-            $attributes = $treeItem.Native.FileAttributes
-            $attrHex   = if ($attributes -ne $null) { ('0x{0:X8}' -f [uint32]$attributes) } else { "n/a" }
-            $attrNames = if ($attributes -ne $null) { $attributes.ToString() } else { "n/a" }
-            $debug     = " [$attrHex $attrNames | $styleName]"
-        }
-
         $esc = [char]27
         $colorReset = $EffectiveColorize ? "${esc}[0m" : ""
-
-        Write-Output "$($style.Ansi)$Path${colorReset}${debug}"
-    }
-
-    # Initialize gap state machine
-    $script:GapState = [PSCustomObject]@{
-        LastGapMode = [GapMode]::None
+        Write-Output "$($style.Ansi)$resolvedPath${colorReset}"
     }
 
     $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
+    if ($null -eq $resolvedStyleProfile) { $resolvedStyleProfile = Get-ShowTreeStyleProfile }
 
-    if ($null -eq $resolvedStyleProfile) {
-        $resolvedStyleProfile = Get-ShowTreeStyleProfile
+    #
+    # Enumerate -> Select -> Render
+    #
+    $providerMode = if ($Mode -eq 'Tree') { 'Win32' } else { 'PowerShell' }
+
+    $treeItemDepth = if ($EffectiveMaxDepth -eq -1) {
+        -1
+    }
+    elseif ($EffectiveMaxDepth -le 0) {
+        0
+    }
+    else {
+        $EffectiveMaxDepth - 1
     }
 
-    #
-    # Delegate to internal engine
-    #
-    Show-TreeInternal `
-        -Path          $Path `
-        -Mode          $Mode `
-        -MaxDepth      $EffectiveMaxDepth `
-        -Colorize:$EffectiveColorize `
-        -IncludeFiles:$EffectiveFiles `
-        -HideHidden:$EffectiveHideHidden `
-        -HideSystem:$EffectiveHideSystem `
-        -ShowTargets:$EffectiveShowTargets `
-        -Exclude $Exclude `
-        -Include $Include `
-        -Gap:$EffectiveGap `
-        -Ascii:$Ascii `
-        -DebugAttributes:$DebugAttributes `
-        -StyleProfile  $resolvedStyleProfile
+    $treeItems = Get-TreeItem `
+            -Path $resolvedPath `
+            -Depth $treeItemDepth `
+            -ProviderMode $providerMode `
+            -Include $Include `
+            -Exclude $Exclude `
+            -HideHidden:$EffectiveHideHidden `
+            -HideSystem:$EffectiveHideSystem `
+            -DirectoryOnly:(!$EffectiveFiles)
+
+    $selectedItems = $treeItems | Select-TreeItem
+
+    $formatParams = @{
+        Mode         = $Mode
+        Colorize    = $EffectiveColorize
+        ShowTargets = $EffectiveShowTargets
+        Ascii       = $Ascii
+        NoGap       = -not $EffectiveGap
+        StyleProfile = $resolvedStyleProfile
+    }
+
+    $selectedItems | Format-Tree @formatParams
 
     #
-    # Final newline for normal mode root
+    # Footer / Last Line logic
     #
     if ($Mode -ne 'Tree') {
         Write-Output ""
-    }    
+    }
 }

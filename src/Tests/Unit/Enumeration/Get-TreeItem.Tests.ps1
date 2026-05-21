@@ -5,11 +5,12 @@ Describe "Get-TreeItem" {
         # Load necessary scripts
         $sutDir = Join-Path $PSScriptRoot '..\..\..\Public'
         $privDir = Join-Path $PSScriptRoot '..\..\..\Private'
+        $pathUDir = Join-Path $privDir 'PathUtilities'
         $fixDir = Join-Path $PSScriptRoot '..\..\Fixtures'
 
         . (Join-Path $sutDir 'Get-TreeItem.ps1')
         . (Join-Path $sutDir 'New-TreeItem.ps1')
-        . (Join-Path $privDir 'Get-RawDirectoryEntries.ps1')
+        . (Join-Path $pathUDir 'Get-RawDirectoryEntries.ps1')
         . (Join-Path $privDir 'TreeItemPredicates.ps1')
         . (Join-Path $fixDir 'TreeItemFixtures.ps1')
 
