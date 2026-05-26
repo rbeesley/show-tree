@@ -1,21 +1,25 @@
 ﻿# src\Tests\Unit\Enumeration\Select-TreeItem.Tests.ps1
 
+BeforeAll {
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
+        -StartPath $PSScriptRoot `
+        -ModuleName 'ShowTree' `
+        -SourceRootName 'src' `
+        -Exclude 'src/Tests/*' `
+        -PassThru
+    $script:FixtureScripts  = @(
+        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
+    )
+ }
+
 Describe "Select-TreeItem" {
     Context "Basic Selection" {
-        BeforeAll {
-            $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
-                -StartPath $PSScriptRoot `
-                -ModuleName 'ShowTree' `
-                -SourceRootName 'src' `
-                -Exclude 'src/Tests/*' `
-                -PassThru
-
-            . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
-        }
 
         It "Passes through flat items" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
                 $items = @(
                     New-FixtureTreeItem -Name "File1.txt"
                     New-FixtureTreeItem -Name "File2.txt"
@@ -28,8 +32,9 @@ Describe "Select-TreeItem" {
         }
 
         It "Filters by Name" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
                 $items = @(
                     New-FixtureTreeItem -Name "File1.txt"
                     New-FixtureTreeItem -Name "File2.txt"
@@ -41,8 +46,9 @@ Describe "Select-TreeItem" {
         }
 
         It "Filters by FilterScript" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
                 $items = @(
                     New-FixtureTreeItem -Name "File1.txt"
                     New-FixtureTreeItem -Name "Dir1" -IsDirectory $true
@@ -55,20 +61,11 @@ Describe "Select-TreeItem" {
     }
 
     Context "Expansion" {
-        BeforeAll {
-            $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
-                -StartPath $PSScriptRoot `
-                -ModuleName 'ShowTree' `
-                -SourceRootName 'src' `
-                -Exclude 'src/Tests/*' `
-                -PassThru
-
-            . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
-        }
 
         It "Expands Children" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
                 $structure = [ordered]@{
                     "Root" = [ordered]@{
                         "DirA" = [ordered]@{
@@ -87,8 +84,9 @@ Describe "Select-TreeItem" {
         }
 
         It "Expands Descendants (Flattening)" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                
                 $structure = [ordered]@{
                     "Root" = [ordered]@{
                         "DirA" = [ordered]@{
@@ -109,8 +107,9 @@ Describe "Select-TreeItem" {
         }
 
         It "Uses -Flatten as an alias for -Expand Descendants" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                
                 $structure = [ordered]@{
                     "Root" = [ordered]@{
                         "DirA" = [ordered]@{
@@ -127,8 +126,9 @@ Describe "Select-TreeItem" {
         }
 
         It "Handles -NoRoot" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                
                 $structure = [ordered]@{
                     "Root" = [ordered]@{
                         "DirA" = [ordered]@{
@@ -149,20 +149,11 @@ Describe "Select-TreeItem" {
     }
 
     Context "Slicing" {
-        BeforeAll {
-            $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
-                -StartPath $PSScriptRoot `
-                -ModuleName 'ShowTree' `
-                -SourceRootName 'src' `
-                -Exclude 'src/Tests/*' `
-                -PassThru
-
-            . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
-        }
 
         It "Handles -First" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                
                 $items = 1..10 | ForEach-Object { New-FixtureTreeItem -Name "File$_.txt" }
                 $selected = $items | Select-TreeItem -First 3
                 $selected.Count | Should -Be 3
@@ -172,8 +163,9 @@ Describe "Select-TreeItem" {
         }
 
         It "Handles -Skip" {
-            InModuleScope ShowTree {
-                . (Join-Path $PSScriptRoot "..\..\Fixtures\TreeItemFixtures.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                
                 $items = 1..10 | ForEach-Object { New-FixtureTreeItem -Name "File$_.txt" }
                 $selected = $items | Select-TreeItem -Skip 8
                 $selected.Count | Should -Be 2

@@ -91,7 +91,7 @@ if ($needsReload) {
         $loadedModules | Remove-Module -Force -ErrorAction SilentlyContinue
     }
 
-    Import-Module -Name $moduleInfo.ManifestPath -Force -ErrorAction Stop
+    Import-Module -Name $moduleInfo.ManifestPath -Force -Scope Global -ErrorAction Stop
 
     $matchingModule = Get-Module -Name $moduleInfo.ModuleName -All -ErrorAction Stop |
         Where-Object {

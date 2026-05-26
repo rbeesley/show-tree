@@ -59,7 +59,8 @@ function New-FixtureTree {
         [string]$ParentPath
     )
 
-    if ($Structure -is [hashtable] -and $Structure -isnot [System.Collections.Specialized.OrderedDictionary]) {
+    if ($Structure -is [hashtable] -and 
+        $Structure -isnot [System.Collections.Specialized.OrderedDictionary]) {
         throw "New-FixtureTree requires an ordered dictionary. Use [ordered]@{ ... } for deterministic fixture order."
     }
     
@@ -68,61 +69,149 @@ function New-FixtureTree {
     }
 
     function BuildFixtureNode($name, $value, $parentPath, $depth = 0) {
-        # Case 1: Directory (OrderedDictionary or Hashtable with Children)
-        $isDir = $false
-        $children = @()
-        $fileAttrs = ([IO.FileAttributes]0)
-        $isSymlink = $false
-        $isJunction = $false
-        $target = $null
+        # Defaults
+        $isDir      = $false
+        $children   = @()
+        $kind       = 'Unknown'
+        $isHidden   = $null
+        $isExec     = $null
+        $isRO       = $null
+        $length     = -1
+        $ctime      = $null
+        $mtime      = $null
+        $atime      = $null
+        $link       = $null
+        $perms      = $null
+        $native     = $null
 
-        if ($value -is [System.Collections.Specialized.OrderedDictionary] -or ($value -is [hashtable] -and -not $value.ContainsKey('Children') -and -not $value.ContainsKey('IsSymlink') -and -not $value.ContainsKey('IsJunction'))) {
+        #
+        # CASE 1 — Directory (OrderedDictionary)
+        #
+        if ($value -is [System.Collections.Specialized.OrderedDictionary]) {
             $isDir = $true
+            $kind  = 'Directory'
+
             $children = foreach ($key in $value.Keys) {
                 BuildFixtureNode $key $value[$key] (Join-Path $parentPath $name) ($depth + 1)
             }
-            $fileAttrs = $fileAttrs -bor [IO.FileAttributes]::Directory
         }
+
+        #
+        # CASE 2 — Node descriptor (file OR directory)
+        #
         elseif ($value -is [hashtable]) {
-            if ($value.ContainsKey('Attributes')) {
-                $fileAttrs = [IO.FileAttributes]$value.Attributes
+
+            # Generic TreeItem properties
+            if ($value.ContainsKey('Kind'))           { $kind       = $value.Kind }
+            if ($value.ContainsKey('IsHidden'))       { $isHidden   = $value.IsHidden }
+            if ($value.ContainsKey('IsExecutable'))   { $isExec     = $value.IsExecutable }
+            if ($value.ContainsKey('IsReadOnly'))     { $isRO       = $value.IsReadOnly }
+            if ($value.ContainsKey('Length'))         { $length     = $value.Length }
+            if ($value.ContainsKey('CreationTime'))   { $ctime      = $value.CreationTime }
+            if ($value.ContainsKey('LastWriteTime'))  { $mtime      = $value.LastWriteTime }
+            if ($value.ContainsKey('LastAccessTime')) { $atime      = $value.LastAccessTime }
+            if ($value.ContainsKey('Permissions'))    { $perms      = $value.Permissions }
+            if ($value.ContainsKey('Native'))         { $native     = $value.Native }
+
+            # Link object
+            if ($value.ContainsKey('IsSymlink') -or $value.ContainsKey('IsJunction') -or $value.ContainsKey('Target')) {
+                $kind = if ($value.IsSymlink) { 'Symlink' }
+                        elseif ($value.IsJunction) { 'Junction' }
+                        else { $kind }
+
+                $link = [PSCustomObject]@{
+                    Type       = $kind
+                    Target     = $value.Target
+                    TargetPath = $value.Target
+                    IsBroken   = $false
+                }
             }
 
-            if ($value.ContainsKey('IsSymlink')) { $isSymlink = $value.IsSymlink }
-            if ($value.ContainsKey('IsJunction')) { $isJunction = $value.IsJunction }
-            if ($value.ContainsKey('Target')) { $target = $value.Target }
-
+            # Directory descriptor
             if ($value.ContainsKey('Children')) {
                 $isDir = $true
+                $kind  = if ($kind -eq 'Unknown') { 'Directory' } else { $kind }
+
                 $childSource = $value.Children
-                if ($childSource -is [hashtable] -or $childSource -is [System.Collections.Specialized.OrderedDictionary]) {
+                if ($childSource -is [System.Collections.IDictionary]) {
                     $children = foreach ($key in $childSource.Keys) {
                         BuildFixtureNode $key $childSource[$key] (Join-Path $parentPath $name) ($depth + 1)
                     }
                 }
             }
-            else {
-                $isDir = $false
-                if ($value.ContainsKey('IsDirectory')) { $isDir = $value.IsDirectory }
-            }
-
-            if ($isDir -and ($fileAttrs -band [IO.FileAttributes]::Directory) -eq 0) {
-                $fileAttrs = $fileAttrs -bor [IO.FileAttributes]::Directory
-            }
         }
+
+        #
+        # CASE 3 — Simple file ($null)
+        #
         else {
-            # Simple file ($null)
+            $kind = 'File'
         }
 
-        return New-FixtureTreeItem -Name $name `
-                                   -ParentPath $parentPath `
-                                   -IsDirectory:$isDir `
-                                   -FileAttributes $fileAttrs `
-                                   -Children $children `
-                                   -IsSymlink $isSymlink `
-                                   -IsJunction $isJunction `
-                                   -Target $target `
-                                   -Depth $depth
+        #
+        # Build the TreeItem
+        #
+        $fullPath = Join-Path $parentPath $name
+
+        function Build-TreeItemSplat {
+            param(
+                [string] $Name,
+                [string] $ParentPath,
+                [int]    $Depth,
+                [hashtable] $Descriptor,
+                [object[]] $Children
+            )
+
+            $fullPath = Join-Path $ParentPath $Name
+
+            $splat = @{
+                FullPath    = $fullPath
+                Name        = $Name
+                ParentPath  = $ParentPath
+                Depth       = $Depth
+                Children    = $Children
+            }
+
+            # Only add keys that exist AND are not $null
+            foreach ($key in @(
+                'Kind','IsContainer','IsHidden','IsExecutable','IsReadOnly',
+                'Length','CreationTime','LastWriteTime','LastAccessTime',
+                'Link','Permissions','Native'
+            )) {
+                if ($Descriptor.ContainsKey($key) -and $null -ne $Descriptor[$key]) {
+                    $splat[$key] = $Descriptor[$key]
+                }
+            }
+
+            return $splat
+        }
+
+        $descriptor = @{}
+
+        # Fill descriptor with only the values you discovered
+        if ($kind -ne 'Unknown')     { $descriptor.Kind = $kind }
+        if ($isDir)                  { $descriptor.IsContainer = $true }
+        if ($null -ne $isHidden)     { $descriptor.IsHidden = $isHidden }
+        if ($null -ne $isExec)       { $descriptor.IsExecutable = $isExec }
+        if ($null -ne $isRO)         { $descriptor.IsReadOnly = $isRO }
+        if ($length -ge 0)           { $descriptor.Length = $length }
+        if ($ctime)                  { $descriptor.CreationTime = $ctime }
+        if ($mtime)                  { $descriptor.LastWriteTime = $mtime }
+        if ($atime)                  { $descriptor.LastAccessTime = $atime }
+        if ($link)                   { $descriptor.Link = $link }
+        if ($perms)                  { $descriptor.Permissions = $perms }
+        if ($native)                 { $descriptor.Native = $native }
+
+        # Build the splat
+        $splat = Build-TreeItemSplat `
+            -Name $name `
+            -ParentPath $parentPath `
+            -Depth $depth `
+            -Descriptor $descriptor `
+            -Children $children
+
+        # Call New-TreeItem with only meaningful parameters
+        return New-TreeItem @splat
     }
 
     foreach ($key in $Structure.Keys) {

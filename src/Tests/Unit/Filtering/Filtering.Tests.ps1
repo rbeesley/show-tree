@@ -1,18 +1,21 @@
 # src\Tests\Unit\Filtering\Filtering.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
-}
+    $script:FixtureScripts  = @(
+        "$script:TestRoot\Helpers\PrivateHelpers.ps1"
+    )}
 
 Describe "TreeItem Visibility" {
     It "Excludes exact matches" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name ".git"
             $visible = Test-TreeItemVisible -Item $item -Exclude ".git"
@@ -25,8 +28,8 @@ Describe "TreeItem Visibility" {
     }
 
     It "Glob include resurrects items excluded by glob" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name ".github"
             $visible = Test-TreeItemVisible -Item $item -Exclude ".*" -Include ".github"
@@ -39,8 +42,8 @@ Describe "TreeItem Visibility" {
     }
 
     It "Exact exclude beats glob include" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name ".git"
             $visible = Test-TreeItemVisible -Item $item -Exclude ".git" -Include ".git*"
@@ -53,8 +56,8 @@ Describe "TreeItem Visibility" {
     }
 
     It "Include resurrects hidden items" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name ".config" -Attributes ([IO.FileAttributes]::Hidden)
             $visible = Test-TreeItemVisible -Item $item -HideHidden -Include ".config"
@@ -65,16 +68,17 @@ Describe "TreeItem Visibility" {
 
 Describe "TreeItem Recursion" {
     It "Does not recurse into files" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $item = New-TestItem -Name "file.txt" -IsContainer $false
             Test-TreeItemRecurse -Item $item | Should -Be $false
         }
     }
 
     It "Does not recurse into links if FollowLinks is false" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name "link"
 
@@ -105,16 +109,18 @@ Describe "TreeItem Recursion" {
     }
 
     It "Prunes traversal for excluded directories" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $item = New-TestItem -Name "node_modules" -IsContainer $true
             Test-TreeItemRecurse -Item $item -Exclude "node_modules" | Should -Be $false
         }
     }
 
     It "Does NOT prune traversal for directories that don't match Include" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $item = New-TestItem -Name "src" -IsContainer $true
 
             # Manually mark as container and hidden since New-TestItem does not have support
@@ -126,8 +132,9 @@ Describe "TreeItem Recursion" {
     }
 
     It "Prunes traversal for hidden directories unless rescued" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $item = New-TestItem -Name ".config"
 
             # Manually mark as container and hidden since New-TestItem does not have support

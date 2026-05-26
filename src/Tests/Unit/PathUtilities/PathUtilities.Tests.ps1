@@ -12,8 +12,10 @@ BeforeAll {
 Describe 'Resolve-TreePath' {
     It 'resolves "." relative to the current working directory' {
         InModuleScope ShowTree {
+
             $tempPath = [System.IO.Path]::GetTempPath()
             Push-Location $tempPath
+
             try {
                 Resolve-TreePath -Path '.' |
                     Should -Be (Get-Location).ProviderPath
@@ -26,8 +28,10 @@ Describe 'Resolve-TreePath' {
 
     It 'resolves relative child paths' {
         InModuleScope ShowTree {
+
             $tempPath = [System.IO.Path]::GetTempPath()
             Push-Location $tempPath
+
             try {
                 $temp = Join-Path (Get-Location).ProviderPath 'foo'
                 if (-not (Test-Path $temp)) {
@@ -49,6 +53,7 @@ Describe 'Resolve-TreePath' {
 
     It 'resolves absolute paths' {
         InModuleScope ShowTree {
+
             $absPath = if ($IsWindows) { 'C:\Windows' } else { '/etc' }
             Resolve-TreePath -Path $absPath |
                     Should -Be $absPath
@@ -57,6 +62,7 @@ Describe 'Resolve-TreePath' {
 
     It 'writes an ItemNotFound-style error and returns null for nonexistent paths in PowerShell mode' {
         InModuleScope ShowTree {
+
             $errors = $null
             $nope = if ($IsWindows) { 'C:\Nope' } else { '/Nope' }
 
@@ -81,6 +87,7 @@ Describe 'Resolve-TreePath' {
 
     It 'returns the original path for nonexistent paths in Tree mode' {
         InModuleScope ShowTree {
+
             $nope = if ($IsWindows) { 'C:\Nope' } else { '/Nope' }
             Resolve-TreePath -Path $nope -Mode 'Tree' |
                 Should -Be $nope
@@ -89,6 +96,7 @@ Describe 'Resolve-TreePath' {
 
     It 'normalizes paths' {
         InModuleScope ShowTree {
+
             if ($IsWindows) {
                 Resolve-TreePath -Path 'c:\windows\..\windows\system32' |
                     Should -BeExactly 'C:\windows\system32'
@@ -106,6 +114,7 @@ Describe 'Resolve-TreePath' {
 
 Describe 'Show-Tree path resolution' {
     It "uses the caller's working directory, not the module directory" {
+
         $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
 
         New-Item -ItemType Directory -Path $testRoot -Force | Out-Null
@@ -126,6 +135,7 @@ Describe 'Show-Tree path resolution' {
     }
 
     It "resolves explicit relative child paths against the caller's working directory" {
+        
         $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
         $childPath = Join-Path $testRoot 'child'
 
