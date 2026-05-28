@@ -1,21 +1,55 @@
-# src\Private\StyleProfile\Get-ShowTreeStyleProfile.ps1
+# src/Private/StyleProfile/Get-ShowTreeStyleProfile.ps1
 
 function Get-ShowTreeStyleProfile {
     [CmdletBinding()]
     param(
-        [string] $Path
+        [string] $Path,
+        [string] $Culture
     )
 
+    $baseProfile    = Import-PowerShellDataFile -LiteralPath $script:BaseStyleProfilePath
     $defaultProfile = Import-PowerShellDataFile -LiteralPath $script:DefaultStyleProfilePath
+
+    $foundation = Merge-ShowTreeHashtable -Base $baseProfile -Override $defaultProfile
+
+    #
+    # Localization
+    #
+    if ([string]::IsNullOrWhiteSpace($Culture)) {
+        $Culture = [System.Globalization.CultureInfo]::CurrentUICulture.Name
+    }
+
+    $localizationFolder = Join-Path (Split-Path $script:BaseStyleProfilePath) 'Localization'
+    
+    $culturesToTry = [System.Collections.Generic.List[string]]::new()
+    $currentCulture = $Culture
+    while ($currentCulture) {
+        $culturesToTry.Add($currentCulture)
+        if ($currentCulture -match '-') {
+            $currentCulture = $currentCulture.Substring(0, $currentCulture.LastIndexOf('-'))
+        }
+        else {
+            $currentCulture = $null
+        }
+    }
+
+    foreach ($c in $culturesToTry) {
+        $locPath = Join-Path $localizationFolder "$c.psd1"
+        if (Test-Path -LiteralPath $locPath) {
+            $localizedStrings = Import-PowerShellDataFile -LiteralPath $locPath
+            $foundation = Merge-ShowTreeHashtable -Base $foundation -Override $localizedStrings
+            break
+        }
+    }
 
     if ([string]::IsNullOrWhiteSpace($Path)) {
         $Path = Join-Path $HOME '.showtree\StyleProfile.psd1'
     }
 
     if (-not (Test-Path -LiteralPath $Path)) {
-        return $defaultProfile
+        return $foundation
     }
 
     $userProfile = Import-PowerShellDataFile -LiteralPath $Path
-    return Merge-ShowTreeHashtable -Base $defaultProfile -Override $userProfile
+    return Merge-ShowTreeHashtable -Base $foundation -Override $userProfile
 }

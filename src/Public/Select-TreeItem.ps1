@@ -1,4 +1,4 @@
-﻿# src\Public\Select-TreeItem.ps1
+﻿# src/Public/Select-TreeItem.ps1
 
 function Select-TreeItem {
     [CmdletBinding(DefaultParameterSetName='Default')]

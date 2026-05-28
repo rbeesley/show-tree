@@ -1,4 +1,4 @@
-﻿# src\Public\Show-Tree.ps1
+﻿# src/Public/Show-Tree.ps1
 
 <#
 .SYNOPSIS
@@ -12,7 +12,7 @@ function Show-Tree {
         #
         # MODE SELECTION
         #
-        [ValidateSet('Normal','Tree','List')]
+        [ValidateSet('Normal', 'Tree', 'List')]
         [string]$Mode = 'Normal',
 
         # Backward-compatible aliases
@@ -27,7 +27,7 @@ function Show-Tree {
         # PATH
         #
         [Parameter(Position = 0)]
-        [string]$Path = ".",
+        [string]$Path = '.',
 
 
         #
@@ -75,14 +75,17 @@ function Show-Tree {
         [switch]$Ascii,
 
         # Show the color legend
-        [switch]$Legend
+        [switch]$Legend,
+
+        # BCP-47 culture override
+        [string]$Culture
     )
 
     #
     # Legend mode: no tree rendering
     #
     if ($Legend) {
-        Show-TreeLegend
+        Show-TreeLegend -Culture $Culture
         return
     }
 
@@ -92,19 +95,28 @@ function Show-Tree {
     if ($AsTree)    { $Mode = 'Tree' }
     if ($AsListing) { $Mode = 'List' }
 
+    $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
+    if ($Culture) {
+        $resolvedStyleProfile = Get-ShowTreeStyleProfile -Culture $Culture
+    }
+    elseif ($null -eq $resolvedStyleProfile) {
+        $resolvedStyleProfile = Get-ShowTreeStyleProfile
+    }
+    $uiErrors = $resolvedStyleProfile.UIStrings.Errors
+
     if ($Mode -eq 'Tree' -and $PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
-        throw "ShowTree currently supports Windows only for Tree mode."
+        throw $uiErrors.WindowsOnly
     }
 
     #
     # Validate paired switches
     #
-    if ($Color -and $Mono) { throw "Cannot specify both -Color and -Mono." }
-    if ($Files -and $NoFiles) { throw "Cannot specify both -Files (or -ShowFiles) and -NoFiles." }
-    if ($ShowHidden -and $HideHidden) { throw "Cannot specify both -ShowHidden and -HideHidden." }
-    if ($ShowSystem -and $HideSystem) { throw "Cannot specify both -ShowSystem and -HideSystem." }
-    if ($ShowTargets -and $NoTargets) { throw "Cannot specify both -ShowTargets and -NoTargets." }
-    if ($Gap -and $NoGap) { throw "Cannot specify both -Gap and -NoGap." }
+    if ($Color -and $Mono) { throw $uiErrors.ColorMonoConflict }
+    if ($Files -and $NoFiles) { throw $uiErrors.FilesConflict }
+    if ($ShowHidden -and $HideHidden) { throw $uiErrors.HiddenConflict }
+    if ($ShowSystem -and $HideSystem) { throw $uiErrors.SystemConflict }
+    if ($ShowTargets -and $NoTargets) { throw $uiErrors.TargetsConflict }
+    if ($Gap -and $NoGap) { throw $uiErrors.GapConflict }
     
     #
     # Resolve the path
@@ -149,7 +161,7 @@ function Show-Tree {
     # Header Rendering
     #
     if ($Mode -eq 'Tree') {
-        $header = Get-TreeModeHeader -Path $resolvedPath
+        $header = Get-TreeModeHeader -Path $resolvedPath -StyleProfile $resolvedStyleProfile
         $header | Where-Object { $_ -is [string] }
         if ($header -contains $false) {
             return
@@ -171,18 +183,11 @@ function Show-Tree {
             -Native $native `
             -Depth 0
 
-        $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
-        if ($null -eq $resolvedStyleProfile) { $resolvedStyleProfile = Get-ShowTreeStyleProfile }
-
         $style = Get-ItemStyle -Item $treeItem -Colorize:$EffectiveColorize -StyleProfile $resolvedStyleProfile
 
-        $esc = [char]27
-        $colorReset = $EffectiveColorize ? "${esc}[0m" : ""
+        $colorReset = $EffectiveColorize ? $resolvedStyleProfile.Reset : ""
         Write-Output "$($style.Ansi)$resolvedPath${colorReset}"
     }
-
-    $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
-    if ($null -eq $resolvedStyleProfile) { $resolvedStyleProfile = Get-ShowTreeStyleProfile }
 
     #
     # Enumerate -> Select -> Render
@@ -200,14 +205,14 @@ function Show-Tree {
     }
 
     $treeItems = Get-TreeItem `
-            -Path $resolvedPath `
-            -Depth $treeItemDepth `
-            -ProviderMode $providerMode `
-            -Include $Include `
-            -Exclude $Exclude `
-            -HideHidden:$EffectiveHideHidden `
-            -HideSystem:$EffectiveHideSystem `
-            -DirectoryOnly:(!$EffectiveFiles)
+        -Path $resolvedPath `
+        -Depth $treeItemDepth `
+        -ProviderMode $providerMode `
+        -Include $Include `
+        -Exclude $Exclude `
+        -HideHidden:$EffectiveHideHidden `
+        -HideSystem:$EffectiveHideSystem `
+        -DirectoryOnly:(!$EffectiveFiles)
 
     $selectedItems = $treeItems | Select-TreeItem
 

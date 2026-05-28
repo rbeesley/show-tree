@@ -1,4 +1,4 @@
-# src\Private\PathUtilities\Get-NearestExistingParent.ps1
+# src/Private/PathUtilities/Get-NearestExistingParent.ps1
 
 <#
 .SYNOPSIS

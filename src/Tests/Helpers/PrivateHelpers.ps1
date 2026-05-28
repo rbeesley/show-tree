@@ -1,4 +1,4 @@
-# src\Tests\Helpers\PrivateHelpers.ps1
+# src/Tests/Helpers/PrivateHelpers.ps1
 
 function New-TestItem {
     param(

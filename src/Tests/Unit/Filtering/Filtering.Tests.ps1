@@ -10,7 +10,8 @@ BeforeAll {
         -PassThru
     $script:FixtureScripts  = @(
         "$script:TestRoot\Helpers\PrivateHelpers.ps1"
-    )}
+    )
+}
 
 Describe "TreeItem Visibility" {
     It "Excludes exact matches" {

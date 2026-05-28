@@ -1,4 +1,4 @@
-# src\Private\Rendering\Get-ItemStyle.ps1
+# src/Private/Rendering/Get-ItemStyle.ps1
 
 <#
 .SYNOPSIS
@@ -27,7 +27,7 @@ function Get-ItemStyle {
         $StyleProfile
     }
 
-    $esc = [char]27
+    $esc = $StyleProfile.Esc
 
     $isContainer = $Item.IsContainer
     $attrs       = $Item.Native.FileAttributes

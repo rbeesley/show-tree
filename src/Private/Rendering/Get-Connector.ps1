@@ -1,4 +1,4 @@
-# src\Private\Rendering\Get-Connector.ps1
+# src/Private/Rendering/Get-Connector.ps1
 
 <#
 .SYNOPSIS
@@ -30,16 +30,16 @@ function Get-Connector {
         [object]$StyleProfile
     )
 
-    if ($Mode -eq 'Tree' -and $Type -eq 'File' -and $NoSpan) {
-        return '    '
-    }
-
     $encoding = $Ascii ? 'Ascii' : 'Unicode'
     $connectorSet = $StyleProfile.Connectors[$Mode][$encoding]
 
     if ($null -eq $connectorSet) {
         # Fallback to Normal if mode not found
         $connectorSet = $StyleProfile.Connectors['Normal'][$encoding]
+    }
+
+    if ($Mode -eq 'Tree' -and $Type -eq 'File' -and $NoSpan) {
+        return $connectorSet.NoSpan
     }
 
     switch ($Type) {

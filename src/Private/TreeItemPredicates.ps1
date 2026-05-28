@@ -1,4 +1,4 @@
-﻿# \src\Private\TestItemPredicates.ps1
+﻿# src/Private/TestItemPredicates.ps1
 
 function Test-TreeItemVisible {
     [CmdletBinding()]

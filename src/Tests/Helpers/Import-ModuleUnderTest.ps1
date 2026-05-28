@@ -1,4 +1,4 @@
-# src\Tests\Helpers\Import-ModuleUnderTest.ps1
+# src/Tests/Helpers/Import-ModuleUnderTest.ps1
 
 [CmdletBinding()]
 param(

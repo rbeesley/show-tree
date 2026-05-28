@@ -1,4 +1,4 @@
-﻿# \src\Public\Get-TreeItem.ps1
+﻿# src/Public/Get-TreeItem.ps1
 
 function Get-TreeItem {
     [CmdletBinding()]
@@ -45,7 +45,7 @@ function Get-TreeItem {
     #
     # Enumeration
     #
-    $items = [System.Collections.Generic.List[object]]::new()
+    $orderedItems = [System.Collections.Generic.List[object]]::new()
     if ($ProviderMode -eq 'Win32' -and $IsWindows) {
         $raw = Get-RawDirectoryEntries -Path $resolvedPath -Depth $CurrentDepth
 
@@ -64,12 +64,17 @@ function Get-TreeItem {
         #   - files first
         #   - directories second
         #   - preserve Win32 enumeration order inside each group
-        foreach ($f in $rawFiles) { [void]$items.Add($f) }
-        foreach ($d in $rawDirectories) { [void]$items.Add($d) }
+        foreach ($f in $rawFiles) {
+            [void]$orderedItems.Add($f)
+        }
+        foreach ($d in $rawDirectories) {
+            [void]$orderedItems.Add($d)
+        }
     }
     else {
         $rawItems = Get-ChildItem -Path $resolvedPath -Force -ErrorAction SilentlyContinue
-
+        $items = [System.Collections.Generic.List[object]]::new()
+        
         foreach ($item in $rawItems) {
             $isDir = $item.PSIsContainer
             $native = [PSCustomObject]@{
@@ -104,15 +109,15 @@ function Get-TreeItem {
             }
 
             $treeItem = New-TreeItem `
-                    -FullPath $item.FullName `
-                    -IsContainer $isDir `
-                    -Kind $kind `
-                    -Name $item.Name `
-                    -Native $native `
-                    -Link $link `
-                    -Depth $CurrentDepth `
-                    -ParentPath $resolvedPath `
-                    -IsHidden $isHidden
+                -FullPath $item.FullName `
+                -IsContainer $isDir `
+                -Kind $kind `
+                -Name $item.Name `
+                -Native $native `
+                -Link $link `
+                -Depth $CurrentDepth `
+                -ParentPath $resolvedPath `
+                -IsHidden $isHidden
 
             if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 [void]$items.Add($treeItem)
@@ -124,20 +129,36 @@ function Get-TreeItem {
         #
         # Deterministic order for PowerShell provider mode.
         # Win32 provider mode intentionally preserves tree.com-compatible enumeration order.
-        $items = $items | Sort-Object @{Expression="IsContainer"; Ascending=$true}, @{Expression="Name"; Ascending=$true}
+        $orderedItems = $items | Sort-Object @{ Expression="IsContainer"; Ascending=$true }, @{ Expression="Name"; Ascending=$true }
     }
 
     #
     # Output and Recursion
     #
-    foreach ($item in $items) {
+    foreach ($item in $orderedItems) {
         # Return the current item
         $item
 
         # Recurse if it's a container and we haven't reached MaxDepth
         if ($item.IsContainer -and ($Depth -eq -1 -or $CurrentDepth -lt $Depth)) {
-            if (Test-TreeItemRecurse -Item $item -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -FollowLinks:$FollowLinks) {
-                Get-TreeItem -Path $item.FullPath -Depth $Depth -FollowLinks:$FollowLinks -ProviderMode $ProviderMode -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly -CurrentDepth ($CurrentDepth + 1)
+            if (Test-TreeItemRecurse `
+                    -Item $item `
+                    -Include $Include `
+                    -Exclude $Exclude `
+                    -HideHidden:$HideHidden `
+                    -HideSystem:$HideSystem `
+                    -FollowLinks:$FollowLinks) {
+                Get-TreeItem `
+                        -Path $item.FullPath `
+                        -Depth $Depth `
+                        -FollowLinks:$FollowLinks `
+                        -ProviderMode $ProviderMode `
+                        -Include $Include `
+                        -Exclude $Exclude `
+                        -HideHidden:$HideHidden `
+                        -HideSystem:$HideSystem `
+                        -DirectoryOnly:$DirectoryOnly `
+                        -CurrentDepth ($CurrentDepth + 1)
             }
         }
     }

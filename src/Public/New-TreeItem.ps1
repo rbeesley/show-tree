@@ -1,4 +1,4 @@
-# \src\Public\New-TreeItem.ps1
+# src/Public/New-TreeItem.ps1
 
 function New-TreeItem {
     [CmdletBinding()]

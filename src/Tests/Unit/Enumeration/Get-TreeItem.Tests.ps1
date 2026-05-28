@@ -2,20 +2,12 @@
 
 Describe "Get-TreeItem" {
     BeforeAll {
-        # Load necessary scripts
-        $sutDir = Join-Path $PSScriptRoot '..\..\..\Public'
-        $privDir = Join-Path $PSScriptRoot '..\..\..\Private'
-        $pathUDir = Join-Path $privDir 'PathUtilities'
-        $fixDir = Join-Path $PSScriptRoot '..\..\Fixtures'
+        $script:TestRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ShowTree_GetTreeItemTest"
 
-        . (Join-Path $sutDir 'Get-TreeItem.ps1')
-        . (Join-Path $sutDir 'New-TreeItem.ps1')
-        . (Join-Path $pathUDir 'Get-RawDirectoryEntries.ps1')
-        . (Join-Path $privDir 'TreeItemPredicates.ps1')
-        . (Join-Path $fixDir 'TreeItemFixtures.ps1')
-
-        $script:TestRoot = Join-Path $PSScriptRoot "GetTreeItemTest"
+        # Be sure that $script:TestRoot is valid and that you really want to delete it before running this!
+        # consider running with -WhatIf first and manually verifying the path before allowing it to delete.
         if (Test-Path $script:TestRoot) { Remove-Item $script:TestRoot -Recurse -Force }
+
         New-Item -ItemType Directory -Path $script:TestRoot | Out-Null
         
         # Create a test structure
@@ -40,6 +32,8 @@ Describe "Get-TreeItem" {
     }
 
     AfterAll {
+        # Be sure that $script:TestRoot is valid and that you really want to delete it before running this!
+        # consider running with -WhatIf first and manually verifying the path before allowing it to delete.
         if (Test-Path $script:TestRoot) { Remove-Item $script:TestRoot -Recurse -Force }
     }
 

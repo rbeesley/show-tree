@@ -22,9 +22,13 @@ Import-Module -Name $DistManifestPath -Force -ErrorAction Stop
 
 Write-Host "Smoke: Checking exported commands"
 $requiredCommands = @(
+    'Format-Tree'
+    'Get-TreeItem'
+    'New-TreeItem'
+    'Select-TreeItem'
+    'Set-ShowTreeStyleProfile'
     'Show-Tree'
     'Show-TreeLegend'
-    'Set-ShowTreeStyleProfile'
 )
 
 foreach ($commandName in $requiredCommands) {

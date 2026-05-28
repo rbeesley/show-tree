@@ -1,4 +1,4 @@
-﻿# src\Private\PathUtilities\Get-TreeModeHeader.ps1
+﻿# src/Private/PathUtilities/Get-TreeModeHeader.ps1
 
 <#
 .SYNOPSIS
@@ -11,8 +11,13 @@ function Get-TreeModeHeader {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Path
+        [string]$Path,
+
+        [object]$StyleProfile = $null
     )
+
+    $StyleProfile = if ($null -eq $StyleProfile) { Get-ActiveShowTreeStyleProfile } else { $StyleProfile }
+    $ui = $StyleProfile.UIStrings.TreeMode
 
     # Extract drive letter
     $drive = Split-Path $Path -Qualifier
@@ -20,7 +25,7 @@ function Get-TreeModeHeader {
 
     # 1. Invalid drive → tree.com behavior
     if ($driveName -and -not (Get-PSDrive -Name $driveName -ErrorAction SilentlyContinue)) {
-        Write-Output "Invalid drive specification"
+        Write-Output $ui.InvalidDrive
         return $false
     }
 
@@ -29,8 +34,8 @@ function Get-TreeModeHeader {
     $fileSystemLabel       = Get-VolumeName -Path $nearestExistingParent
     $serialNumber          = Get-VolumeSerialNumber -Path $nearestExistingParent
 
-    Write-Output "Folder PATH listing for volume $fileSystemLabel"
-    Write-Output "Volume serial number is $serialNumber"
+    Write-Output ($ui.VolumeListing -f $fileSystemLabel)
+    Write-Output ($ui.VolumeSerial -f $serialNumber)
     Write-Output $Path
 
     # 3. Invalid path on valid drive → tree.com behavior
@@ -38,11 +43,11 @@ function Get-TreeModeHeader {
         # Check if it's a rooted path with a drive qualifier
         if ($drive) {
             $sub = $Path.Substring($drive.Length)
-            Write-Output "Invalid path - $sub"
+            Write-Output ($ui.InvalidPath -f $sub)
         } else {
-            Write-Output "Invalid path - $Path"
+            Write-Output ($ui.InvalidPath -f $Path)
         }
-        Write-Output "No subfolders exist"
+        Write-Output $ui.NoSubfolders
         return $false
     }
 

@@ -1,4 +1,4 @@
-# src\Private\StyleProfile\Get-ActiveShowTreeStyleProfile.ps1
+# src/Private/StyleProfile/Get-ActiveShowTreeStyleProfile.ps1
 
 function Get-ActiveShowTreeStyleProfile {
     [CmdletBinding()]

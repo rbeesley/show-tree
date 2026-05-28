@@ -1,18 +1,23 @@
 # src\Tests\Unit\TreeItem\TreeItem.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
+    $script:FixtureScripts  = @(
+        "$script:TestRoot\Helpers\PrivateHelpers.ps1"
+        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
+    )
 }
 
 Describe "New-TreeItem" {
     It "creates a basic file TreeItem with correct defaults" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
             $fullPath = Join-Path $root 'File.txt'
@@ -35,8 +40,8 @@ Describe "New-TreeItem" {
     }
 
     It "creates a directory TreeItem with correct defaults" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
             $fullPath = Join-Path $root 'Dir'
@@ -50,8 +55,8 @@ Describe "New-TreeItem" {
     }
 
     It "allows overriding Name and Kind" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $root = if ($IsWindows) { 'C:\X' } else { '/tmp/X' }
             $fullPath = Join-Path $root 'Y'
@@ -67,8 +72,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports native attributes and hidden detection" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $root = if ($IsWindows) { 'C:\Hidden' } else { '/tmp/Hidden' }
             $fullPath = Join-Path $root 'File.txt'
@@ -88,8 +93,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports children" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
             $childPath = Join-Path $root 'Child.txt'
@@ -102,8 +107,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports link information" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $root = if ($IsWindows) { 'C:\' } else { '/tmp/' }
             $linkPath = Join-Path $root 'Link'
@@ -127,8 +132,8 @@ Describe "New-TreeItem" {
     }
 
     It "supports ParentPath and Depth" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $parent = if ($IsWindows) { 'C:\A' } else { '/tmp/A' }
             $fullPath = Join-Path $parent 'B'
@@ -145,8 +150,8 @@ Describe "New-TreeItem" {
     }
 
     It "detects hidden files by '.' prefix on non-Windows" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             # In v2.0.0, we use localIsWindows inside the function, 
             # and it detects the real OS. To test this specifically,
@@ -222,9 +227,9 @@ Describe "New-TreeItem" {
     }
 
     It "converts test fixtures into TreeItem objects" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Fixtures\TreeItemFixtures.ps1"
-            
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $expectedTarget = if ($IsWindows) { 'C:\Target' } else { '/tmp/Target' }
             $structure = [ordered]@{
                 'Root' = [ordered]@{

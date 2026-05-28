@@ -1,4 +1,4 @@
-# src\Private\StyleProfile\Merge-ShowTreeHashtable.ps1
+# src/Private/StyleProfile/Merge-ShowTreeHashtable.ps1
 
 function Merge-ShowTreeHashtable {
     [CmdletBinding()]

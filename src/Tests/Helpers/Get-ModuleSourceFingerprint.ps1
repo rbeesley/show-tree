@@ -1,4 +1,4 @@
-# src\Tests\Helpers\Get-ModuleSourceFingerprint.ps1
+# src/Tests/Helpers/Get-ModuleSourceFingerprint.ps1
 
 [CmdletBinding()]
 param(

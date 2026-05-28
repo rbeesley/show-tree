@@ -1,4 +1,4 @@
-# src\Tests\Helpers\Get-ModuleUnderTestInfo.ps1
+# src/Tests/Helpers/Get-ModuleUnderTestInfo.ps1
 
 [CmdletBinding()]
 param(

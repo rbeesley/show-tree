@@ -1,12 +1,16 @@
 # src\Tests\Unit\Rendering\Rendering.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
+    $script:FixtureScripts  = @(
+        "$script:TestRoot\Helpers\PrivateHelpers.ps1"
+    )
 
     InModuleScope ShowTree {        
         # Load real default style profile for connector tests
@@ -50,8 +54,8 @@ BeforeAll {
 
 Describe "Get-ItemStyle" {
     It "Applies base directory style" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name "Dir" -IsDirectory:$true -Attributes ([IO.FileAttributes]::Directory)
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
@@ -61,8 +65,8 @@ Describe "Get-ItemStyle" {
     }
 
     It "Applies Hidden overlay" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name "Hidden" -Attributes ([IO.FileAttributes]::Hidden)
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
@@ -73,8 +77,8 @@ Describe "Get-ItemStyle" {
     }
 
     It "Applies System foreground override" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $item = New-TestItem -Name "Sys" -Attributes ([IO.FileAttributes]::System)
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
@@ -84,8 +88,8 @@ Describe "Get-ItemStyle" {
     }
 
     It "Styles symlink to directory as Directory" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             # Create a symlink that points to a directory
             $item = New-TreeItem -FullPath "C:\Test\LinkToDir" -Name "LinkToDir" `
@@ -105,8 +109,8 @@ Describe "Get-ItemStyle" {
     }
 
     It "Styles symlink to file as File" {
-        InModuleScope ShowTree {
-            . "$PSScriptRoot\..\..\Helpers\PrivateHelpers.ps1"
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             # Create a symlink that points to a file
             $item = New-TreeItem -FullPath "C:\Test\LinkToFile" -Name "LinkToFile" `
@@ -128,28 +132,36 @@ Describe "Get-ItemStyle" {
 
 Describe "Get-Connector" {
     It "Returns Unicode directory connector (non-last)" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             Get-Connector -Type Directory -IsLast:$false -StyleProfile $realProfile |
                 Should -Be "╠══ "
         }
     }
 
     It "Returns Unicode directory connector (last)" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             Get-Connector -Type Directory -IsLast:$true -StyleProfile $realProfile |
                 Should -Be "╚══ "
         }
     }
 
     It "Returns ASCII connectors when -Ascii is used" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             Get-Connector -Type File -Ascii -StyleProfile $realProfile |
                 Should -Be "+-- "
         }
     }
 
     It "Returns Tree.com connectors in -Tree mode" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             Get-Connector -Type Directory -Mode 'Tree' -IsLast:$false -StyleProfile $realProfile |
                 Should -Be "├───"
         }

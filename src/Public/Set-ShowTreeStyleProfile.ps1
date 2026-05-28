@@ -1,10 +1,13 @@
-# src\Public\Set-ShowTreeStyleProfile.ps1
+# src/Public/Set-ShowTreeStyleProfile.ps1
 
 function Set-ShowTreeStyleProfile {
     [CmdletBinding(DefaultParameterSetName = 'Path')]
     param(
         [Parameter(ParameterSetName = 'Path')]
         [string] $Path,
+
+        [Parameter(ParameterSetName = 'Path')]
+        [string] $Culture,
 
         [Parameter(ParameterSetName = 'InputObject')]
         [System.Collections.IDictionary] $InputObject,
@@ -20,11 +23,7 @@ function Set-ShowTreeStyleProfile {
         }
 
         'Path' {
-            if ([string]::IsNullOrWhiteSpace($Path)) {
-                throw 'Path cannot be null or empty.'
-            }
-
-            $script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile -Path $Path
+            $script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile -Path $Path -Culture $Culture
             return
         }
 

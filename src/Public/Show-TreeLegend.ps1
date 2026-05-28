@@ -1,4 +1,4 @@
-# src\Public\Show-TreeLegend.ps1
+# src/Public/Show-TreeLegend.ps1
 
 <#
 .SYNOPSIS
@@ -10,21 +10,23 @@
 #>
 function Show-TreeLegend {
     param(
-        $StyleProfile = $null
+        $StyleProfile = $null,
+        [string]$Culture
     )
 
-    $StyleProfile = if (-not $StyleProfile) {
-        Get-ActiveShowTreeStyleProfile
-    } else {
-        $StyleProfile
+    if ($Culture) {
+        $StyleProfile = Get-ShowTreeStyleProfile -Culture $Culture
+    }
+    elseif (-not $StyleProfile) {
+        $StyleProfile = Get-ActiveShowTreeStyleProfile
     }
 
-    $esc   = [char]27
-    $reset = "${esc}[0m"
+    $reset = $StyleProfile.Reset
 
+    $ui = $StyleProfile.UIStrings.Legend
     Write-Output ""
-    Write-Output "Legend"
-    Write-Output "------"
+    Write-Output $ui.Header
+    Write-Output $ui.HeaderUnderline
     Write-Output ""
 
     #
@@ -34,18 +36,22 @@ function Show-TreeLegend {
         param(
             [string]$Name,
             $Item,
-            $Indent = ""
+            $Indent = "",
+            $StyleProfile
         )
 
-        $style = Get-ItemStyle -Item $Item -Colorize:$true
+        $style = Get-ItemStyle -Item $Item -Colorize:$true -StyleProfile $StyleProfile
         $ansi  = $style.Ansi
+        $reset = $StyleProfile.Reset
         Write-Output ("{0,-22} {1}{2}{3}" -f ($Indent + $Name), $ansi, $Name, $reset)
     }
 
     function ConvertTo-LegendFileAttributes {
         param(
             [Parameter(Mandatory)]
-            [string] $Name
+            [string] $Name,
+
+            $StyleProfile
         )
 
         if ($Name -eq 'None') {
@@ -56,30 +62,31 @@ function Show-TreeLegend {
             return [IO.FileAttributes] [System.Enum]::Parse([IO.FileAttributes], $Name, $true)
         }
         catch {
-            throw "Style profile attribute '$Name' is not a valid System.IO.FileAttributes value."
+            $err = $StyleProfile.UIStrings.Errors.InvalidAttribute -f $Name
+            throw $err
         }
     }
 
     #
     # Base types
     #
-    Write-Output "Types:"
+    Write-Output $ui.Types
 
-    Show-Sample "File"      (New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = [IO.FileAttributes]::Archive }) " "
-    Write-Output "  Attributes:"
+    Show-Sample "File"      (New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = [IO.FileAttributes]::Archive }) " " $StyleProfile
+    Write-Output $ui.Attributes
     foreach ($attr in $StyleProfile.Attributes.Keys) {
-        $flag = ConvertTo-LegendFileAttributes -Name $attr
+        $flag = ConvertTo-LegendFileAttributes -Name $attr -StyleProfile $StyleProfile
         $item = New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = $flag }
-        Show-Sample $attr $item "   "
+        Show-Sample $attr $item "   " $StyleProfile
     }
     Write-Output ""
 
-    Show-Sample "Directory" (New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = [IO.FileAttributes]::Directory }) " "
-    Write-Output "  Attributes:"
+    Show-Sample "Directory" (New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = [IO.FileAttributes]::Directory }) " " $StyleProfile
+    Write-Output $ui.Attributes
     foreach ($attr in $StyleProfile.Attributes.Keys) {
-        $flag = ConvertTo-LegendFileAttributes -Name $attr
+        $flag = ConvertTo-LegendFileAttributes -Name $attr -StyleProfile $StyleProfile
         $item = New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = $flag }
-        Show-Sample $attr $item "   "
+        Show-Sample $attr $item "   " $StyleProfile
     }
     Write-Output ""
 

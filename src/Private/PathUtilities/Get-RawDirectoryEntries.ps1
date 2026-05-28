@@ -1,4 +1,4 @@
-# src\Private\PathUtilities\Get-RawDirectoryEnumeration.ps1
+# src/Private/PathUtilities/Get-RawDirectoryEntries.ps1
 
 <#
 .SYNOPSIS

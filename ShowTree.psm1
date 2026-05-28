@@ -33,14 +33,15 @@ else {
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Merge-ShowTreeHashtable.ps1')
 
-# Load the default style profile
+# Load the style profiles
+$script:BaseStyleProfilePath    = Join-Path $moduleSrcRoot 'Data\BaseStyleProfile.psd1'
 $script:DefaultStyleProfilePath = Join-Path $moduleSrcRoot 'Data\DefaultStyleProfile.psd1'
 
 $script:ShowTreeState = @{
     StyleProfile = $null
 }
 
-$script:ShowTreeState.StyleProfile = Import-PowerShellDataFile -LiteralPath $script:DefaultStyleProfilePath
+$script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile
 
 # Export only the public function
 $script:PublicFunctions = `

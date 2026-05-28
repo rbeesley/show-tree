@@ -1,4 +1,4 @@
-# src\Private\PathUtilities\Get-VolumeSerialNumber.ps1
+# src/Private/PathUtilities/Get-VolumeSerialNumber.ps1
 
 <#
 .SYNOPSIS

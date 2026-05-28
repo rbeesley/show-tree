@@ -1,4 +1,4 @@
-# src\Tests\Helpers\Find-ModuleManifest.ps1
+# src/Tests/Helpers/Find-ModuleManifest.ps1
 
 [CmdletBinding(DefaultParameterSetName = 'ByStartPath')]
 param(

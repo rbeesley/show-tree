@@ -1,20 +1,24 @@
 ﻿# src\Tests\Unit\Rendering\Gaps.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
+    $script:FixtureScripts  = @(
+        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
+        "$script:TestRoot\Helpers\PrivateHelpers.ps1"
+    )
 }
 
 Describe "Reproduction Gaps" {
     Context "Base structures" {
         It "Doesn't have a gap with an empty root" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -36,9 +40,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there is only one file in the root" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -64,9 +67,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there is only one directory in the root" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -93,9 +95,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there are only files in the root" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -125,9 +126,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has a gap if there are a mix of files and directories in the root" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -161,9 +161,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between sibling directories if the 1st sibling has no children" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -195,9 +194,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between the parent and child directories if the parent has no children" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -229,9 +227,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there are only files in subdirectories" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -266,9 +263,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has a gap between the mixed sibling files and directories in subdirectories" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -307,9 +303,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there are only directories in subdirectories" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -346,9 +341,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has a gap between sibling directories if the 1st sibling has children" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -387,9 +381,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has two gaps when there are two sibling directories and the 1st sibling has a mix of files and directories for children" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -436,9 +429,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has a gap between the two sibling directories if the 1st sibling has directories for children" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -478,9 +470,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between sibling directories if the 1st sibling has no children and the 2nd sibling has file children." {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -516,9 +507,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has one gap if the 1st sibling has no children and the 2nd sibling has mixed children." {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -562,9 +552,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between sibling directories if the 1st sibling has no children and the 2nd sibling has directory children." {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -603,9 +592,8 @@ Describe "Reproduction Gaps" {
 
     Context "Base structures (with files filtered out)" {
         It "Doesn't have a gap if there are only files in the root (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -631,9 +619,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there are a mix of files and directories in the root (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -663,9 +650,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if there are only files in subdirectories (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -696,9 +682,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between the mixed sibling files and directories in subdirectories (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -733,9 +718,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between sibling directories if the 1st sibling has children (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -770,9 +754,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Has one gap when there are two sibling directories and the 1st sibling has a mix of files and directories for children (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -815,9 +798,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap between sibling directories if the 1st sibling has no children and the 2nd sibling has file children.  (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root
@@ -851,9 +833,8 @@ Describe "Reproduction Gaps" {
         }
 
         It "Doesn't have a gap if the 1st sibling has no children and the 2nd sibling has mixed children. (filtered)" {
-            InModuleScope ShowTree {
-                . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-                . (Join-Path $script:moduleSrcRoot "Tests\Helpers\PrivateHelpers.ps1")
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
                 # Create a structure:
                 # root

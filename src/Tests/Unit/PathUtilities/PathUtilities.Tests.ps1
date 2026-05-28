@@ -1,14 +1,15 @@
 # src\Tests\Unit\PathUtilities\PathUtilities.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
-}
-
+ }
+ 
 Describe 'Resolve-TreePath' {
     It 'resolves "." relative to the current working directory' {
         InModuleScope ShowTree {
@@ -135,7 +136,7 @@ Describe 'Show-Tree path resolution' {
     }
 
     It "resolves explicit relative child paths against the caller's working directory" {
-        
+
         $testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ([guid]::NewGuid().ToString('N'))
         $childPath = Join-Path $testRoot 'child'
 

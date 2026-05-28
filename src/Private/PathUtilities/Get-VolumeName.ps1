@@ -1,4 +1,4 @@
-# src\Private\PathUtilities\Get-VolumeName.ps1
+# src/Private/PathUtilities/Get-VolumeName.ps1
 
 <#
 .SYNOPSIS

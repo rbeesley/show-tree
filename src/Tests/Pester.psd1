@@ -1,4 +1,4 @@
-# src\Tests\Pester.psd1
+# src/Tests/Pester.psd1
 
 @{
     Run = @{

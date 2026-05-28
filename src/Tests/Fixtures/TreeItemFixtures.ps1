@@ -1,4 +1,4 @@
-﻿# src\Tests\Fixtures\TreeItemFixtures.ps1
+﻿# src/Tests/Fixtures/TreeItemFixtures.ps1
 
 function New-FixtureTreeItem {
     [CmdletBinding()]

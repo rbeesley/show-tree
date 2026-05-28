@@ -1,12 +1,16 @@
 # src\Tests\Unit\Rendering\TreeMode.Tests.ps1
 
 BeforeAll {
-    $script:ModuleUnderTest = . "$PSScriptRoot\..\..\Helpers\Import-ModuleUnderTest.ps1" `
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
         -StartPath $PSScriptRoot `
         -ModuleName 'ShowTree' `
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
+    $script:FixtureScripts  = @(
+        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
+    )
 
     InModuleScope ShowTree {
         $script:testStyleProfile = Get-ShowTreeStyleProfile
@@ -50,8 +54,8 @@ BeforeAll {
 
 Describe "Tree mode formatting" {
     It "Formats a simple TreeItem graph using Tree.com-compatible directory and file layout" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 a = [ordered]@{
@@ -79,8 +83,8 @@ Describe "Tree mode formatting" {
     }
 
     It "Keeps continuation bars for later root-level siblings while rendering nested files without file connectors" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 a = [ordered]@{
@@ -112,8 +116,8 @@ Describe "Tree mode formatting" {
     }
 
     It "Renders gap lines in Tree mode" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 a = [ordered]@{
@@ -139,8 +143,8 @@ Describe "Tree mode formatting" {
     }
 
     It "Supports ASCII Tree mode connectors" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 a = [ordered]@{
@@ -166,8 +170,8 @@ Describe "Tree mode formatting" {
     }
 
     It "Formats a file-only root-level listing like Tree.com when there are no later root directories" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 file1 = $null
@@ -186,8 +190,8 @@ Describe "Tree mode formatting" {
     }
 
     It "renders root files with Tree.com file connector spans when later root directories exist" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 "root-file-1.txt" = $null
@@ -212,8 +216,8 @@ Describe "Tree mode formatting" {
     }
 
     It "Renders Tree.com file connector spans only when a later sibling directory exists" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $structure = [ordered]@{
                 a = [ordered]@{
@@ -249,7 +253,9 @@ Describe "Tree mode formatting" {
 
 Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
     It "does not show gap lines in directory-only Tree mode by default" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $rootPath = 'C:\Test'
 
             Mock Get-TreeModeHeader {
@@ -305,7 +311,9 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
     }
 
     It "shows gap lines in Tree mode when -Gap is explicitly requested" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $rootPath = 'C:\Test'
 
             Mock Get-TreeModeHeader {
@@ -362,7 +370,9 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
     }
 
     It "shows gap lines in Tree mode when -Files is specified" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $rootPath = 'C:\Test'
 
             Mock Get-TreeModeHeader {
@@ -421,8 +431,8 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
 
 Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
     It "Maps mocked Win32 provider output to a flattened TreeItem graph with correct depth and parent paths" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $rootPath = 'C:\Test'
 
@@ -490,8 +500,8 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
     }
 
     It "Produces Tree.com-compatible rendering from mocked Win32 provider output" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $rootPath = 'C:\Test'
 
@@ -555,8 +565,8 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
     }
 
     It "Passes recursion depth into the mocked Win32 provider" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $rootPath = 'C:\Test'
             $observedCalls = [System.Collections.Generic.List[object]]::new()
@@ -620,8 +630,8 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
     }
 
     It "Honors DirectoryOnly while still recursing through directories from mocked Win32 output" {
-        InModuleScope ShowTree {
-            . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
             $rootPath = 'C:\Test'
 
@@ -678,7 +688,9 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
 
 Describe "Tree mode Win32 provider ordering" -Skip:(-not $IsWindows) {
     It "preserves tree.com-compatible Win32 ordering without applying deterministic sorting" {
-        InModuleScope ShowTree {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
             $rootPath = 'C:\Test'
 
             Mock Get-RawDirectoryEntries {

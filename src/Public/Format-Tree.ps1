@@ -1,4 +1,4 @@
-﻿# \src\Public\Format-Tree.ps1
+﻿# src/Public/Format-Tree.ps1
 
 function Format-Tree {
     [CmdletBinding()]
@@ -17,9 +17,13 @@ function Format-Tree {
     )
 
     begin {
-        $Gap = -not $NoGap.IsPresent
+        $gap = -not $NoGap.IsPresent
         $resolvedStyleProfile = if ($null -ne $StyleProfile) {
-            if ($StyleProfile -is [string]) { Get-ShowTreeStyleProfile -Path $StyleProfile } else { $StyleProfile }
+            if ($StyleProfile -is [string]) {
+                Get-ShowTreeStyleProfile -Path $StyleProfile
+            } else {
+                $StyleProfile
+            }
         } else {
             Get-ActiveShowTreeStyleProfile
         }
@@ -28,28 +32,29 @@ function Format-Tree {
     }
 
     process {
-        if ($null -ne $_) {
-            $allInputItems.Add($_)
+        foreach ($item in $Items) {
+            if ($null -ne $item) {
+                [void]$allInputItems.Add($item)
+            }
         }
     }
 
     end {
-        if ($allInputItems.Count -eq 0 -and $null -ne $Items) {
-            foreach ($i in $Items) { if ($null -ne $i) { $allInputItems.Add($i) } }
+        if ($allInputItems.Count -eq 0) {
+            return
         }
-        
-        if ($allInputItems.Count -eq 0) { return }
 
-        $esc = [char]27
-        $reset = $Colorize ? "${esc}[0m" : ""
-        $dim = $Colorize ? "${esc}[90m" : ""
+        $reset = $Colorize ? $resolvedStyleProfile.Reset : ""
+        $dim = $Colorize ? $resolvedStyleProfile.Dim : ""
 
         $itemCount = $allInputItems.Count
         
         # Calculate minimum depth to avoid leading indentation when roots are skipped
         $minDepth = 999
         foreach ($item in $allInputItems) {
-            if ($item.Depth -lt $minDepth) { $minDepth = $item.Depth }
+            if ($item.Depth -lt $minDepth) {
+                $minDepth = $item.Depth
+            }
         }
 
         for ($i = 0; $i -lt $itemCount; $i++) {
@@ -69,7 +74,9 @@ function Format-Tree {
                         $ancestorIsLast = $false
                         break
                     }
-                    if ($allInputItems[$j].Depth -lt $d) { break }
+                    if ($allInputItems[$j].Depth -lt $d) {
+                        break
+                    }
                 }
                 $prefixes += Get-Connector -Type Prefix -Mode $Mode -Ascii:$Ascii -IsLast $ancestorIsLast -StyleProfile $resolvedStyleProfile
             }
@@ -77,8 +84,11 @@ function Format-Tree {
             # 2. Determine if this item is the last sibling
             $isLast = $true
             for ($j = $i + 1; $j -lt $itemCount; $j++) {
-                if ($allInputItems[$j].Depth -lt $depth) { break }
-                if ($allInputItems[$j].Depth -eq $depth -and $allInputItems[$j].ParentPath -eq $item.ParentPath) {
+                if ($allInputItems[$j].Depth -lt $depth) {
+                    break
+                }
+                if ($allInputItems[$j].Depth -eq $depth -and 
+                        $allInputItems[$j].ParentPath -eq $item.ParentPath) {
                     $isLast = $false
                     break
                 }
@@ -90,7 +100,9 @@ function Format-Tree {
                 $hasLaterSiblingDirectory = $false
 
                 for ($j = $i + 1; $j -lt $itemCount; $j++) {
-                    if ($allInputItems[$j].Depth -lt $depth) { break }
+                    if ($allInputItems[$j].Depth -lt $depth) {
+                        break
+                    }
 
                     if ($allInputItems[$j].Depth -eq $depth -and
                             $allInputItems[$j].ParentPath -eq $item.ParentPath -and
@@ -104,15 +116,17 @@ function Format-Tree {
             }
 
             $connector = Get-Connector `
-                        -Type ($item.IsContainer ? 'Directory' : 'File') `
-                        -Mode $Mode `
-                        -Ascii:$Ascii `
-                        -IsLast $isLast `
-                        -NoSpan:$noSpan `
-                        -StyleProfile $resolvedStyleProfile
+                -Type ($item.IsContainer ? 'Directory' : 'File') `
+                -Mode $Mode `
+                -Ascii:$Ascii `
+                -IsLast $isLast `
+                -NoSpan:$noSpan `
+                -StyleProfile $resolvedStyleProfile
 
-            # 4. Gaps
-            if ($Gap -and $i -gt 0) {
+            #
+            # Gaps
+            #
+            if ($gap -and $i -gt 0) {
                 $prev = $allInputItems[$i-1]
                 $needsGap = $false
                 
@@ -120,28 +134,33 @@ function Format-Tree {
                     # Sibling gap: if previous had children
                     $prevHadChildren = $false
                     for ($j = $i; $j -lt $itemCount; $j++) {
-                        if ($allInputItems[$j].ParentPath -eq $prev.FullPath) { $prevHadChildren = $true; break }
+                        if ($allInputItems[$j].ParentPath -eq $prev.FullPath) {
+                            $prevHadChildren = $true
+                            break
+                        }
                     }
-                    if ($prevHadChildren -or ($prev.IsLeaf -and $item.IsContainer)) { $needsGap = $true }
+                    if ($prevHadChildren -or ($prev.IsLeaf -and $item.IsContainer)) {
+                        $needsGap = $true
+                    }
                 } elseif ($item.Depth -lt $prev.Depth) {
                     # Tail gap: we moved up
                     # Look back to find if the sibling of the current item we just finished had children
                     $needsGap = $true 
                 }
-
+        
                 if ($needsGap) {
                     $gapConnector = Get-Connector -Type Gap -Mode $Mode -Ascii:$Ascii -StyleProfile $resolvedStyleProfile
                     Write-Output "${dim}${prefixes}${gapConnector}${reset}"
                 }
             }
-
+        
             # 5. Render Item
             $style = Get-ItemStyle -Item $item -Colorize:$Colorize -StyleProfile $resolvedStyleProfile
             $targetText = ""
             if ($ShowTargets -and $item.IsLink -and $item.Link.Target) {
                 $targetText = " ${dim}->${reset} $($item.Link.Target)"
             }
-
+        
             Write-Output "${dim}${prefixes}${dim}${connector}${reset}$($style.Ansi)$($item.Name)$reset$targetText".TrimEnd()
         }
     }

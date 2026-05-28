@@ -1,4 +1,4 @@
-# src\Private\PathUtilities\Get-SetFileAttributes.ps1
+# src/Private/PathUtilities/Get-SetFileAttributes.ps1
 
 <#
 .SYNOPSIS

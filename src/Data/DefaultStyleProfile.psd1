@@ -1,4 +1,4 @@
-﻿# src\Data\DefaultStyleProfile.psd1
+﻿# src/Data/DefaultStyleProfile.psd1
 
 <#
 .SYNOPSIS
@@ -47,73 +47,5 @@
         Encrypted         = @{ Attributes = '' }
         IntegrityStream   = @{ Attributes = '' }
         NoScrubData       = @{ Attributes = '' }
-    }
-
-    #
-    # Connectors and Gaps
-    #
-    # Symbols are mapped by Mode and Encoding (Unicode/Ascii)
-    #
-    Connectors = @{
-        Normal = @{
-            Unicode = @{
-                File          = '╟── '
-                FileLast      = '╙── '
-                Directory     = '╠══ '
-                DirectoryLast = '╚══ '
-                Prefix        = '║   '
-                PrefixLast    = '    '
-                Gap           = '║'
-            }
-            Ascii = @{
-                File          = '+-- '
-                FileLast      = '\-- '
-                Directory     = '+== '
-                DirectoryLast = '\== '
-                Prefix        = '|   '
-                PrefixLast    = '    '
-                Gap           = '|'
-            }
-        }
-        Tree = @{
-            Unicode = @{
-                File          = '│   '
-                FileLast      = '│   '
-                Directory     = '├───'
-                DirectoryLast = '└───'
-                Prefix        = '│   '
-                PrefixLast    = '    '
-                Gap           = '│'
-            }
-            Ascii = @{
-                File          = '|   '
-                FileLast      = '|   '
-                Directory     = '+---'
-                DirectoryLast = '\---'
-                Prefix        = '|   '
-                PrefixLast    = '    '
-                Gap           = '|'
-            }
-        }
-        List = @{
-            Unicode = @{
-                File          = ' '
-                FileLast      = ' '
-                Directory     = ' '
-                DirectoryLast = ' '
-                Prefix        = ' '
-                PrefixLast    = ' '
-                Gap           = ' '
-            }
-            Ascii = @{
-                File          = ' '
-                FileLast      = ' '
-                Directory     = ' '
-                DirectoryLast = ' '
-                Prefix        = ' '
-                PrefixLast    = ' '
-                Gap           = ' '
-            }
-        }
     }
 }

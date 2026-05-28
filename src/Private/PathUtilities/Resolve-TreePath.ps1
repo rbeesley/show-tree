@@ -1,4 +1,4 @@
-# src\Private\PathUtilities\Resolve-TreePath.ps1
+# src/Private/PathUtilities/Resolve-TreePath.ps1
 
 <#
 .SYNOPSIS
