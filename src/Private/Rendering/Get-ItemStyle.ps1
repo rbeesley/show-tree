@@ -21,11 +21,7 @@ function Get-ItemStyle {
         $StyleProfile = $null
     )
 
-    $StyleProfile = if (-not $StyleProfile) {
-        Get-ActiveShowTreeStyleProfile
-    } else {
-        $StyleProfile
-    }
+    $StyleProfile ??= Get-ActiveShowTreeStyleProfile
 
     $esc = $StyleProfile.Esc
 
@@ -59,44 +55,101 @@ function Get-ItemStyle {
     # Parse base style codes
     #
     $codesList = [System.Collections.Generic.List[object]]::new()
-        foreach ($c in ($base -split ';')) {
-            if ($c -ne '') { [void]$codesList.Add($c) }
-        }
+    foreach ($c in ($base -split ';')) {
+        if ($c -ne '') { [void]$codesList.Add($c) }
+    }
 
-    # Extract foreground codes (30–37, 90–97)
+    # Extract foreground codes.
+    # Includes:
+    #   30-37  standard foreground colors
+    #   90-97  bright foreground colors
+    #   39     terminal default foreground
+    #
+    # 39 must be treated as a foreground code so it does not remain in the
+    # non-foreground code list and reset later OverrideForeground values.
     $fgList = [System.Collections.Generic.List[object]]::new()
     $remainingCodes = [System.Collections.Generic.List[object]]::new()
     foreach ($c in $codesList) {
-        if ($c -match '^(3[0-7]|9[0-7])$') { [void]$fgList.Add($c) }
+        if ($c -match '^(3[0-7]|9[0-7]|39)$') { [void]$fgList.Add($c) }
         else { [void]$remainingCodes.Add($c) }
     }
     $fg = $fgList.ToArray()
     $codes = $remainingCodes
 
     #
-    # Apply attribute overlays
+    # Apply States
     #
-    if ($null -ne $attrs -and $null -ne $StyleProfile.Attributes) {
-        foreach ($flag in Get-SetFileAttributes $attrs) {
+    # 1. Start with explicit States from the item
+    # 2. Add States derived from Native FileAttributes for Windows/provider support
+    # 3. Add legacy Traits if any are present
+    #
+    $allStates = [System.Collections.Generic.List[string]]::new()
+    if ($Item.States) {
+        foreach ($s in $Item.States) { [void]$allStates.Add($s) }
+    }
+
+    # Derive states from Native FileAttributes.
+    if ($null -ne $attrs) {
+        foreach ($flag in Get-FileAttributes $attrs) {
             $flagName = $flag.ToString()
-            
-            if ($StyleProfile.Attributes.ContainsKey($flagName)) {
-                $overlay = $StyleProfile.Attributes[$flagName]
+            if (-not $allStates.Contains($flagName)) { [void]$allStates.Add($flagName) }
+        }
+    }
 
-                # Add overlay attributes
-                if ($overlay.Attributes) {
-                    foreach ($a in ($overlay.Attributes -split ';')) { [void]$codes.Add($a) }
-                }
+    # Apply broad/low-priority styles first and specific/high-priority
+    # styles last. Later Foreground/Background values intentionally win.
+    $stateStylePriority = @($StyleProfile.StylePriority)
 
-                # Foreground override
-                if ($overlay.OverrideForeground) {
-                    if ($overlay.OverrideForeground -is [string]) {
-                        $fg = $overlay.OverrideForeground
-                    }
-                    elseif ($overlay.OverrideForeground.ContainsKey($styleName)) {
-                        $fg = $overlay.OverrideForeground[$styleName]
-                    }
+    $knownStates = [System.Collections.Generic.List[string]]::new()
+    foreach ($priorityState in $stateStylePriority) {
+        if ($allStates.Contains($priorityState)) {
+            [void]$knownStates.Add($priorityState)
+        }
+    }
+
+    $customStates = [System.Collections.Generic.List[string]]::new()
+    foreach ($stateName in $allStates) {
+        if ($stateStylePriority -notcontains $stateName) {
+            [void]$customStates.Add($stateName)
+        }
+    }
+
+    $orderedStates = [System.Collections.Generic.List[string]]::new()
+    foreach ($stateName in $knownStates) {
+        [void]$orderedStates.Add($stateName)
+    }
+    foreach ($stateName in $customStates) {
+        [void]$orderedStates.Add($stateName)
+    }
+
+    # Lookup styles from States.
+    foreach ($stateName in $orderedStates) {
+        $overlay = $null
+        
+        if ($null -ne $StyleProfile.States -and $StyleProfile.States.ContainsKey($stateName)) {
+            $overlay = $StyleProfile.States[$stateName]
+        }
+
+        if ($null -ne $overlay) {
+            # Add state style SGR fragments.
+            $ansiStyle = $overlay.AnsiStyle
+            if ($ansiStyle) {
+                foreach ($a in ($ansiStyle -split ';')) { [void]$codes.Add($a) }
+            }
+
+            # Foreground override.
+            if ($overlay.Foreground) {
+                if ($overlay.Foreground -is [string]) {
+                    $fg = $overlay.Foreground
                 }
+                elseif ($overlay.Foreground.ContainsKey($styleName)) {
+                    $fg = $overlay.Foreground[$styleName]
+                }
+            }
+
+            # Background override.
+            if ($overlay.Background) {
+                [void]$codes.Add($overlay.Background)
             }
         }
     }

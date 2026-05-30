@@ -32,7 +32,8 @@ Describe "New-TreeItem" {
             $item.IsFile         | Should -Be $true
             $item.IsDirectory    | Should -Be $false
             $item.IsLink         | Should -Be $false
-            $item.IsHidden       | Should -BeNull
+            $item.States         | Should -Not -Contain 'Hidden'
+            $item.IsHidden       | Should -Be $false
             $item.Depth          | Should -Be 0
             $item.Native.FileAttributes | Should -BeNull
             $item.Children       | Should -Be @()
@@ -89,6 +90,55 @@ Describe "New-TreeItem" {
 
             $item.Native.FileAttributes -band [IO.FileAttributes]::Hidden | Should -Not -Be 0
             $item.IsHidden | Should -Be $true
+            $item.States | Should -Contain 'Hidden'
+        }
+    }
+
+    It "folds legacy boolean flags into States" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath 'C:\test' -IsHidden $true -IsExecutable $true -IsReadOnly $true
+            $item.States | Should -Contain 'Hidden'
+            $item.States | Should -Contain 'Executable'
+            $item.States | Should -Contain 'ReadOnly'
+            $item.IsHidden | Should -Be $true
+            $item.IsExecutable | Should -Be $true
+            $item.IsReadOnly | Should -Be $true
+        }
+    }
+
+    It "does not add state when legacy boolean flag is false" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath 'C:\test' -IsHidden $false
+            $item.States | Should -Not -Contain 'Hidden'
+            $item.IsHidden | Should -Be $false
+        }
+    }
+
+    It "reflects Kind Symlink/Junction in States" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $symlink = New-TreeItem -FullPath 'C:\link' -Kind 'Symlink'
+            $symlink.States | Should -Contain 'Symlink'
+            
+            $junction = New-TreeItem -FullPath 'C:\junction' -Kind 'Junction'
+            $junction.States | Should -Contain 'Junction'
+        }
+    }
+
+    It "computed IsLeaf is true when not a container" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath 'C:\file' -IsContainer $false
+            $item.IsLeaf | Should -Be $true
+            
+            $dir = New-TreeItem -FullPath 'C:\dir' -IsContainer $true
+            $dir.IsLeaf | Should -Be $false
         }
     }
 

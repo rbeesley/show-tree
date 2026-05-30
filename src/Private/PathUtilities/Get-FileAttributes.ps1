@@ -1,4 +1,4 @@
-# src/Private/PathUtilities/Get-SetFileAttributes.ps1
+# src/Private/PathUtilities/Get-FileAttributes.ps1
 
 <#
 .SYNOPSIS
@@ -7,7 +7,7 @@
 .DESCRIPTION
     Used by Get-ItemStyle to apply attribute overlays.
 #>
-function Get-SetFileAttributes {
+function Get-FileAttributes {
     param([IO.FileAttributes]$Attributes)
 
     foreach ($flag in [System.Enum]::GetValues([IO.FileAttributes])) {

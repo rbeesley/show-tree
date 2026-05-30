@@ -11,18 +11,18 @@ function New-TreeItem {
         [string] $ParentPath,
 
         [ValidateSet(
-            'File',
-            'Directory',
-            'Symlink',
-            'Junction',
-            'MountPoint',
-            'Socket',
-            'Pipe',
-            'BlockDevice',
-            'CharacterDevice',
-            'Device',
-            'Other',
-            'Unknown'
+                'File',
+                'Directory',
+                'Symlink',
+                'Junction',
+                'MountPoint',
+                'Socket',
+                'Pipe',
+                'BlockDevice',
+                'CharacterDevice',
+                'Device',
+                'Other',
+                'Unknown'
         )]
         [string] $Kind = 'Unknown',
 
@@ -30,6 +30,8 @@ function New-TreeItem {
 
         [int] $Depth = 0,
 
+    # Compatibility inputs. These are folded into States and are not stored
+    # as independent values on the TreeItem.
         [object] $IsHidden = $null,
         [object] $IsExecutable = $null,
         [object] $IsReadOnly = $null,
@@ -43,49 +45,64 @@ function New-TreeItem {
         [object] $Link,
         [object] $Permissions,
         [object] $Native,
+        [string[]] $States,
 
         [object[]] $Children
     )
 
-    if (-not $Name) {
+    if ([string]::IsNullOrEmpty($Name)) {
         $Name = Split-Path -Path $FullPath -Leaf
     }
 
-    if (-not $Children) {
-        $Children = @()
+    $Children ??= @()
+
+    $Link ??= [PSCustomObject]@{
+        Type       = 'None'
+        Target     = $null
+        TargetPath = $null
+        IsBroken   = $null
     }
 
-    if (-not $Link) {
-        $Link = [PSCustomObject]@{
-            Type       = 'None'
-            Target     = $null
-            TargetPath = $null
-            IsBroken   = $null
+    $Permissions ??= [PSCustomObject]@{
+        Mode     = $null
+        Symbolic = $null
+        Owner    = $null
+        Group    = $null
+    }
+
+    $Native ??= [PSCustomObject]@{
+        Platform       = $null
+        FileAttributes = $null
+        Raw            = $null
+    }
+
+    $resolvedStates = [System.Collections.Generic.List[string]]::new()
+
+    foreach ($state in @($States)) {
+        if ($state -and -not $resolvedStates.Contains($state)) {
+            [void] $resolvedStates.Add($state)
         }
     }
 
-    if (-not $Permissions) {
-        $Permissions = [PSCustomObject]@{
-            Mode     = $null
-            Symbolic = $null
-            Owner    = $null
-            Group    = $null
+    $legacyStateMap = @{
+        Hidden     = $IsHidden
+        Executable = $IsExecutable
+        ReadOnly   = $IsReadOnly
+    }
+
+    foreach ($stateName in $legacyStateMap.Keys) {
+        if ($legacyStateMap[$stateName] -eq $true -and -not $resolvedStates.Contains($stateName)) {
+            [void] $resolvedStates.Add($stateName)
         }
     }
 
-    if (-not $Native) {
-        $Native = [PSCustomObject]@{
-            Platform       = $null
-            FileAttributes = $null
-            Raw            = $null
+    foreach ($stateName in @($Kind)) {
+        if ($stateName -in @('Symlink', 'Junction') -and -not $resolvedStates.Contains($stateName)) {
+            [void] $resolvedStates.Add($stateName)
         }
     }
 
-    $isLink = $Link.Type -and $Link.Type -ne 'None'
-    $isLeaf = -not $IsContainer
-    $resolvedLength = if ($Length -ge 0) { $Length } else { $null }
-
-    [PSCustomObject]@{
+    $treeItem = [PSCustomObject]@{
         PSTypeName     = 'ShowTree.TreeItem'
 
         Name           = $Name
@@ -95,25 +112,48 @@ function New-TreeItem {
 
         Kind           = $Kind
         IsContainer    = $IsContainer
-        IsLeaf         = $isLeaf
-        IsFile         = $Kind -eq 'File'
-        IsDirectory    = $Kind -eq 'Directory'
 
-        IsHidden       = $IsHidden
-        IsExecutable   = $IsExecutable
-        IsReadOnly     = $IsReadOnly
-
-        Length         = $resolvedLength
+        Length         = $Length -ge 0 ? $Length : $null
         CreationTime   = $CreationTime
         LastWriteTime  = $LastWriteTime
         LastAccessTime = $LastAccessTime
 
-        IsLink         = $isLink
         Link           = $Link
 
         Permissions    = $Permissions
         Native         = $Native
+        States         = $resolvedStates.ToArray()
 
         Children       = $Children
     }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsLeaf -Value {
+        -not $this.IsContainer
+    }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsFile -Value {
+        $this.Kind -eq 'File'
+    }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsDirectory -Value {
+        $this.Kind -eq 'Directory'
+    }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsHidden -Value {
+        $this.States -contains 'Hidden'
+    }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsExecutable -Value {
+        $this.States -contains 'Executable'
+    }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsReadOnly -Value {
+        $this.States -contains 'ReadOnly'
+    }
+
+    $treeItem | Add-Member -MemberType ScriptProperty -Name IsLink -Value {
+        $this.Link.Type -and $this.Link.Type -ne 'None'
+    }
+
+    $treeItem
 }

@@ -92,15 +92,55 @@ function Get-TreeItem {
                     $target = $item.Target
                 }
 
+                $targetPath = $target
+                if ($target -is [array]) {
+                    $targetPath = $target | Select-Object -First 1
+                }
+
+                $isBroken = $null
+                if (-not [string]::IsNullOrWhiteSpace([string]$targetPath)) {
+                    $targetText = [string]$targetPath
+
+                    $linkParentPath = $null
+                    if ($item.PSObject.Properties.Match('DirectoryName') -and
+                            -not [string]::IsNullOrWhiteSpace([string]$item.DirectoryName)) {
+                        $linkParentPath = [string]$item.DirectoryName
+                    }
+
+                    if ([string]::IsNullOrWhiteSpace($linkParentPath)) {
+                        $linkParentPath = Split-Path -Path $item.FullName -Parent
+                    }
+
+                    if ([string]::IsNullOrWhiteSpace($linkParentPath)) {
+                        $linkParentPath = [System.IO.Path]::GetPathRoot($item.FullName)
+                    }
+
+                    $candidateTargetPath = if ([System.IO.Path]::IsPathRooted($targetText)) {
+                        $targetText
+                    }
+                    elseif (-not [string]::IsNullOrWhiteSpace($linkParentPath)) {
+                        Join-Path -Path $linkParentPath -ChildPath $targetText
+                    }
+                    else {
+                        $null
+                    }
+
+                    if (-not [string]::IsNullOrWhiteSpace($candidateTargetPath)) {
+                        $isBroken = -not (Test-Path -LiteralPath $candidateTargetPath)
+                    }
+                }
+
                 $link = [PSCustomObject]@{
                     Type       = ($kind -eq 'Junction') ? 'Junction' : 'SymbolicLink'
                     Target     = $target
-                    TargetPath = $target
-                    IsBroken   = $null
+                    TargetPath = $targetPath
+                    IsBroken   = $isBroken
                 }
             }
 
             $isHidden = $null
+            $states = [System.Collections.Generic.List[string]]::new()
+
             if ($IsWindows) {
                 $isHidden = ($item.Attributes -band [IO.FileAttributes]::Hidden) -ne 0
             }
@@ -108,16 +148,66 @@ function Get-TreeItem {
                 $isHidden = $item.Name.StartsWith('.')
             }
 
+            if ($isHidden) { [void]$states.Add('Hidden') }
+            if ($item.Attributes -band [IO.FileAttributes]::ReadOnly) { [void]$states.Add('ReadOnly') }
+            if ($item.Attributes -band [IO.FileAttributes]::System) { [void]$states.Add('System') }
+
+            if (-not $IsWindows -and $kind -notin @('Symlink', 'Junction') -and $item.PSObject.Properties.Match('UnixMode')) {
+                $unixMode = [string]$item.UnixMode
+
+                if ($unixMode.Length -ge 10) {
+                    $hasSetUid = $unixMode[3] -match '[sS]'
+                    $hasSetGid = $unixMode[6] -match '[sS]'
+                    $isOtherWritable = $unixMode[8] -eq 'w'
+                    $hasSticky = $unixMode[9] -match '[tT]'
+
+                    if ($hasSetUid) {
+                        [void]$states.Add('SetUid')
+                    }
+
+                    if ($hasSetGid) {
+                        [void]$states.Add('SetGid')
+                    }
+
+                    if ($isDir -and $isOtherWritable) {
+                        [void]$states.Add('OtherWritable')
+                    }
+
+                    if ($isDir -and $hasSticky) {
+                        [void]$states.Add('Sticky')
+                    }
+
+                    if ($isDir -and $isOtherWritable -and $hasSticky) {
+                        [void]$states.Add('StickyOtherWritable')
+                    }
+
+                    if ($kind -eq 'File' -and (
+                    $unixMode[3] -match '[xs]' -or
+                            $unixMode[6] -match '[xs]' -or
+                            $unixMode[9] -match '[xt]'
+                    )) {
+                        [void]$states.Add('Executable')
+                    }
+                }
+            }
+
+            if ($kind -eq 'Symlink') { [void]$states.Add('Symlink') }
+            elseif ($kind -eq 'Junction') { [void]$states.Add('Junction') }
+
+            if ($link -and $link.IsBroken -eq $true) {
+                [void]$states.Add('BrokenLink')
+            }
+
             $treeItem = New-TreeItem `
-                -FullPath $item.FullName `
-                -IsContainer $isDir `
-                -Kind $kind `
-                -Name $item.Name `
-                -Native $native `
-                -Link $link `
-                -Depth $CurrentDepth `
-                -ParentPath $resolvedPath `
-                -IsHidden $isHidden
+                    -FullPath $item.FullName `
+                    -IsContainer $isDir `
+                    -Kind $kind `
+                    -Name $item.Name `
+                    -Native $native `
+                    -Link $link `
+                    -Depth $CurrentDepth `
+                    -ParentPath $resolvedPath `
+                    -States $states.ToArray()
 
             if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 [void]$items.Add($treeItem)

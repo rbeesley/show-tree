@@ -2,16 +2,26 @@
 
 <#
 .SYNOPSIS
-    Displays a color legend for all base types and attribute overlays.
+    Displays a color legend for base types and state overlays.
 
 .DESCRIPTION
     Useful for understanding how Show-Tree applies color to files,
-    directories, symlinks, junctions, and attribute combinations.
+    directories, symlinks, junctions, and state combinations.
+
+    By default, only states relevant to the current platform are shown.
+    Use -Platform to preview another platform's states, or -All to show every
+    state defined by the active style profile.
 #>
 function Show-TreeLegend {
     param(
         $StyleProfile = $null,
-        [string]$Culture
+
+        [string]$Culture,
+
+        [ValidateSet('Current', 'Windows', 'Unix')]
+        [string]$Platform = 'Current',
+
+        [switch]$All
     )
 
     if ($Culture) {
@@ -46,26 +56,10 @@ function Show-TreeLegend {
         Write-Output ("{0,-22} {1}{2}{3}" -f ($Indent + $Name), $ansi, $Name, $reset)
     }
 
-    function ConvertTo-LegendFileAttributes {
-        param(
-            [Parameter(Mandatory)]
-            [string] $Name,
-
-            $StyleProfile
-        )
-
-        if ($Name -eq 'None') {
-            return [IO.FileAttributes] 0
-        }
-
-        try {
-            return [IO.FileAttributes] [System.Enum]::Parse([IO.FileAttributes], $Name, $true)
-        }
-        catch {
-            $err = $StyleProfile.UIStrings.Errors.InvalidAttribute -f $Name
-            throw $err
-        }
-    }
+    $stateNames = Get-LegendStateNames `
+        -StyleProfile $StyleProfile `
+        -Platform $Platform `
+        -All:$All
 
     #
     # Base types
@@ -73,21 +67,18 @@ function Show-TreeLegend {
     Write-Output $ui.Types
 
     Show-Sample "File"      (New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = [IO.FileAttributes]::Archive }) " " $StyleProfile
-    Write-Output $ui.Attributes
-    foreach ($attr in $StyleProfile.Attributes.Keys) {
-        $flag = ConvertTo-LegendFileAttributes -Name $attr -StyleProfile $StyleProfile
-        $item = New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = $flag }
-        Show-Sample $attr $item "   " $StyleProfile
+    Write-Output $ui.States
+    foreach ($state in $stateNames) {
+        $item = New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -States @($state)
+        Show-Sample $state $item "   " $StyleProfile
     }
     Write-Output ""
 
     Show-Sample "Directory" (New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = [IO.FileAttributes]::Directory }) " " $StyleProfile
-    Write-Output $ui.Attributes
-    foreach ($attr in $StyleProfile.Attributes.Keys) {
-        $flag = ConvertTo-LegendFileAttributes -Name $attr -StyleProfile $StyleProfile
-        $item = New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = $flag }
-        Show-Sample $attr $item "   " $StyleProfile
+    Write-Output $ui.States
+    foreach ($state in $stateNames) {
+        $item = New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -States @($state)
+        Show-Sample $state $item "   " $StyleProfile
     }
     Write-Output ""
-
 }

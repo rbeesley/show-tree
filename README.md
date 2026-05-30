@@ -303,6 +303,113 @@ The Pester Test Explorer extension is not recommended for use as it handles the 
 
 ---
 
+## Style profile states
+
+ShowTree style profiles can define visual overlays for item states:
+
+```
+powershell
+States = @{
+    Hidden = @{ AnsiStyle = '2' }
+    System = @{
+        Foreground = @{
+            File      = '31'
+            Directory = '35'
+        }
+    }
+    Executable = @{
+        Foreground = @{
+            File      = '32'
+            Directory = '36'
+        }
+        AnsiStyle = '1'
+    }
+}
+```
+
+`AnsiStyle` contains ANSI SGR parameters without the escape sequence wrapper. Multiple parameters may be separated with semicolons:
+
+```
+powershell
+States = @{
+    Hidden = @{ AnsiStyle = '2' }      # dim
+    Symlink = @{ AnsiStyle = '4' }     # underline
+    BrokenLink = @{ AnsiStyle = '9' }  # strikethrough
+}
+```
+
+### Common states
+
+These are the states most users are likely to style:
+
+| State | Platform | Meaning |
+|---|---|---|
+| `Hidden` | Windows, Unix | Hidden file or directory. On Unix, names beginning with `.` are hidden. |
+| `ReadOnly` | Windows, Unix/provider dependent | Read-only item. |
+| `System` | Windows | Windows system file or directory. |
+| `Temporary` | Windows | Temporary file. |
+| `SparseFile` | Windows | Sparse file. |
+| `ReparsePoint` | Windows | Reparse point, including symlinks and junctions. |
+| `Compressed` | Windows | Compressed file or directory. |
+| `Offline` | Windows | Offline file. |
+| `NotContentIndexed` | Windows | Excluded from content indexing. |
+| `Encrypted` | Windows | Encrypted file or directory. |
+| `IntegrityStream` | Windows | Integrity stream attribute. |
+| `NoScrubData` | Windows | Data integrity scrubbing disabled. |
+| `Executable` | Unix | File with at least one execute permission bit. |
+| `Symlink` | Windows, Unix | Symbolic link. |
+| `BrokenLink` | Windows, Unix | Symbolic link whose target cannot be resolved. |
+| `SetUid` | Unix | Set-user-ID permission bit. |
+| `SetGid` | Unix | Set-group-ID permission bit. |
+| `Sticky` | Unix | Sticky permission bit. |
+
+### Additional native Windows attributes
+
+ShowTree can also derive states from native Windows file attributes. These are supported for custom style profiles, but they are not styled by the default profile because they are usually too common or not visually useful.
+
+| State | Notes |
+|---|---|
+| `Archive` | Common on ordinary Windows files. Styling it usually affects almost everything. |
+| `Normal` | Means no other file attributes are set. Usually better represented by the base file/directory style. |
+| `Device` | Reserved by Windows. Rarely useful for styling. |
+
+Example:
+
+```
+powershell
+States = @{
+    Archive = @{ AnsiStyle = '2' }
+    Normal  = @{ AnsiStyle = '90' }
+}
+```
+
+### Base styles vs states
+
+Use `Base` for what an item is:
+
+```
+powershell
+Base = @{
+    File      = '37'
+    Directory = '36'
+}
+```
+
+Use `States` for conditions or traits applied to an item:
+
+```
+powershell
+States = @{
+    Hidden     = @{ AnsiStyle = '2' }
+    ReadOnly   = @{ AnsiStyle = '3' }
+    Executable = @{ AnsiStyle = '1'; Foreground = @{ File = '32'; Directory = '36' } }
+}
+```
+
+`Directory` and `File` are kinds, not states, so they belong under `Base`, not `States`.
+
+---
+
 ## Deprecation Notice
 
 The legacy switches `-Tree` and `-List` are still supported for backward compatibility but are now deprecated.  

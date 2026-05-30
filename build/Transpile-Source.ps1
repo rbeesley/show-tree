@@ -57,43 +57,64 @@ function Transpile-Ast {
     return $currentSource
 }
 
-# 1. Ternary Expressions: $a ? $b : $c -> (&{if($a){$b}else{$c}})
+# Ternary Expressions: $a ? $b : $c -> (&{if($a){$b}else{$c}})
 $content = Transpile-Ast -Source $content `
     -MatchCondition { $args[0] -is [System.Management.Automation.Language.TernaryExpressionAst] } `
     -ReplacementGenerator {
-        param($node, $src)
-        $cond = $src.Substring($node.Condition.Extent.StartOffset, $node.Condition.Extent.EndOffset - $node.Condition.Extent.StartOffset)
-        $ifT  = $src.Substring($node.IfTrue.Extent.StartOffset, $node.IfTrue.Extent.EndOffset - $node.IfTrue.Extent.StartOffset)
-        $ifF  = $src.Substring($node.IfFalse.Extent.StartOffset, $node.IfFalse.Extent.EndOffset - $node.IfFalse.Extent.StartOffset)
-        return "(&{if($cond){$ifT}else{$ifF}})"
-    }
+    param($node, $src)
+    $cond = $src.Substring($node.Condition.Extent.StartOffset, $node.Condition.Extent.EndOffset - $node.Condition.Extent.StartOffset)
+    $ifT  = $src.Substring($node.IfTrue.Extent.StartOffset, $node.IfTrue.Extent.EndOffset - $node.IfTrue.Extent.StartOffset)
+    $ifF  = $src.Substring($node.IfFalse.Extent.StartOffset, $node.IfFalse.Extent.EndOffset - $node.IfFalse.Extent.StartOffset)
+    return "(&{if($cond){$ifT}else{$ifF}})"
+}
 
-# 2. Static New: [Type]::new(...) -> (New-Object -TypeName Type -ArgumentList ...)
+# Null-coalescing assignment: $a ??= $b -> if ($null -eq $a) { $a = $b }
 $content = Transpile-Ast -Source $content `
     -MatchCondition {
-        $node = $args[0]
-        $node -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and 
-        $node.Member -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
-        $node.Member.Value -eq 'new' -and
-        $node.Static
-    } `
+    $node = $args[0]
+    $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $node.Extent.Text -match '\?\?='
+} `
     -ReplacementGenerator {
-        param($node, $src)
-        $type = $node.Expression.Extent.Text
-        $argsText = if ($node.Arguments) {
-            $src.Substring($node.Arguments[0].Extent.StartOffset, $node.Extent.EndOffset - 1 - $node.Arguments[0].Extent.StartOffset)
-        } else { "" }
+    param($node, $src)
+    $left = $src.Substring(
+            $node.Left.Extent.StartOffset,
+            $node.Left.Extent.EndOffset - $node.Left.Extent.StartOffset
+    )
+    $right = $src.Substring(
+            $node.Right.Extent.StartOffset,
+            $node.Right.Extent.EndOffset - $node.Right.Extent.StartOffset
+    )
 
-        $newText = "New-Object -TypeName $type"
-        if ($argsText) { $newText += " -ArgumentList $argsText" }
-        return "($newText)"
-    }
+    return "if (`$null -eq $left) { $left = $right }"
+}
+
+# Static New: [Type]::new(...) -> (New-Object -TypeName Type -ArgumentList ...)
+$content = Transpile-Ast -Source $content `
+    -MatchCondition {
+    $node = $args[0]
+    $node -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and
+            $node.Member -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
+            $node.Member.Value -eq 'new' -and
+            $node.Static
+} `
+    -ReplacementGenerator {
+    param($node, $src)
+    $type = $node.Expression.Extent.Text
+    $argsText = if ($node.Arguments) {
+        $src.Substring($node.Arguments[0].Extent.StartOffset, $node.Extent.EndOffset - 1 - $node.Arguments[0].Extent.StartOffset)
+    } else { "" }
+
+    $newText = "New-Object -TypeName $type"
+    if ($argsText) { $newText += " -ArgumentList $argsText" }
+    return "($newText)"
+}
 
 # ---------------------------------------------------------------------------
 # Brittle Regex Cleanups (Legacy support for things hard to do in AST or not yet moved)
 # ---------------------------------------------------------------------------
 
-# Rule 3: Ensure $results = @() becomes a List if we use .Add later
+# Ensure $results = @() becomes a List if we use .Add later
 $content = [regex]::Replace($content, '(?m)^\s*(\$(?:results|children|childPool|roots))\s*=\s*@\(\)', '$1 = New-Object System.Collections.Generic.List[object]')
 
 # Fix List[object]::new() that might have been missed
@@ -102,7 +123,7 @@ $content = [regex]::Replace($content, '\[System\.Collections\.Generic\.List\[obj
 # Use GetType().IsArray check for count to be robust in PS5.1
 $content = [regex]::Replace($content, '(?<!@\()\$roots\.Count', '(&{ if($null -ne $roots -and $roots.GetType().IsArray){ $roots.Length } else { $roots.Count } })')
 
-# Rule 6: Fix Resolve-Path -ErrorAction SilentlyContinue pattern
+# Fix Resolve-Path -ErrorAction SilentlyContinue pattern
 $resolvePathPattern = '(?s)\$resolvedPath\s*=\s*Resolve-Path\s*\$Path\s*-ErrorAction\s*SilentlyContinue\s*if\s*\(-not\s*\$resolvedPath\)\s*\{\s*\$resolvedPath\s*=\s*\$Path\s*\}\s*else\s*\{\s*\$resolvedPath\s*=\s*\$resolvedPath\.Path\s*\}'
 if ($content -match $resolvePathPattern) {
     $newResolve = '$resolvedPath = $null; $errPref = $ErrorActionPreference; $ErrorActionPreference = "SilentlyContinue"; try { $res = Resolve-Path $Path; if($null -ne $res){ $resolvedPath = $res.Path } } catch {}; $ErrorActionPreference = $errPref; if($null -eq $resolvedPath){ $resolvedPath = $Path }'

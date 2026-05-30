@@ -87,27 +87,74 @@
     #
     UIStrings = @{
         Legend = @{
-            Header              = 'Legend'
-            HeaderUnderline     = '------'
-            Types               = 'Types:'
-            Attributes          = '  Attributes:'
+            Header                  = 'Legend'
+            HeaderUnderline         = '------'
+            Types                   = 'Types:'
+            States                  = '  States:'
         }
         TreeMode = @{
-            InvalidDrive        = 'Invalid drive specification'
-            VolumeListing       = 'Folder PATH listing for volume {0}'
-            VolumeSerial        = 'Volume serial number is {0}'
-            InvalidPath         = 'Invalid path - {0}'
-            NoSubfolders        = 'No subfolders exist'
+            InvalidDrive            = 'Invalid drive specification'
+            VolumeListing           = 'Folder PATH listing for volume {0}'
+            VolumeSerial            = 'Volume serial number is {0}'
+            InvalidPath             = 'Invalid path - {0}'
+            NoSubfolders            = 'No subfolders exist'
         }
         Errors = @{
-            WindowsOnly         = 'ShowTree currently supports Windows only for Tree mode.'
-            ColorMonoConflict   = 'Cannot specify both -Color and -Mono.'
-            FilesConflict       = 'Cannot specify both -Files (or -ShowFiles) and -NoFiles.'
-            HiddenConflict      = 'Cannot specify both -ShowHidden and -HideHidden.'
-            SystemConflict      = 'Cannot specify both -ShowSystem and -HideSystem.'
-            TargetsConflict     = 'Cannot specify both -ShowTargets and -NoTargets.'
-            GapConflict         = 'Cannot specify both -Gap and -NoGap.'
-            InvalidAttribute    = "Style profile attribute '{0}' is not a valid System.IO.FileAttributes value."
+            WindowsOnly             = 'ShowTree currently supports Windows only for Tree mode.'
+            ColorMonoConflict       = 'Cannot specify both -Color and -Mono.'
+            FilesConflict           = 'Cannot specify both -Files (or -ShowFiles) and -NoFiles.'
+            HiddenConflict          = 'Cannot specify both -ShowHidden and -HideHidden.'
+            SystemConflict          = 'Cannot specify both -ShowSystem and -HideSystem.'
+            TargetsConflict         = 'Cannot specify both -ShowTargets and -NoTargets.'
+            GapConflict             = 'Cannot specify both -Gap and -NoGap.'
+            PlatformRequiresLegend  = 'The -Platform parameter is only valid with -Legend or -LegendAll.'
         }
     }
+
+    StylePriority = @(
+    # No-op / structural
+        'Normal'
+        'Directory'
+        'Archive'
+
+    # Low-signal metadata
+        'NotContentIndexed'
+        'Temporary'
+        'SparseFile'
+        'ReadOnly'
+        'Hidden'
+
+    # Storage / availability / integrity
+        'Compressed'
+        'Encrypted'
+        'IntegrityStream'
+        'NoScrubData'
+        'Offline'
+
+    # Special filesystem object kinds
+        'Device'
+        'BlockDevice'
+        'CharacterDevice'
+        'Pipe'
+        'Socket'
+
+    # Link / reparse semantics
+        'ReparsePoint'
+        'Junction'
+        'Symlink'
+
+    # Permission / executable semantics
+        'Executable'
+        'OtherWritable'
+        'Sticky'
+        'SetGid'
+        'SetUid'
+        'StickyOtherWritable'
+
+    # Protected/system semantics
+        'System'
+
+    # Error states
+        'BrokenLink'
+    )
 }

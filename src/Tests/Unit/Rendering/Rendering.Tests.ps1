@@ -8,162 +8,186 @@ BeforeAll {
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
-    $script:FixtureScripts  = @(
+
+    $script:FixtureScripts = @(
         "$script:TestRoot\Helpers\PrivateHelpers.ps1"
     )
 
-    InModuleScope ShowTree {        
-        # Load real default style profile for connector tests
+    InModuleScope ShowTree {
         $script:realProfile = Get-ShowTreeStyleProfile
 
-        # Define a style profile for testing
         $script:styleProfile = @{
             Base = @{
-                File      = "1"
-                Directory = "2"
-                Symlink   = "3"
-                Junction  = "4"
+                File      = "31"
+                Directory = "34"
             }
-            Attributes = @{
-                None              = @{ Attributes = "1" }
-                ReadOnly          = @{ Attributes = "2" }
-                Hidden            = @{ Attributes = "4" }
-                System            = @{
-                    OverrideForeground = @{
-                        File      = "1-8"
-                        Directory = "2-8"
+            States = @{
+                Hidden     = @{ AnsiStyle = "2" }
+                Executable = @{ AnsiStyle = "1" }
+                Symlink    = @{ AnsiStyle = "4" }
+                SetUid     = @{ Background = "41" }
+                System     = @{
+                    Foreground = @{
+                        File      = "91"
+                        Directory = "95"
                     }
                 }
-                Directory         = @{ Attributes = "16" }
-                Archive           = @{ Attributes = "32" }
-                Device            = @{ Attributes = "64" }
-                Normal            = @{ Attributes = "128" }
-                Temporary         = @{ Attributes = "256" }
-                SparseFile        = @{ Attributes = "512" }
-                ReparsePoint      = @{ Attributes = "1024" }
-                Compressed        = @{ Attributes = "2048" }
-                Offline           = @{ Attributes = "4096" }
-                NotContentIndexed = @{ Attributes = "8192" }
-                Encrypted         = @{ Attributes = "16384" }
-                IntegrityStream   = @{ Attributes = "32768" }
-                NoScrubData       = @{ Attributes = "65536" }
             }
         }
     }
 }
 
 Describe "Get-ItemStyle" {
-    It "Applies base directory style" {
+    It "uses the file base style for files" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
 
-            $item = New-TestItem -Name "Dir" -IsDirectory:$true -Attributes ([IO.FileAttributes]::Directory)
-            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
-            $style.Name | Should -Be "Directory"
-            $style.Ansi | Should -Match "2"   # Directory base code
-        }
-    }
-
-    It "Applies Hidden overlay" {
-        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-            $item = New-TestItem -Name "Hidden" -Attributes ([IO.FileAttributes]::Hidden)
-            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
-            $style.Name | Should -Be "File"   # Base type should still be File
-            $style.Ansi | Should -Match "1"   # File base code
-            $style.Ansi | Should -Match "4"   # Hidden attribute code
-        }
-    }
-
-    It "Applies System foreground override" {
-        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-            $item = New-TestItem -Name "Sys" -Attributes ([IO.FileAttributes]::System)
-            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
-            $style.Name | Should -Be "File"   # Base type should still be File
-            $style.Ansi | Should -Match "1-8" # System file override
-        }
-    }
-
-    It "Styles symlink to directory as Directory" {
-        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-            # Create a symlink that points to a directory
-            $item = New-TreeItem -FullPath "C:\Test\LinkToDir" -Name "LinkToDir" `
-                -Kind 'Symlink' -IsContainer:$true -Link @{ Type = 'SymbolicLink' }
-
-            $item.Native = [PSCustomObject]@{
-                Platform = 'Windows'
-                FileAttributes = [IO.FileAttributes]::ReparsePoint
-            }
-            
-            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
-            
-            $style.Name | Should -Be "Directory"
-            $style.Ansi | Should -Match "2"      # Should use Directory base
-            $style.Ansi | Should -Match "1024"   # Should still have ReparsePoint overlay
-        }
-    }
-
-    It "Styles symlink to file as File" {
-        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-            # Create a symlink that points to a file
-            $item = New-TreeItem -FullPath "C:\Test\LinkToFile" -Name "LinkToFile" `
-                -Kind 'Symlink' -IsContainer:$false -Link @{ Type = 'SymbolicLink' }
-
-            $item.Native = [PSCustomObject]@{
-                Platform = 'Windows'
-                FileAttributes = [IO.FileAttributes]::ReparsePoint
-            }
+            $item = New-TreeItem -FullPath "file.txt" -IsContainer:$false -Kind "File"
 
             $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
-            
+
             $style.Name | Should -Be "File"
-            $style.Ansi | Should -Match "1"      # Should use File base
-            $style.Ansi | Should -Match "1024"   # Should still have ReparsePoint overlay
+            $style.Ansi | Should -Match "\[31m"
+        }
+    }
+
+    It "uses the directory base style for directories" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath "dir" -IsContainer:$true -Kind "Directory"
+
+            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
+
+            $style.Name | Should -Be "Directory"
+            $style.Ansi | Should -Match "\[34m"
+        }
+    }
+
+    It "returns no ANSI sequence when colorization is disabled" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath "file.txt" -IsContainer:$false -Kind "File" -States @("Hidden")
+
+            $style = Get-ItemStyle -Item $item -Colorize:$false -StyleProfile $styleProfile
+
+            $style.Name | Should -Be "File"
+            $style.Ansi | Should -Be ""
+        }
+    }
+
+    It "applies explicit state ANSI overlays" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath "script.ps1" -IsContainer:$false -Kind "File" -States @(
+                "Executable"
+                "Symlink"
+            )
+
+            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
+
+            $style.Ansi | Should -Match "31"
+            $style.Ansi | Should -Match "1"
+            $style.Ansi | Should -Match "4"
+        }
+    }
+
+    It "derives state overlays from native file attributes" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath "hidden.txt" -IsContainer:$false -Kind "File"
+            $item.Native = [PSCustomObject]@{
+                Platform       = "Windows"
+                FileAttributes = [IO.FileAttributes]::Hidden
+            }
+
+            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
+
+            $style.Ansi | Should -Match "31"
+            $style.Ansi | Should -Match "2"
+        }
+    }
+
+    It "applies foreground overrides for the current item type" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $file = New-TreeItem -FullPath "system-file.txt" -IsContainer:$false -Kind "File" -States @("System")
+            $directory = New-TreeItem -FullPath "system-dir" -IsContainer:$true -Kind "Directory" -States @("System")
+
+            $fileStyle = Get-ItemStyle -Item $file -Colorize:$true -StyleProfile $styleProfile
+            $directoryStyle = Get-ItemStyle -Item $directory -Colorize:$true -StyleProfile $styleProfile
+
+            $fileStyle.Ansi | Should -Match "91"
+            $fileStyle.Ansi | Should -Not -Match "31"
+
+            $directoryStyle.Ansi | Should -Match "95"
+            $directoryStyle.Ansi | Should -Not -Match "34"
+        }
+    }
+
+    It "applies background overlays from semantic states" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $item = New-TreeItem -FullPath "setuid-file" -IsContainer:$false -Kind "File" -States @("SetUid")
+
+            $style = Get-ItemStyle -Item $item -Colorize:$true -StyleProfile $styleProfile
+
+            $style.Ansi | Should -Match "31"
+            $style.Ansi | Should -Match "41"
         }
     }
 }
 
 Describe "Get-Connector" {
-    It "Returns Unicode directory connector (non-last)" {
+    It "returns the Unicode directory connector for a non-last item" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
 
             Get-Connector -Type Directory -IsLast:$false -StyleProfile $realProfile |
-                Should -Be "╠══ "
+                    Should -Be "╠══ "
         }
     }
 
-    It "Returns Unicode directory connector (last)" {
+    It "returns the Unicode directory connector for a last item" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
 
             Get-Connector -Type Directory -IsLast:$true -StyleProfile $realProfile |
-                Should -Be "╚══ "
+                    Should -Be "╚══ "
         }
     }
 
-    It "Returns ASCII connectors when -Ascii is used" {
+    It "returns ASCII connectors when ASCII mode is used" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
 
             Get-Connector -Type File -Ascii -StyleProfile $realProfile |
-                Should -Be "+-- "
+                    Should -Be "+-- "
         }
     }
 
-    It "Returns Tree.com connectors in -Tree mode" {
+    It "returns Tree.com connectors in Tree mode" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
 
-            Get-Connector -Type Directory -Mode 'Tree' -IsLast:$false -StyleProfile $realProfile |
-                Should -Be "├───"
+            Get-Connector -Type Directory -Mode "Tree" -IsLast:$false -StyleProfile $realProfile |
+                    Should -Be "├───"
         }
     }
 }

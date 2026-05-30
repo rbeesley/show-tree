@@ -77,17 +77,16 @@ function Show-Tree {
         # Show the color legend
         [switch]$Legend,
 
+        # Shortcut for Show-TreeLegend -All
+        [switch]$LegendAll,
+
+        # Platform to show in legend mode
+        [ValidateSet('Current', 'Windows', 'Unix')]
+        [string]$Platform = 'Current',
+
         # BCP-47 culture override
         [string]$Culture
     )
-
-    #
-    # Legend mode: no tree rendering
-    #
-    if ($Legend) {
-        Show-TreeLegend -Culture $Culture
-        return
-    }
 
     #
     # Resolve Mode (explicit or implied)
@@ -103,6 +102,23 @@ function Show-Tree {
         $resolvedStyleProfile = Get-ShowTreeStyleProfile
     }
     $uiErrors = $resolvedStyleProfile.UIStrings.Errors
+
+    #
+    # Legend mode validation/rendering
+    #
+    $isLegendMode = $Legend -or $LegendAll
+
+    if ($PSBoundParameters.ContainsKey('Platform') -and -not $isLegendMode) {
+        throw $uiErrors.PlatformRequiresLegend
+    }
+
+    if ($isLegendMode) {
+        Show-TreeLegend `
+            -StyleProfile $resolvedStyleProfile `
+            -Platform $Platform `
+            -All:$LegendAll
+        return
+    }
 
     if ($Mode -eq 'Tree' -and $PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
         throw $uiErrors.WindowsOnly
