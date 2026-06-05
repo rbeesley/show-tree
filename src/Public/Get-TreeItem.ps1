@@ -13,15 +13,16 @@ function Get-TreeItem {
 
         [switch]$FollowLinks,
 
-        # Filtering parameters
+    # Filtering parameters
         [string[]]$Include,
         [string[]]$Exclude,
         [switch]$HideHidden,
         [switch]$HideSystem,
         [switch]$DirectoryOnly,
 
-        # Internal recursion parameters
-        [int]$CurrentDepth = 0
+    # Internal recursion parameters
+        [int]$CurrentDepth = 0,
+        [string]$RootPath
     )
 
     #
@@ -33,6 +34,10 @@ function Get-TreeItem {
     }
     else {
         $resolvedPath = $resolvedPath.Path
+    }
+
+    if ([string]::IsNullOrWhiteSpace($RootPath)) {
+        $RootPath = $resolvedPath
     }
 
     #
@@ -50,12 +55,12 @@ function Get-TreeItem {
         $raw = Get-RawDirectoryEntries -Path $resolvedPath -Depth $CurrentDepth
 
         $rawDirectories = foreach ($d in $raw.Directories) {
-            if (Test-TreeItemVisible -Item $d -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
+            if (Test-TreeItemVisible -Item $d -Include $Include -Exclude $Exclude -RootPath $RootPath -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 $d
             }
         }
         $rawFiles = foreach ($f in $raw.Files) {
-            if (Test-TreeItemVisible -Item $f -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
+            if (Test-TreeItemVisible -Item $f -Include $Include -Exclude $Exclude -RootPath $RootPath -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 $f
             }
         }
@@ -74,7 +79,7 @@ function Get-TreeItem {
     else {
         $rawItems = Get-ChildItem -Path $resolvedPath -Force -ErrorAction SilentlyContinue
         $items = [System.Collections.Generic.List[object]]::new()
-        
+
         foreach ($item in $rawItems) {
             $isDir = $item.PSIsContainer
             $native = [PSCustomObject]@{
@@ -209,7 +214,7 @@ function Get-TreeItem {
                     -ParentPath $resolvedPath `
                     -States $states.ToArray()
 
-            if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
+            if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -RootPath $RootPath -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
                 [void]$items.Add($treeItem)
             }
         }
@@ -232,23 +237,25 @@ function Get-TreeItem {
         # Recurse if it's a container and we haven't reached MaxDepth
         if ($item.IsContainer -and ($Depth -eq -1 -or $CurrentDepth -lt $Depth)) {
             if (Test-TreeItemRecurse `
-                    -Item $item `
+                -Item $item `
+                -Include $Include `
+                -Exclude $Exclude `
+                -RootPath $RootPath `
+                -HideHidden:$HideHidden `
+                -HideSystem:$HideSystem `
+                -FollowLinks:$FollowLinks) {
+                Get-TreeItem `
+                    -Path $item.FullPath `
+                    -Depth $Depth `
+                    -FollowLinks:$FollowLinks `
+                    -ProviderMode $ProviderMode `
                     -Include $Include `
                     -Exclude $Exclude `
                     -HideHidden:$HideHidden `
                     -HideSystem:$HideSystem `
-                    -FollowLinks:$FollowLinks) {
-                Get-TreeItem `
-                        -Path $item.FullPath `
-                        -Depth $Depth `
-                        -FollowLinks:$FollowLinks `
-                        -ProviderMode $ProviderMode `
-                        -Include $Include `
-                        -Exclude $Exclude `
-                        -HideHidden:$HideHidden `
-                        -HideSystem:$HideSystem `
-                        -DirectoryOnly:$DirectoryOnly `
-                        -CurrentDepth ($CurrentDepth + 1)
+                    -DirectoryOnly:$DirectoryOnly `
+                    -CurrentDepth ($CurrentDepth + 1) `
+                    -RootPath $RootPath
             }
         }
     }

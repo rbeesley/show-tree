@@ -44,7 +44,10 @@ $script:ShowTreeState = @{
 
 $script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile
 
-# Export only the public function
+# <ShowTreeDistributionExportBlock>
+# This block is rewritten when building the published distribution.
+# Do not edit the content inside this block in generated dist files.
+# Source builds intentionally discover public functions from src/Public.
 $script:PublicFunctions = `
         Get-ChildItem -Path $PSScriptRoot `
             -Recurse `
@@ -61,3 +64,4 @@ $script:PublicFunctions = `
     }
 }
 Export-ModuleMember -Function $script:PublicFunctions
+# </ShowTreeDistributionExportBlock>

@@ -48,7 +48,7 @@ function Format-Tree {
         $dim = $Colorize ? $resolvedStyleProfile.Dim : ""
 
         $itemCount = $allInputItems.Count
-        
+
         # Calculate minimum depth to avoid leading indentation when roots are skipped
         $minDepth = 999
         foreach ($item in $allInputItems) {

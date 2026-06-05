@@ -90,20 +90,58 @@ public class RawEnum {
 
         $kind = if ($isDir) { 'Directory' } else { 'File' }
         $link = $null
+        $states = [System.Collections.Generic.List[string]]::new()
+
         if (($e.dwFileAttributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
             $kind = if ($isDir) { 'Junction' } else { 'Symlink' }
 
-            # In raw mode (Win32 API), we don't have the target easily.
+            $target = $null
+            $targetPath = $null
+            $isBroken = $null
+
+            # In raw mode (Win32 API), use Get-Item to retrieve PowerShell's
+            # link metadata when available.
             $info = Get-Item -LiteralPath $fullPath -Force -ErrorAction SilentlyContinue
             if ($info -and $info.PSObject.Properties.Match('Target')) {
                 $target = $info.Target
             }
-            
+
+            $targetPath = $target
+            if ($target -is [array]) {
+                $targetPath = $target | Select-Object -First 1
+            }
+
+            if (-not [string]::IsNullOrWhiteSpace([string]$targetPath)) {
+                $targetText = [string]$targetPath
+
+                $candidateTargetPath = if ([System.IO.Path]::IsPathRooted($targetText)) {
+                    $targetText
+                }
+                else {
+                    Join-Path -Path $Path -ChildPath $targetText
+                }
+
+                if (-not [string]::IsNullOrWhiteSpace($candidateTargetPath)) {
+                    $isBroken = -not (Test-Path -LiteralPath $candidateTargetPath)
+                }
+            }
+
             $link = [PSCustomObject]@{
                 Type       = if ($isDir) { 'Junction' } else { 'SymbolicLink' }
                 Target     = $target
-                TargetPath = $target
-                IsBroken   = $null
+                TargetPath = $targetPath
+                IsBroken   = $isBroken
+            }
+
+            if ($kind -eq 'Symlink') {
+                [void]$states.Add('Symlink')
+            }
+            elseif ($kind -eq 'Junction') {
+                [void]$states.Add('Junction')
+            }
+
+            if ($isBroken -eq $true) {
+                [void]$states.Add('BrokenLink')
             }
         }
 
@@ -115,7 +153,8 @@ public class RawEnum {
             -Native $native `
             -Link $link `
             -Depth $Depth `
-            -ParentPath $Path
+            -ParentPath $Path `
+            -States $states.ToArray()
 
         if ($isDir) {
             $dirs += $item

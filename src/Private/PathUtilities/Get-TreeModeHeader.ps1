@@ -12,7 +12,7 @@ function Get-TreeModeHeader {
     param(
         [Parameter(Mandatory)]
         [string]$Path,
-
+        $Colorize,
         [object]$StyleProfile = $null
     )
 
@@ -36,9 +36,30 @@ function Get-TreeModeHeader {
 
     Write-Output ($ui.VolumeListing -f $fileSystemLabel)
     Write-Output ($ui.VolumeSerial -f $serialNumber)
-    Write-Output $Path
 
-    # 3. Invalid path on valid drive → tree.com behavior
+    # 3. Write the root path and stylize it
+    $rootItem = Get-Item -LiteralPath $Path -Force
+    $native = [PSCustomObject]@{
+        Platform       = if ($IsWindows) { 'Windows' } else { 'Unix' }
+        FileAttributes = $rootItem.Attributes
+    }
+
+    $kind = if ($rootItem.PSIsContainer) { 'Directory' } else { 'File' }
+
+    $treeItem = New-TreeItem `
+        -FullPath $rootItem.FullName `
+        -IsContainer $rootItem.PSIsContainer `
+        -Kind $kind `
+        -Name $rootItem.Name `
+        -Native $native `
+        -Depth 0
+
+    $style = Get-ItemStyle -Item $treeItem -Colorize:$Colorize -StyleProfile $StyleProfile
+    $colorReset = $Colorize ? $StyleProfile.Reset : ""
+
+    Write-Output "$($style.Ansi)$Path${colorReset}"
+    
+    # 4. Invalid path on valid drive → tree.com behavior
     if (-not (Test-Path $Path)) {
         # Check if it's a rooted path with a drive qualifier
         if ($drive) {

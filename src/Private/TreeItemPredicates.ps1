@@ -1,5 +1,87 @@
 ﻿# src/Private/TestItemPredicates.ps1
 
+function ConvertTo-TreeFilterPattern {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Pattern
+    )
+
+    $directoryOnly = $Pattern.EndsWith('\') -or $Pattern.EndsWith('/')
+
+    $normalized = $Pattern -replace '/', '\'
+    $normalized = $normalized.TrimEnd('\')
+
+    $isExplicitRelativePath = $normalized.StartsWith('.\')
+
+    if ($isExplicitRelativePath) {
+        $normalized = $normalized.Substring(2)
+    }
+
+    $isPathPattern = $isExplicitRelativePath -or $normalized.Contains('\')
+
+    [PSCustomObject]@{
+        Raw           = $Pattern
+        Pattern       = $normalized
+        DirectoryOnly = $directoryOnly
+        IsPathPattern = $isPathPattern
+    }
+}
+
+function Get-TreeItemRelativePath {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Item,
+
+        [string]$RootPath
+    )
+
+    if ([string]::IsNullOrWhiteSpace($RootPath)) {
+        return $null
+    }
+
+    $root = [System.IO.Path]::GetFullPath($RootPath).TrimEnd('\', '/')
+    $full = [System.IO.Path]::GetFullPath($Item.FullPath).TrimEnd('\', '/')
+
+    if (-not $full.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
+        return $null
+    }
+
+    $relative = $full.Substring($root.Length).TrimStart('\', '/')
+    $relative -replace '/', '\'
+}
+
+function Test-TreeItemFilterMatch {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [object]$Item,
+
+        [Parameter(Mandatory)]
+        [string]$Pattern,
+
+        [string]$RootPath
+    )
+
+    $filter = ConvertTo-TreeFilterPattern -Pattern $Pattern
+
+    if ($filter.DirectoryOnly -and -not $Item.IsContainer) {
+        return $false
+    }
+
+    if ($filter.IsPathPattern) {
+        $relativePath = Get-TreeItemRelativePath -Item $Item -RootPath $RootPath
+        if ([string]::IsNullOrWhiteSpace($relativePath)) {
+            return $false
+        }
+
+        return $relativePath -like $filter.Pattern
+    }
+
+    return $Item.Name -like $filter.Pattern
+}
+
 function Test-TreeItemVisible {
     [CmdletBinding()]
     param(
@@ -8,6 +90,8 @@ function Test-TreeItemVisible {
 
         [string[]]$Include,
         [string[]]$Exclude,
+
+        [string]$RootPath,
 
         [switch]$HideHidden,
         [switch]$HideSystem,
@@ -22,7 +106,7 @@ function Test-TreeItemVisible {
     $isIncludedGlob = $false
     if (-not $isIncludedExact -and $Include) {
         foreach ($pattern in $Include) {
-            if ($name -like $pattern) {
+            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
                 $isIncludedGlob = $true
                 break
             }
@@ -32,7 +116,7 @@ function Test-TreeItemVisible {
     $isExcludedGlob = $false
     if (-not $isExcludedExact -and $Exclude) {
         foreach ($pattern in $Exclude) {
-            if ($name -like $pattern) {
+            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
                 $isExcludedGlob = $true
                 break
             }
@@ -41,16 +125,16 @@ function Test-TreeItemVisible {
 
     $isHidden = $false
     if ($HideHidden) {
-        $isHidden = $Item.IsHidden -eq $true -or (
-            $null -ne $Item.Native.FileAttributes -and
-            ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
+        $isHidden = $Item.IsHidden -eq $true -or
+                ($null -ne $Item.Native.FileAttributes -and
+                ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
         )
     }
 
     $isSystem = $false
     if ($HideSystem) {
         $isSystem = $null -ne $Item.Native.FileAttributes -and
-            ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
+                ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
     }
 
     $isFileToRemove = $DirectoryOnly -and -not $Item.IsContainer
@@ -75,6 +159,8 @@ function Test-TreeItemRecurse {
         [string[]]$Include,
         [string[]]$Exclude,
 
+        [string]$RootPath,
+
         [switch]$HideHidden,
         [switch]$HideSystem,
 
@@ -94,7 +180,7 @@ function Test-TreeItemRecurse {
     $name = $Item.Name
 
     # Exclude/hide/system can prune traversal unless Include explicitly rescues the item.
-    
+
     $isIncludedExact = $Include -contains $name
     $isExcludedExact = $Exclude -contains $name
 
@@ -112,12 +198,12 @@ function Test-TreeItemRecurse {
     $isRescued = $false
     if ($Exclude) {
         foreach ($pattern in $Exclude) {
-            if ($name -like $pattern) {
+            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
                 # Check if it's rescued by a glob include
                 $isRescued = $false
                 if ($Include) {
                     foreach ($incPattern in $Include) {
-                        if ($name -like $incPattern) {
+                        if (Test-TreeItemFilterMatch -Item $Item -Pattern $incPattern -RootPath $RootPath) {
                             $isRescued = $true
                             break
                         }
@@ -127,7 +213,7 @@ function Test-TreeItemRecurse {
                     return $false
                 }
                 # If rescued by glob include, we continue to check HideHidden/HideSystem
-                break 
+                break
             }
         }
     }
@@ -135,8 +221,8 @@ function Test-TreeItemRecurse {
     # If hidden/system and hidden/system are to be hidden
     if ($HideHidden) {
         $isHidden = $Item.IsHidden -eq $true -or (
-            $null -ne $Item.Native.FileAttributes -and
-            ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
+        $null -ne $Item.Native.FileAttributes -and
+                ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
         )
         if ($isHidden -and -not $isRescued) {
             return $false
@@ -145,7 +231,7 @@ function Test-TreeItemRecurse {
 
     if ($HideSystem) {
         $isSystem = $null -ne $Item.Native.FileAttributes -and
-            ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
+                ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
         if ($isSystem -and -not $isRescued) {
             return $false
         }

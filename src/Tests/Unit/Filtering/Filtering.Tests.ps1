@@ -28,6 +28,90 @@ Describe "TreeItem Visibility" {
         }
     }
 
+    It "Treats a trailing slash filter as directory-only" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+
+            $directory = New-TestItem `
+                -Name "TestFixtures" `
+                -ParentPath $rootPath `
+                -IsDirectory:$true `
+                -Attributes ([IO.FileAttributes]::Directory)
+
+            $file = New-TestItem `
+                -Name "TestFixtures" `
+                -ParentPath $rootPath `
+                -IsDirectory:$false
+
+            Test-TreeItemVisible `
+                -Item $directory `
+                -Exclude "TestFixtures\" `
+                -RootPath $rootPath |
+                    Should -Be $false
+
+            Test-TreeItemVisible `
+                -Item $file `
+                -Exclude "TestFixtures\" `
+                -RootPath $rootPath |
+                    Should -Be $true
+        }
+    }
+
+    It "Matches nested relative directory filters only at the specified relative path" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+
+            $srcFixtures = New-TestItem `
+                -Name "TestFixtures" `
+                -ParentPath (Join-Path $rootPath 'src') `
+                -IsDirectory:$true `
+                -Attributes ([IO.FileAttributes]::Directory)
+
+            $testFixtures = New-TestItem `
+                -Name "TestFixtures" `
+                -ParentPath (Join-Path $rootPath 'test') `
+                -IsDirectory:$true `
+                -Attributes ([IO.FileAttributes]::Directory)
+
+            Test-TreeItemVisible `
+                -Item $srcFixtures `
+                -Exclude ".\src\TestFixtures\" `
+                -RootPath $rootPath |
+                    Should -Be $false
+
+            Test-TreeItemVisible `
+                -Item $testFixtures `
+                -Exclude ".\src\TestFixtures\" `
+                -RootPath $rootPath |
+                    Should -Be $true
+        }
+    }
+
+    It "Still allows name-only filters to match items with that name anywhere in the tree" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $nestedParent = Join-Path $rootPath 'src'
+
+            $nestedFixtures = New-TestItem `
+                -Name "TestFixtures" `
+                -ParentPath $nestedParent `
+                -IsDirectory:$true `
+                -Attributes ([IO.FileAttributes]::Directory)
+
+            Test-TreeItemVisible `
+                -Item $nestedFixtures `
+                -Exclude "TestFixtures" `
+                -RootPath $rootPath |
+                    Should -Be $false
+        }
+    }
+
     It "Glob include resurrects items excluded by glob" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
@@ -83,10 +167,6 @@ Describe "TreeItem Recursion" {
 
             $item = New-TestItem -Name "link"
 
-            # Manually mark as link and container since New-TestItem does not have link support
-            $item | Add-Member -MemberType NoteProperty -Name IsContainer -Value $true -Force
-            $item | Add-Member -MemberType NoteProperty -Name IsLink -Value $true -Force
-            
             # Manually create a link using New-TreeItem since New-TestItem does not have link support
             # $name = "link"
             # $fullPath = Join-Path ($IsWindows ? 'C:\Test' : '/tmp/test') $name
@@ -104,6 +184,10 @@ Describe "TreeItem Recursion" {
             #     -Kind $kind `
             #     -Link $link
 
+            # Manually mark as link and container since New-TestItem does not have link support
+            $item | Add-Member -MemberType NoteProperty -Name IsContainer -Value $true -Force
+            $item | Add-Member -MemberType NoteProperty -Name IsLink -Value $true -Force
+            
             Test-TreeItemRecurse -Item $item -FollowLinks:$false | Should -Be $false
             Test-TreeItemRecurse -Item $item -FollowLinks:$true | Should -Be $true
         }

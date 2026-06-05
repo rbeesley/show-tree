@@ -177,7 +177,7 @@ function Show-Tree {
     # Header Rendering
     #
     if ($Mode -eq 'Tree') {
-        $header = Get-TreeModeHeader -Path $resolvedPath -StyleProfile $resolvedStyleProfile
+        $header = Get-TreeModeHeader -Path $resolvedPath -Colorize:$EffectiveColorize -StyleProfile $resolvedStyleProfile
         $header | Where-Object { $_ -is [string] }
         if ($header -contains $false) {
             return
@@ -220,18 +220,6 @@ function Show-Tree {
         $EffectiveMaxDepth - 1
     }
 
-    $treeItems = Get-TreeItem `
-        -Path $resolvedPath `
-        -Depth $treeItemDepth `
-        -ProviderMode $providerMode `
-        -Include $Include `
-        -Exclude $Exclude `
-        -HideHidden:$EffectiveHideHidden `
-        -HideSystem:$EffectiveHideSystem `
-        -DirectoryOnly:(!$EffectiveFiles)
-
-    $selectedItems = $treeItems | Select-TreeItem
-
     $formatParams = @{
         Mode         = $Mode
         Colorize    = $EffectiveColorize
@@ -241,7 +229,17 @@ function Show-Tree {
         StyleProfile = $resolvedStyleProfile
     }
 
-    $selectedItems | Format-Tree @formatParams
+    Get-TreeItem `
+        -Path $resolvedPath `
+        -Depth $treeItemDepth `
+        -ProviderMode $providerMode `
+        -Include $Include `
+        -Exclude $Exclude `
+        -HideHidden:$EffectiveHideHidden `
+        -HideSystem:$EffectiveHideSystem `
+        -DirectoryOnly:(!$EffectiveFiles) |
+            Select-TreeItem |
+            Format-Tree @formatParams
 
     #
     # Footer / Last Line logic
