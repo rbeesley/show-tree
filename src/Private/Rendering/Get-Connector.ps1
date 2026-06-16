@@ -5,12 +5,8 @@
     Returns the connector string for a given item type.
 
 .DESCRIPTION
-    Handles:
-      • Tree.com ASCII mode
-      • Unicode graphical mode
-      • Prefix vs File vs Directory vs Gap
-      • Last-sibling logic
-      • NoSpan suppression for Tree.com file connectors
+    The Get-Connector cmdlet retrieves the appropriate tree connector (e.g., │, ├, └) based on the 
+    specified mode, item type, sibling position, and style profile. It supports both Unicode and ASCII sets.
 #>
 function Get-Connector {
     param(

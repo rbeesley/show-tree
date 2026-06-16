@@ -5,7 +5,8 @@
     Enumerates all set file attributes on an item.
 
 .DESCRIPTION
-    Used by Get-ItemStyle to apply attribute overlays.
+    The Get-FileAttributes cmdlet expands a FileAttributes bitmask into a collection of individual flags,
+    which is used by Get-ItemStyle to apply attribute-based styling overlays.
 #>
 function Get-FileAttributes {
     param([IO.FileAttributes]$Attributes)

@@ -13,7 +13,6 @@ else {
 . (Join-Path $moduleSrcRoot 'Public\Format-Tree.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Get-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Public\New-TreeItem.ps1')
-. (Join-Path $moduleSrcRoot 'Public\Select-TreeItem.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Set-ShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Show-Tree.ps1')
 . (Join-Path $moduleSrcRoot 'Public\Show-TreeLegend.ps1')
@@ -33,6 +32,11 @@ else {
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ActiveShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Merge-ShowTreeHashtable.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Traversal\Get-ImmediateTreeChild.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Traversal\Invoke-TreeTraversal.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Traversal\New-TreeChildProvider.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Traversal\New-TreeLayout.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Traversal\New-TreeRecord.ps1')
 
 # Load the style profiles
 $script:BaseStyleProfilePath    = Join-Path $moduleSrcRoot 'Data\BaseStyleProfile.psd1'

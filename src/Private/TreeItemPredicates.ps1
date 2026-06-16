@@ -1,5 +1,18 @@
 ﻿# src/Private/TestItemPredicates.ps1
 
+<#
+.SYNOPSIS
+    Internal predicate functions for filtering and testing tree items.
+
+.DESCRIPTION
+    This file contains several internal functions used to determine the visibility and 
+    recursion behavior of items during a tree traversal:
+    - ConvertTo-TreeFilterPattern: Normalizes glob patterns.
+    - Get-TreeItemRelativePath: Computes the path of an item relative to the traversal root.
+    - Test-TreeItemFilterMatch: Tests if an item matches an include/exclude pattern.
+    - Test-TreeItemVisible: Determines if an item should be displayed.
+    - Test-TreeItemRecurse: Determines if a directory should be traversed.
+#>
 function ConvertTo-TreeFilterPattern {
     [CmdletBinding()]
     param(

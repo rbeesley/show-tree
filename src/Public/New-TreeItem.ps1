@@ -1,5 +1,75 @@
 # src/Public/New-TreeItem.ps1
 
+<#
+.SYNOPSIS
+    Creates a new ShowTree.TreeItem object.
+
+.DESCRIPTION
+    The New-TreeItem cmdlet is a factory function for creating ShowTree.TreeItem objects.
+    These objects represent files, directories, or other filesystem items in a tree traversal,
+    capturing metadata like kind, states (hidden, readonly, etc.), and link information.
+
+.PARAMETER FullPath
+    The absolute path to the item.
+
+.PARAMETER Name
+    The leaf name of the item. Defaults to the leaf part of FullPath.
+
+.PARAMETER ParentPath
+    The path to the parent directory.
+
+.PARAMETER Kind
+    The kind of item (e.g., 'File', 'Directory', 'Symlink').
+
+.PARAMETER IsContainer
+    True if the item is a directory or other container.
+
+.PARAMETER Depth
+    The depth of the item in the tree relative to the root.
+
+.PARAMETER IsHidden
+    Legacy input for setting the 'Hidden' state.
+
+.PARAMETER IsExecutable
+    Legacy input for setting the 'Executable' state.
+
+.PARAMETER IsReadOnly
+    Legacy input for setting the 'ReadOnly' state.
+
+.PARAMETER Length
+    The size of the item in bytes.
+
+.PARAMETER CreationTime
+    The creation time of the item.
+
+.PARAMETER LastWriteTime
+    The last write time of the item.
+
+.PARAMETER LastAccessTime
+    The last access time of the item.
+
+.PARAMETER Link
+    An object containing link information (Type, Target, TargetPath, IsBroken).
+
+.PARAMETER Permissions
+    An object containing permission information (Mode, Symbolic, Owner, Group).
+
+.PARAMETER Native
+    An object containing native platform information.
+
+.PARAMETER States
+    An array of states associated with the item (e.g., 'Hidden', 'Archive', 'System').
+
+.PARAMETER Children
+    An array of child TreeItem objects.
+
+.EXAMPLE
+    New-TreeItem -FullPath "C:\test.txt" -Kind File -IsContainer $false
+    Creates a basic TreeItem for a file.
+
+.LINK
+    Get-TreeItem
+#>
 function New-TreeItem {
     [CmdletBinding()]
     param(

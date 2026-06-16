@@ -1,262 +1,107 @@
 ﻿# src/Public/Get-TreeItem.ps1
 
+<#
+.SYNOPSIS
+    Streams tree traversal records for a path.
+
+.DESCRIPTION
+    The Get-TreeItem cmdlet resolves a path and performs a depth-first traversal of its children.
+    It emits ShowTree.TreeRecord objects that contain both the item information and layout metadata
+    required for hierarchical rendering.
+
+.PARAMETER Path
+    The path to traverse. Default is '.'.
+
+.PARAMETER Depth
+    The maximum depth to traverse. -1 for unlimited.
+
+.PARAMETER ProviderMode
+    The provider to use for enumerating items ('PowerShell' or 'Win32').
+    'Win32' is faster on Windows but may have different behavior for certain file types.
+
+.PARAMETER FollowLinks
+    If set, follows symbolic links and junctions during traversal.
+
+.PARAMETER Include
+    Filters items to include based on glob patterns.
+
+.PARAMETER Exclude
+    Filters items to exclude based on glob patterns.
+
+.PARAMETER HideHidden
+    If set, hides hidden files and directories.
+
+.PARAMETER HideSystem
+    If set, hides system files and directories.
+
+.PARAMETER DirectoryOnly
+    If set, only directories are included in the traversal.
+
+.EXAMPLE
+    Get-TreeItem -Path C:\Source -Depth 2 | Format-Tree
+    Retrieves items from C:\Source up to 2 levels deep and formats them.
+
+.LINK
+    Invoke-TreeTraversal
+    Format-Tree
+#>
 function Get-TreeItem {
     [CmdletBinding()]
     param(
         [Parameter(Position = 0)]
-        [string]$Path = '.',
+        [string] $Path = '.',
 
-        [int]$Depth = -1,
+        [int] $Depth = -1,
 
         [ValidateSet('PowerShell', 'Win32')]
-        [string]$ProviderMode = 'PowerShell',
+        [string] $ProviderMode = 'PowerShell',
 
-        [switch]$FollowLinks,
+        [switch] $FollowLinks,
 
-    # Filtering parameters
-        [string[]]$Include,
-        [string[]]$Exclude,
-        [switch]$HideHidden,
-        [switch]$HideSystem,
-        [switch]$DirectoryOnly,
+        [string[]] $Include,
+        [string[]] $Exclude,
 
-    # Internal recursion parameters
-        [int]$CurrentDepth = 0,
-        [string]$RootPath
+        [switch] $HideHidden,
+        [switch] $HideSystem,
+        [switch] $DirectoryOnly
     )
 
-    #
-    # Resolve Path
-    #
-    $resolvedPath = Resolve-Path $Path -ErrorAction SilentlyContinue
-    if (-not $resolvedPath) {
-        $resolvedPath = $Path
-    }
-    else {
-        $resolvedPath = $resolvedPath.Path
-    }
+    $resolvedPathInfo = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
 
-    if ([string]::IsNullOrWhiteSpace($RootPath)) {
-        $RootPath = $resolvedPath
-    }
-
-    #
-    # Depth Check
-    #
-    if ($Depth -ne -1 -and $CurrentDepth -gt $Depth) {
-        return
-    }
-
-    #
-    # Enumeration
-    #
-    $orderedItems = [System.Collections.Generic.List[object]]::new()
-    if ($ProviderMode -eq 'Win32' -and $IsWindows) {
-        $raw = Get-RawDirectoryEntries -Path $resolvedPath -Depth $CurrentDepth
-
-        $rawDirectories = foreach ($d in $raw.Directories) {
-            if (Test-TreeItemVisible -Item $d -Include $Include -Exclude $Exclude -RootPath $RootPath -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
-                $d
-            }
+    $resolvedPath = if ($resolvedPathInfo) {
+        if ($resolvedPathInfo.PSObject.Properties.Match('ProviderPath')) {
+            $resolvedPathInfo.ProviderPath
         }
-        $rawFiles = foreach ($f in $raw.Files) {
-            if (Test-TreeItemVisible -Item $f -Include $Include -Exclude $Exclude -RootPath $RootPath -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
-                $f
-            }
-        }
-
-        # Tree.com-compatible ordering:
-        #   - files first
-        #   - directories second
-        #   - preserve Win32 enumeration order inside each group
-        foreach ($f in $rawFiles) {
-            [void]$orderedItems.Add($f)
-        }
-        foreach ($d in $rawDirectories) {
-            [void]$orderedItems.Add($d)
+        else {
+            $resolvedPathInfo.Path
         }
     }
     else {
-        $rawItems = Get-ChildItem -Path $resolvedPath -Force -ErrorAction SilentlyContinue
-        $items = [System.Collections.Generic.List[object]]::new()
-
-        foreach ($item in $rawItems) {
-            $isDir = $item.PSIsContainer
-            $native = [PSCustomObject]@{
-                Platform = $IsWindows ? 'Windows' : 'Unix'
-                FileAttributes = $item.Attributes
-            }
-
-            $kind = $isDir ? 'Directory' : 'File'
-            $link = $null
-            if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
-                $kind = ($isDir -and $IsWindows) ? 'Junction' : 'Symlink'
-
-                $target = $null
-                if ($item.PSObject.Properties.Match('Target')) {
-                    $target = $item.Target
-                }
-
-                $targetPath = $target
-                if ($target -is [array]) {
-                    $targetPath = $target | Select-Object -First 1
-                }
-
-                $isBroken = $null
-                if (-not [string]::IsNullOrWhiteSpace([string]$targetPath)) {
-                    $targetText = [string]$targetPath
-
-                    $linkParentPath = $null
-                    if ($item.PSObject.Properties.Match('DirectoryName') -and
-                            -not [string]::IsNullOrWhiteSpace([string]$item.DirectoryName)) {
-                        $linkParentPath = [string]$item.DirectoryName
-                    }
-
-                    if ([string]::IsNullOrWhiteSpace($linkParentPath)) {
-                        $linkParentPath = Split-Path -Path $item.FullName -Parent
-                    }
-
-                    if ([string]::IsNullOrWhiteSpace($linkParentPath)) {
-                        $linkParentPath = [System.IO.Path]::GetPathRoot($item.FullName)
-                    }
-
-                    $candidateTargetPath = if ([System.IO.Path]::IsPathRooted($targetText)) {
-                        $targetText
-                    }
-                    elseif (-not [string]::IsNullOrWhiteSpace($linkParentPath)) {
-                        Join-Path -Path $linkParentPath -ChildPath $targetText
-                    }
-                    else {
-                        $null
-                    }
-
-                    if (-not [string]::IsNullOrWhiteSpace($candidateTargetPath)) {
-                        $isBroken = -not (Test-Path -LiteralPath $candidateTargetPath)
-                    }
-                }
-
-                $link = [PSCustomObject]@{
-                    Type       = ($kind -eq 'Junction') ? 'Junction' : 'SymbolicLink'
-                    Target     = $target
-                    TargetPath = $targetPath
-                    IsBroken   = $isBroken
-                }
-            }
-
-            $isHidden = $null
-            $states = [System.Collections.Generic.List[string]]::new()
-
-            if ($IsWindows) {
-                $isHidden = ($item.Attributes -band [IO.FileAttributes]::Hidden) -ne 0
-            }
-            else {
-                $isHidden = $item.Name.StartsWith('.')
-            }
-
-            if ($isHidden) { [void]$states.Add('Hidden') }
-            if ($item.Attributes -band [IO.FileAttributes]::ReadOnly) { [void]$states.Add('ReadOnly') }
-            if ($item.Attributes -band [IO.FileAttributes]::System) { [void]$states.Add('System') }
-
-            if (-not $IsWindows -and $kind -notin @('Symlink', 'Junction') -and $item.PSObject.Properties.Match('UnixMode')) {
-                $unixMode = [string]$item.UnixMode
-
-                if ($unixMode.Length -ge 10) {
-                    $hasSetUid = $unixMode[3] -match '[sS]'
-                    $hasSetGid = $unixMode[6] -match '[sS]'
-                    $isOtherWritable = $unixMode[8] -eq 'w'
-                    $hasSticky = $unixMode[9] -match '[tT]'
-
-                    if ($hasSetUid) {
-                        [void]$states.Add('SetUid')
-                    }
-
-                    if ($hasSetGid) {
-                        [void]$states.Add('SetGid')
-                    }
-
-                    if ($isDir -and $isOtherWritable) {
-                        [void]$states.Add('OtherWritable')
-                    }
-
-                    if ($isDir -and $hasSticky) {
-                        [void]$states.Add('Sticky')
-                    }
-
-                    if ($isDir -and $isOtherWritable -and $hasSticky) {
-                        [void]$states.Add('StickyOtherWritable')
-                    }
-
-                    if ($kind -eq 'File' -and (
-                    $unixMode[3] -match '[xs]' -or
-                            $unixMode[6] -match '[xs]' -or
-                            $unixMode[9] -match '[xt]'
-                    )) {
-                        [void]$states.Add('Executable')
-                    }
-                }
-            }
-
-            if ($kind -eq 'Symlink') { [void]$states.Add('Symlink') }
-            elseif ($kind -eq 'Junction') { [void]$states.Add('Junction') }
-
-            if ($link -and $link.IsBroken -eq $true) {
-                [void]$states.Add('BrokenLink')
-            }
-
-            $treeItem = New-TreeItem `
-                    -FullPath $item.FullName `
-                    -IsContainer $isDir `
-                    -Kind $kind `
-                    -Name $item.Name `
-                    -Native $native `
-                    -Link $link `
-                    -Depth $CurrentDepth `
-                    -ParentPath $resolvedPath `
-                    -States $states.ToArray()
-
-            if (Test-TreeItemVisible -Item $treeItem -Include $Include -Exclude $Exclude -RootPath $RootPath -HideHidden:$HideHidden -HideSystem:$HideSystem -DirectoryOnly:$DirectoryOnly) {
-                [void]$items.Add($treeItem)
-            }
-        }
-
-        #
-        # Normalization: Ordering (Deterministic)
-        #
-        # Deterministic order for PowerShell provider mode.
-        # Win32 provider mode intentionally preserves tree.com-compatible enumeration order.
-        $orderedItems = $items | Sort-Object @{ Expression="IsContainer"; Ascending=$true }, @{ Expression="Name"; Ascending=$true }
+        $Path
     }
 
-    #
-    # Output and Recursion
-    #
-    foreach ($item in $orderedItems) {
-        # Return the current item
-        $item
+    $provider = New-TreeChildProvider -ProviderMode $ProviderMode
 
-        # Recurse if it's a container and we haven't reached MaxDepth
-        if ($item.IsContainer -and ($Depth -eq -1 -or $CurrentDepth -lt $Depth)) {
-            if (Test-TreeItemRecurse `
-                -Item $item `
-                -Include $Include `
-                -Exclude $Exclude `
-                -RootPath $RootPath `
-                -HideHidden:$HideHidden `
-                -HideSystem:$HideSystem `
-                -FollowLinks:$FollowLinks) {
-                Get-TreeItem `
-                    -Path $item.FullPath `
-                    -Depth $Depth `
-                    -FollowLinks:$FollowLinks `
-                    -ProviderMode $ProviderMode `
-                    -Include $Include `
-                    -Exclude $Exclude `
-                    -HideHidden:$HideHidden `
-                    -HideSystem:$HideSystem `
-                    -DirectoryOnly:$DirectoryOnly `
-                    -CurrentDepth ($CurrentDepth + 1) `
-                    -RootPath $RootPath
-            }
-        }
+    $traversalDepth = if ($Depth -eq -1) {
+        -1
     }
+    elseif ($Depth -le 0) {
+        0
+    }
+    else {
+        $Depth - 1
+    }
+
+    Invoke-TreeTraversal `
+        -Path $resolvedPath `
+        -RootPath $resolvedPath `
+        -MaxDepth $traversalDepth `
+        -CurrentDepth 0 `
+        -Provider $provider `
+        -Include $Include `
+        -Exclude $Exclude `
+        -HideHidden:$HideHidden `
+        -HideSystem:$HideSystem `
+        -DirectoryOnly:$DirectoryOnly `
+        -FollowLinks:$FollowLinks
 }

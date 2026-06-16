@@ -5,7 +5,9 @@
     Retrieves the volume serial number using Win32 API.
 
 .DESCRIPTION
-    Matches Tree.com output exactly.
+    The Get-VolumeSerialNumber cmdlet calls the Win32 GetVolumeInformation API to retrieve
+    the serial number of the volume containing the specified path, formatted to match tree.com.
+    Used only in Tree.com compatibility mode.
 #>
 function Get-VolumeSerialNumber {
     param (

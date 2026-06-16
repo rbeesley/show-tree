@@ -2,31 +2,12 @@
 
 <#
 .SYNOPSIS
-    Resolves a user-supplied path into a fully qualified provider path with
-    correct caller-relative behavior, normalization, and mode-specific error handling.
+    Resolves a user-supplied path into a fully qualified provider path.
+
 .DESCRIPTION
-    Resolve-TreePath converts user input (relative paths, absolute paths, and
-    mixed-case paths) into a canonical provider path suitable for tree rendering.
-
-    The function performs three key operations:
-
-      • Caller-relative resolution  
-        Relative paths such as '.', '..', and '.\foo' are resolved against the
-        caller's working directory, not the module's import location.
-
-      • Normalization  
-        The resulting path is normalized segment-by-segment to match actual
-        filesystem casing and to collapse constructs like '..' and redundant
-        separators.
-
-      • Mode-specific error behavior  
-        In Normal and List modes, nonexistent paths produce a PowerShell-style
-        ItemNotFound error.  
-        In Tree mode, nonexistent paths are returned verbatim so that the caller
-        can reproduce tree.com’s error messages exactly.
-
-    The returned value is always a fully qualified provider path unless the
-    path does not exist and Tree mode is active.
+    The Resolve-TreePath cmdlet converts user input into a canonical provider path. 
+    It handles caller-relative resolution, normalization, and mode-specific error behavior 
+    (Normal/List vs. Tree mode).
 #>
 function Resolve-TreePath {
     [CmdletBinding()]

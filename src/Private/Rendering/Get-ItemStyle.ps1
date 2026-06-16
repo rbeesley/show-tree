@@ -5,14 +5,9 @@
     Computes the ANSI style for a file or directory.
 
 .DESCRIPTION
-    Applies:
-      • Base style (directory/file)
-      • Attribute overlays (hidden, system, temporary, etc.)
-      • Foreground overrides
-      • Combined ANSI escape sequence
-
-    Returns an object:
-      @{ Name = "..."; Ansi = "..."; }
+    The Get-ItemStyle cmdlet determines the color and styling for an item based on its type
+    (File or Directory) and its states (Hidden, System, etc.). It combines base styles
+    with state-based overlays and foreground/background overrides from the active style profile.
 #>
 function Get-ItemStyle {
     param(

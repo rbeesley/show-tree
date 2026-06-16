@@ -1,195 +1,586 @@
-﻿# src\Tests\Unit\Enumeration\Get-TreeItem.Tests.ps1
+﻿# src/Tests/Unit/Enumeration/Get-TreeItem.Tests.ps1
 
-Describe "Get-TreeItem" {
-    BeforeAll {
-        $script:TestRoot = Join-Path ([System.IO.Path]::GetTempPath()) "ShowTree_GetTreeItemTest"
+BeforeAll {
+    $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
+    $script:ModuleUnderTest = . "$script:TestRoot\Helpers\Import-ModuleUnderTest.ps1" `
+        -StartPath $PSScriptRoot `
+        -ModuleName 'ShowTree' `
+        -SourceRootName 'src' `
+        -Exclude 'src/Tests/*' `
+        -PassThru
 
-        # Be sure that $script:TestRoot is valid and that you really want to delete it before running this!
-        # consider running with -WhatIf first and manually verifying the path before allowing it to delete.
-        if (Test-Path $script:TestRoot) { Remove-Item $script:TestRoot -Recurse -Force }
+    $script:FixtureScripts = @(
+        "$script:TestRoot\Helpers\PrivateHelpers.ps1"
+        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
+    )
+}
 
-        New-Item -ItemType Directory -Path $script:TestRoot | Out-Null
-        
-        # Create a test structure
-        # TestRoot/
-        #   Dir1/
-        #     File1.txt
-        #   File2.txt
-        #   .HiddenFile (on non-windows, or +H on windows)
-        #   _SystemFile (+S on windows)
-        
-        $dir1 = New-Item -ItemType Directory -Path (Join-Path $script:TestRoot "Dir1")
-        New-Item -ItemType File -Path (Join-Path $dir1 "File1.txt") | Out-Null
-        New-Item -ItemType File -Path (Join-Path $script:TestRoot "File2.txt") | Out-Null
-        
-        $hiddenFile = New-Item -ItemType File -Path (Join-Path $script:TestRoot ".HiddenFile")
-        if ($IsWindows) {
-            $hiddenFile.Attributes = $hiddenFile.Attributes -bor [IO.FileAttributes]::Hidden
-            
-            $systemFile = New-Item -ItemType File -Path (Join-Path $script:TestRoot "_SystemFile")
-            $systemFile.Attributes = $systemFile.Attributes -bor [IO.FileAttributes]::System
+Describe 'Get-TreeItem behavior' {
+    It 'emits TreeRecord objects for files and directories' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                'File2.txt' = $null
+                Dir1 = [ordered]@{
+                    'File1.txt' = $null
+                }
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 0)
+            $itemRecords = @($records | Where-Object RecordType -eq 'Item')
+
+            $records | Should -Not -BeNullOrEmpty
+            foreach ($record in $records) {
+                $record.PSTypeNames | Should -Contain 'ShowTree.TreeRecord'
+            }
+
+            $itemRecords.TreeItem.Name | Should -Be @(
+                'File2.txt'
+                'Dir1'
+            )
         }
     }
 
-    AfterAll {
-        # Be sure that $script:TestRoot is valid and that you really want to delete it before running this!
-        # consider running with -WhatIf first and manually verifying the path before allowing it to delete.
-        if (Test-Path $script:TestRoot) { Remove-Item $script:TestRoot -Recurse -Force }
+    It 'recurses to the requested public depth' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                Dir1 = [ordered]@{
+                    'File1.txt' = $null
+                    Nested = [ordered]@{
+                        'TooDeep.txt' = $null
+                    }
+                }
+                'File2.txt' = $null
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 2)
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Contain 'Dir1'
+            $itemNames | Should -Contain 'File1.txt'
+            $itemNames | Should -Contain 'File2.txt'
+            $itemNames | Should -Not -Contain 'TooDeep.txt'
+        }
     }
 
-    Context "Basic Enumeration" {
-        It "Produces TreeItem objects" {
-            $items = @(Get-TreeItem -Path $script:TestRoot -Depth 0)
-            $items.Count | Should -BeGreaterThan 0
-            $items[0].PSTypeNames | Should -Contain "ShowTree.TreeItem"
-        }
+    It 'excludes items by exact name and prunes excluded subtrees' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
 
-        It "Enumerates files and directories" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0
-            # Should find Dir1, File2.txt, .HiddenFile, _SystemFile
-            $expectedCount = if ($IsWindows) { 4 } else { 3 }
-            $items.Count | Should -Be $expectedCount
-            $items.Name | Should -Contain "Dir1"
-            $items.Name | Should -Contain "File2.txt"
-            $items.Name | Should -Contain ".HiddenFile"
-            if ($IsWindows) {
-                $items.Name | Should -Contain "_SystemFile"
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                Dir1 = [ordered]@{
+                    'File1.txt' = $null
+                }
+                'File2.txt' = $null
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 2 -Exclude 'Dir1')
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Not -Contain 'Dir1'
+            $itemNames | Should -Not -Contain 'File1.txt'
+            $itemNames | Should -Contain 'File2.txt'
+        }
+    }
+
+    It 'excludes files by glob pattern' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                Dir1 = [ordered]@{}
+                'File2.txt' = $null
+                'File3.log' = $null
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 1 -Exclude '*.txt')
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Not -Contain 'File2.txt'
+            $itemNames | Should -Contain 'File3.log'
+            $itemNames | Should -Contain 'Dir1'
+        }
+    }
+
+    It 'allows include to rescue an excluded item' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                Dir1 = [ordered]@{
+                    'File1.txt' = $null
+                }
+                'File2.txt' = $null
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 1 -Exclude '*' -Include 'Dir1')
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Contain 'Dir1'
+            $itemNames | Should -Not -Contain 'File2.txt'
+        }
+    }
+
+    It 'filters out files when DirectoryOnly is specified but still recurses into directories' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                Dir1 = [ordered]@{
+                    'File1.txt' = $null
+                    Nested = [ordered]@{
+                        'File2.txt' = $null
+                    }
+                }
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 2 -DirectoryOnly)
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Contain 'Dir1'
+            $itemNames | Should -Contain 'Nested'
+            $itemNames | Should -Not -Contain 'File1.txt'
+            $itemNames | Should -Not -Contain 'File2.txt'
+        }
+    }
+
+    It 'does not follow links by default' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                LinkDir = @{
+                    IsSymlink = $true
+                    Children = [ordered]@{
+                        'TargetFile.txt' = $null
+                    }
+                }
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 2)
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Contain 'LinkDir'
+            $itemNames | Should -Not -Contain 'TargetFile.txt'
+        }
+    }
+
+    It 'follows links when FollowLinks is specified' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $rootPath = Join-Path $parentPath 'Root'
+
+            $structure = [ordered]@{
+                LinkDir = @{
+                    IsSymlink = $true
+                    Children = [ordered]@{
+                        'TargetFile.txt' = $null
+                    }
+                }
+            }
+
+            $tree = New-FixtureTree -Structure $structure -ParentPath $parentPath
+            $provider = New-TestTreeChildProvider -Root $tree
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 2 -FollowLinks)
+            $itemNames = @($records | Where-Object RecordType -eq 'Item' | ForEach-Object { $_.TreeItem.Name })
+
+            $itemNames | Should -Contain 'LinkDir'
+            $itemNames | Should -Contain 'TargetFile.txt'
+        }
+    }
+}
+
+Describe 'Get-TreeItem' {
+    It 'creates a provider and invokes streaming traversal' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+
+            $provider = [PSCustomObject]@{
+                PSTypeName   = 'ShowTree.TreeChildProvider'
+                Name         = 'PowerShell'
+                ProviderMode = 'PowerShell'
+                GetChildren  = { }
+            }
+
+            $item = New-FixtureTreeItem `
+                -Name 'file-a.txt' `
+                -ParentPath $rootPath `
+                -Depth 0
+
+            $record = New-TreeRecord `
+                -RecordType Item `
+                -TreeItem $item `
+                -TreeLayout (New-TreeLayout -Depth 0 -RelativeDepth 0 -IsLastSibling:$true)
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            Mock Invoke-TreeTraversal {
+                $record
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 0)
+
+            $records.Count | Should -Be 1
+            $records[0].PSTypeNames | Should -Contain 'ShowTree.TreeRecord'
+            $records[0].TreeItem.Name | Should -Be 'file-a.txt'
+
+            Should -Invoke New-TreeChildProvider -Times 1 -Exactly -ParameterFilter {
+                $ProviderMode -eq 'PowerShell'
+            }
+
+            Should -Invoke Invoke-TreeTraversal -Times 1 -Exactly -ParameterFilter {
+                $Path -eq $rootPath -and
+                        $RootPath -eq $rootPath -and
+                        $MaxDepth -eq 0 -and
+                        $CurrentDepth -eq 0 -and
+                        $Provider -eq $provider
             }
         }
-
-        It "Recurses to specified depth" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 1
-            $items.Name | Should -Contain "File1.txt"
-        }
     }
 
-    Context "Normalization" {
-        It "Orders files before directories and then by name" {
-            # Expected order: .HiddenFile, File2.txt, _SystemFile, Dir1 (sorted by IsContainer, then Name)
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0
-            $items[-1].Name | Should -Be "Dir1"
-            $sortedNames = $items | Select-Object -ExpandProperty Name
-            $expectedCount = if ($IsWindows) { 4 } else { 3 }
-            $sortedNames | Should -Contain "File2.txt"
-        }
+    It 'uses unresolved path text when Resolve-Path does not resolve the path' {
+        InModuleScope ShowTree {
+            $path = if ($IsWindows) { 'C:\MissingRoot' } else { '/missing-root' }
 
-        It "Correctly exposes IsHidden property" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0
-            $hiddenItem = $items | Where-Object { $_.Name -eq ".HiddenFile" }
-            $hiddenItem.IsHidden | Should -Be $true
-            
-            $normalItem = $items | Where-Object { $_.Name -eq "File2.txt" }
-            $normalItem.IsHidden | Should -Be $false
-        }
-    }
+            $provider = [PSCustomObject]@{
+                PSTypeName   = 'ShowTree.TreeChildProvider'
+                Name         = 'PowerShell'
+                ProviderMode = 'PowerShell'
+                GetChildren  = { }
+            }
 
-    Context "Provider Modes" {
-        It "Supports PowerShell provider mode" {
-            $items = Get-TreeItem -Path $script:TestRoot -ProviderMode PowerShell -Depth 0
-            $items.Count | Should -BeGreaterThan 0
-        }
+            Mock Resolve-Path { $null }
 
-        if ($IsWindows) {
-            It "Supports Win32 provider mode on Windows" {
-                $items = Get-TreeItem -Path $script:TestRoot -ProviderMode Win32 -Depth 0
-                $items.Count | Should -BeGreaterThan 0
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            Mock Invoke-TreeTraversal {
+                return
+            }
+
+            $records = @(Get-TreeItem -Path $path -Depth 0)
+
+            $records | Should -BeNullOrEmpty
+
+            Should -Invoke Invoke-TreeTraversal -Times 1 -Exactly -ParameterFilter {
+                $Path -eq $path -and
+                        $RootPath -eq $path
             }
         }
     }
 
-    Context "Link Following" {
-        BeforeAll {
-            $script:LinkRoot = Join-Path $script:TestRoot "LinkTest"
-            if (Test-Path $script:LinkRoot) { Remove-Item $script:LinkRoot -Recurse -Force }
-            New-Item -ItemType Directory -Path $script:LinkRoot | Out-Null
-            
-            # TargetDir is OUTSIDE LinkRoot to ensure it's ONLY reached via the link when we recurse from LinkRoot
-            $script:ExternalTarget = Join-Path $script:TestRoot "ExternalTarget"
-            if (Test-Path $script:ExternalTarget) { Remove-Item $script:ExternalTarget -Recurse -Force }
-            New-Item -ItemType Directory -Path $script:ExternalTarget | Out-Null
-            New-Item -ItemType File -Path (Join-Path $script:ExternalTarget "TargetFile.txt") | Out-Null
+    It 'passes ProviderMode to New-TreeChildProvider' {
+        InModuleScope ShowTree {
+            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
 
-            if ($IsWindows) {
-                # Create a Junction on Windows
-                $junctionPath = Join-Path $script:LinkRoot "JunctionLink"
-                New-Item -ItemType Junction -Path $junctionPath -Target $script:ExternalTarget | Out-Null
-            } else {
-                # Create a Symlink on Unix
-                $symlinkPath = Join-Path $script:LinkRoot "SymlinkLink"
-                New-Item -ItemType SymbolicLink -Path $symlinkPath -Target $script:ExternalTarget | Out-Null
+            $provider = [PSCustomObject]@{
+                PSTypeName   = 'ShowTree.TreeChildProvider'
+                Name         = 'Win32'
+                ProviderMode = 'Win32'
+                GetChildren  = { }
             }
-        }
 
-        It "Does NOT follow links by default" {
-            $items = Get-TreeItem -Path $script:LinkRoot -Depth 2
-            # Should see JunctionLink/SymlinkLink, but NOT TargetFile.txt inside it
-            $linkName = if ($IsWindows) { "JunctionLink" } else { "SymlinkLink" }
-            $items.Name | Should -Contain $linkName
-            $items.Name | Should -Not -Contain "TargetFile.txt"
-        }
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
 
-        It "Follows links when -FollowLinks is specified" {
-            $items = Get-TreeItem -Path $script:LinkRoot -Depth 2 -FollowLinks
-            $items.Name | Should -Contain "TargetFile.txt"
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            Mock Invoke-TreeTraversal {
+                return
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -ProviderMode Win32)
+
+            $records | Should -BeNullOrEmpty
+
+            Should -Invoke New-TreeChildProvider -Times 1 -Exactly -ParameterFilter {
+                $ProviderMode -eq 'Win32'
+            }
+
+            Should -Invoke Invoke-TreeTraversal -Times 1 -Exactly -ParameterFilter {
+                $Provider -eq $provider
+            }
         }
     }
 
-    Context "Filtering" {
+    It 'passes filtering switches to Invoke-TreeTraversal' {
+        InModuleScope ShowTree {
+            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
 
-        It "Excludes items by name" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0 -Exclude "Dir1"
-            $items.Name | Should -Not -Contain "Dir1"
-            $items.Name | Should -Contain "File2.txt"
-        }
+            $provider = [PSCustomObject]@{
+                PSTypeName   = 'ShowTree.TreeChildProvider'
+                Name         = 'PowerShell'
+                ProviderMode = 'PowerShell'
+                GetChildren  = { }
+            }
 
-        It "Excludes items by glob pattern" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0 -Exclude "*.txt"
-            $items.Name | Should -Not -Contain "File2.txt"
-            $items.Name | Should -Contain "Dir1"
-        }
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path         = $rootPath
+                }
+            }
 
-        It "Prunes subtrees of excluded directories" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 1 -Exclude "Dir1"
-            $items.Name | Should -Not -Contain "Dir1"
-            $items.Name | Should -Not -Contain "File1.txt"
-        }
+            Mock New-TreeChildProvider {
+                $provider
+            }
 
-        It "Includes items by glob pattern (resurrection)" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0 -Exclude "*" -Include "Dir1"
-            $items.Name | Should -Contain "Dir1"
-            $items.Name | Should -Not -Contain "File2.txt"
-        }
+            Mock Invoke-TreeTraversal {
+                return
+            }
 
-        It "Hides hidden items" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 0 -HideHidden
-            $items.Name | Should -Not -Contain ".HiddenFile"
-        }
+            $records = @(
+                Get-TreeItem `
+                    -Path $rootPath `
+                    -Depth 3 `
+                    -Include '*.ps1' `
+                    -Exclude 'bin' `
+                    -HideHidden `
+                    -HideSystem `
+                    -DirectoryOnly `
+                    -FollowLinks
+            )
 
-        if ($IsWindows) {
-            It "Hides system items on Windows" {
-                $items = Get-TreeItem -Path $script:TestRoot -Depth 0 -HideSystem
-                $items.Name | Should -Not -Contain "_SystemFile"
+            $records | Should -BeNullOrEmpty
+
+            Should -Invoke Invoke-TreeTraversal -Times 1 -Exactly -ParameterFilter {
+                $Path -eq $rootPath -and
+                $RootPath -eq $rootPath -and
+                $MaxDepth -eq 2 -and
+                $CurrentDepth -eq 0 -and
+                $Provider -eq $provider -and
+                $Include -contains '*.ps1' -and
+                $Exclude -contains 'bin' -and
+                $HideHidden -eq $true -and
+                $HideSystem -eq $true -and
+                $DirectoryOnly -eq $true -and
+                $FollowLinks -eq $true
             }
         }
+    }
 
-        It "Filters out files when -DirectoryOnly is specified" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 1 -DirectoryOnly
-            # Should contain Dir1, but NOT File2.txt or File1.txt
-            $items.Name | Should -Contain "Dir1"
-            $items.Name | Should -Not -Contain "File2.txt"
-            $items.Name | Should -Not -Contain "File1.txt"
-            $items.Name | Should -Not -Contain ".HiddenFile"
-            if ($IsWindows) {
-                $items.Name | Should -Not -Contain "_SystemFile"
+    It 'streams multiple TreeRecord objects from traversal' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param([string[]] $FixtureScripts)
+            foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+
+            $provider = [PSCustomObject]@{
+                PSTypeName   = 'ShowTree.TreeChildProvider'
+                Name         = 'PowerShell'
+                ProviderMode = 'PowerShell'
+                GetChildren  = { }
             }
-        }
 
-        It "Still follows into directories when -DirectoryOnly is specified" {
-            $items = Get-TreeItem -Path $script:TestRoot -Depth 1 -DirectoryOnly
-            # Dir1 is a container, so we should have recurse into it, 
-            # but File1.txt inside it should be filtered out.
-            $items | Where-Object { $_.Name -eq "Dir1" } | Should -Not -BeNull
-            $items.Name | Should -Not -Contain "File1.txt"
+            $file = New-FixtureTreeItem `
+                -Name 'file-a.txt' `
+                -ParentPath $rootPath `
+                -Depth 0
+
+            $dir = New-FixtureTreeItem `
+                -Name 'dir-a' `
+                -ParentPath $rootPath `
+                -Metadata @{ IsContainer = $true } `
+                -Depth 0
+
+            $recordsToReturn = @(
+                New-TreeRecord `
+                    -RecordType Item `
+                    -TreeItem $file `
+                    -TreeLayout (New-TreeLayout -Depth 0 -RelativeDepth 0 -IsLastSibling:$false)
+
+                New-TreeRecord `
+                    -RecordType Item `
+                    -TreeItem $dir `
+                    -TreeLayout (New-TreeLayout -Depth 0 -RelativeDepth 0 -IsLastSibling:$true)
+            )
+
+            Mock Resolve-Path {
+                [PSCustomObject]@{
+                    ProviderPath = $rootPath
+                    Path = $rootPath
+                }
+            }
+
+            Mock New-TreeChildProvider {
+                $provider
+            }
+
+            Mock Invoke-TreeTraversal {
+                foreach ($record in $recordsToReturn) {
+                    $record
+                }
+            }
+
+            $records = @(Get-TreeItem -Path $rootPath -Depth 0)
+
+            $records.Count | Should -Be 2
+            $records.RecordType | Should -Be @('Item', 'Item')
+            $records.TreeItem.Name | Should -Be @('file-a.txt', 'dir-a')
         }
     }
 }

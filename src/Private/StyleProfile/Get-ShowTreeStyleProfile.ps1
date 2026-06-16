@@ -1,5 +1,13 @@
 # src/Private/StyleProfile/Get-ShowTreeStyleProfile.ps1
 
+<#
+.SYNOPSIS
+    Loads a style profile from disk or returns the default.
+
+.DESCRIPTION
+    The Get-ShowTreeStyleProfile cmdlet constructs a style profile by merging the base profile, 
+    the default profile, localized strings for the requested culture, and an optional user profile from disk.
+#>
 function Get-ShowTreeStyleProfile {
     [CmdletBinding()]
     param(

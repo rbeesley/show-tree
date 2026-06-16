@@ -19,8 +19,8 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
-            $fullPath = Join-Path $root 'File.txt'
+            $tree = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $fullPath = Join-Path $tree 'File.txt'
             $item = New-TreeItem -FullPath $fullPath -IsContainer:$false -Kind 'File'
 
             $item.PSObject.TypeNames[0] | Should -Be 'ShowTree.TreeItem'
@@ -44,8 +44,8 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
-            $fullPath = Join-Path $root 'Dir'
+            $tree = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $fullPath = Join-Path $tree 'Dir'
             $item = New-TreeItem -FullPath $fullPath -IsContainer:$true -Kind 'Directory'
 
             $item.Name        | Should -Be 'Dir'
@@ -59,8 +59,8 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $root = if ($IsWindows) { 'C:\X' } else { '/tmp/X' }
-            $fullPath = Join-Path $root 'Y'
+            $tree = if ($IsWindows) { 'C:\X' } else { '/tmp/X' }
+            $fullPath = Join-Path $tree 'Y'
             $item = New-TreeItem `
                 -FullPath $fullPath `
                 -IsContainer:$true `
@@ -76,8 +76,8 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $root = if ($IsWindows) { 'C:\Hidden' } else { '/tmp/Hidden' }
-            $fullPath = Join-Path $root 'File.txt'
+            $tree = if ($IsWindows) { 'C:\Hidden' } else { '/tmp/Hidden' }
+            $fullPath = Join-Path $tree 'File.txt'
             $native = [PSCustomObject]@{
                 Platform = 'Windows'
                 FileAttributes = [IO.FileAttributes]::Hidden
@@ -146,10 +146,10 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $root = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
-            $childPath = Join-Path $root 'Child.txt'
+            $tree = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $childPath = Join-Path $tree 'Child.txt'
             $child = New-TreeItem -FullPath $childPath -IsContainer:$false -Kind 'File'
-            $parent = New-TreeItem -FullPath $root -IsContainer:$true -Kind 'Directory' -Children @($child)
+            $parent = New-TreeItem -FullPath $tree -IsContainer:$true -Kind 'Directory' -Children @($child)
 
             $parent.Children.Count | Should -Be 1
             $parent.Children[0].Name | Should -Be 'Child.txt'
@@ -160,9 +160,9 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $root = if ($IsWindows) { 'C:\' } else { '/tmp/' }
-            $linkPath = Join-Path $root 'Link'
-            $targetPath = Join-Path $root 'Target'
+            $tree = if ($IsWindows) { 'C:\' } else { '/tmp/' }
+            $linkPath = Join-Path $tree 'Link'
+            $targetPath = Join-Path $tree 'Target'
             $link = [PSCustomObject]@{
                 Type = 'SymbolicLink'
                 Target = $targetPath
@@ -282,30 +282,28 @@ Describe "New-TreeItem" {
 
             $expectedTarget = if ($IsWindows) { 'C:\Target' } else { '/tmp/Target' }
             $structure = [ordered]@{
-                'Root' = [ordered]@{
-                    'Folder' = [ordered]@{
-                        'File.txt' = $null
-                    }
-                    'Link' = @{
-                        IsSymlink = $true
-                        Target = $expectedTarget
-                    }
+                'Folder' = [ordered]@{
+                    'File.txt' = $null
+                }
+                'Link' = @{
+                    IsSymlink = $true
+                    Target = $expectedTarget
                 }
             }
             
-            $root = New-FixtureTree -Structure $structure
+            $tree = New-FixtureTree -Structure $structure
             
-            $root.Name | Should -Be 'Root'
-            $root.Children.Count | Should -Be 2
+            $tree.Name | Should -Be 'Root'
+            $tree.Children.Count | Should -Be 2
             
-            $folder = $root.Children | Where-Object { $_.Name -eq 'Folder' }
+            $folder = $tree.Children | Where-Object { $_.Name -eq 'Folder' }
             $folder.IsDirectory | Should -Be $true
             $folder.Depth | Should -Be 1
             $folder.Children.Count | Should -Be 1
             $folder.Children[0].Name | Should -Be 'File.txt'
             $folder.Children[0].Depth | Should -Be 2
             
-            $link = $root.Children | Where-Object { $_.Name -eq 'Link' }
+            $link = $tree.Children | Where-Object { $_.Name -eq 'Link' }
             $link.Kind | Should -Be 'Symlink'
             $link.IsLink | Should -Be $true
             $link.Link.Target | Should -Be $expectedTarget

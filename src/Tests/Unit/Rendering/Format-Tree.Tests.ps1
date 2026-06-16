@@ -1,4 +1,4 @@
-﻿# src\Tests\Unit\Rendering\Format-Tree.Tests.ps1
+﻿# src/Tests/Unit/Rendering/Format-Tree.Tests.ps1
 
 BeforeAll {
     $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
@@ -8,58 +8,119 @@ BeforeAll {
         -SourceRootName 'src' `
         -Exclude 'src/Tests/*' `
         -PassThru
-    $script:FixtureScripts  = @(
-        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
+
+    $script:FixtureScripts = @(
         "$script:TestRoot\Helpers\PrivateHelpers.ps1"
+        "$script:TestRoot\Fixtures\TreeItemFixtures.ps1"
     )
+
+    $script:comprehensiveStructure = [ordered]@{
+        'hidden-file.tmp' = @{'FileAttributes' = 'Hidden'}
+        'system-file.sys' = @{'FileAttributes' = 'System'}
+        '<gap-2>' = $null
+        'dir-1' = [ordered]@{
+            'file-1-1.txt' = $null
+            'file-1-2.txt' = $null
+            '<gap-6>' = $null
+            'dir-1-1' = [ordered]@{
+                'file-1-1-1.txt' = $null
+            }
+        }
+        '<gap-9>' = $null
+        'link-dir' = @{'Target' = 'C:\Elsewhere'; 'IsContainer' = $true; 'IsSymlink' = $true; 'Children' = [ordered]@{ }}
+        'dir-2' = [ordered]@{
+            'file-2-1.txt' = $null
+        }
+    }
 }
 
-Describe "Format-Tree" {
-    Context "Basic Rendering" {
-        It "Renders a single file" {
+Describe 'Format-Tree' {
+    Context 'Basic Rendering' {
+
+        It 'renders Item records in stream order' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
                 $structure = [ordered]@{
-                    "File1.txt" = $null
+                    'file-a.txt' = $null
+                    'dir-a' = [ordered]@{}
                 }
 
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
 
-                # # Write-Host "[DEBUG_LOG] Output lines:"
-                # $out | ForEach-Object { Write-Host "[DEBUG_LOG] '$_'" }
-                
-                $out.Count | Should -Be 1
-                $out[0] | Should -Be "╙── File1.txt"
+                $output.Count | Should -Be 2
+                $output[0] | Should -Match 'file-a\.txt'
+                $output[1] | Should -Match 'dir-a'
             }
         }
 
-
-        It "Renders a directory with a file" {
+        It 'renders Gap records as additional output lines' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
                 $structure = [ordered]@{
-                    "Dir1" = [ordered]@{
-                        "File1.txt" = $null
+                    'dir-a' = [ordered]@{
+                        'inside-a.txt' = $null
+                    }
+                    '<gap-2>' = $null
+                    'dir-b' = [ordered]@{}
+                }
+
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
+
+                $output.Count | Should -Be 4
+                $output[0] | Should -Match 'dir-a'
+                $output[1] | Should -Match 'inside-a\.txt'
+                $output[2] | Should -Not -Match 'dir-a|inside-a\.txt|dir-b'
+                $output[3] | Should -Match 'dir-b'
+            }
+        }
+
+        It 'renders a single file'{
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
+
+                $structure = [ordered]@{
+                    'file-a.txt' = $null
+                }
+
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
+
+                $output.Count | Should -Be 1
+                $output[0] | Should -Match 'file-a\.txt'
+            }
+        }
+
+        It 'renders a directory with a file' {
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
+
+                $structure = [ordered]@{
+                    'dir-a' = [ordered]@{
+                        'file-a.txt' = $null
                     }
                 }
 
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
 
-                $out.Count | Should -Be 2
-                $out[0] | Should -Be "╚══ Dir1"
-                $out[1] | Should -Be "    ╙── File1.txt"
+                $output.Count | Should -Be 2
+                $output[0] | Should -Match 'dir-a'
+                $output[1] | Should -Match 'file-a\.txt'
             }
         }
 
-        It "Renders multiple levels" {
+        It 'renders multiple levels' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
                 $structure = [ordered]@{
                     "RootDir" = [ordered]@{
@@ -69,309 +130,540 @@ Describe "Format-Tree" {
                     }
                 }
 
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
 
-                # In Normal mode, single root subtrees don't get a tail gap if they are the last item
-                $out.Count | Should -Be 3
-                $out[0] | Should -Be "╚══ RootDir"
-                $out[1] | Should -Be "    ╚══ SubDir"
-                $out[2] | Should -Be "        ╙── File1.txt"
+                $output.Count | Should -Be 3
+                $output[0] | Should -Match 'RootDir'
+                $output[1] | Should -Match 'SubDir'
+                $output[2] | Should -Match 'File1\.txt'
             }
         }
 
-        It "Renders a simple nested graph correctly" {
+        It 'renders multiple top-level items with a gap in between' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
                 $structure = [ordered]@{
-                    "DirA" = [ordered]@{
-                        "FileA1.txt" = $null
-                    }
-                    "DirB" = [ordered]@{
-                        "FileB1.txt" = $null
-                    }
-                    "FileRoot.txt" = $null
+                    "file-a.txt" = $null
+                    "<gap-1>" = $null
+                    "dir-a" = [ordered]@{}
                 }
 
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
 
-                # Expected graphical output:
-                # ╠══ DirA
-                # ║   ╙── FileA1.txt
-                # ║
-                # ╠══ DirB
-                # ║   ╙── FileB1.txt
-                # ║
-                # ╙── FileRoot.txt
+                $output.Count | Should -Be 3
+                $output[0] | Should -Match 'file-a\.txt'
+                $output[2] | Should -Match 'dir-a'
+            }
+        }
 
-                $expected = @(
-                    "╠══ DirA"
-                    "║   ╙── FileA1.txt"
-                    "║"
-                    "╠══ DirB"
-                    "║   ╙── FileB1.txt"
-                    "║"
-                    "╙── FileRoot.txt"
+        It 'renders a simple nested graph correctly' {
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
+
+                $structure = [ordered]@{
+                    "dir-a" = [ordered]@{
+                        "file-a.txt" = $null
+                    }
+                    "<gap-2>" = $null
+                    "dir-b" = [ordered]@{
+                        "file-b.txt" = $null
+                    }
+                    "<gap-5>" = $null
+                    "file-root.txt" = $null
+                }
+
+                # Generate records directly from the structure
+                $records = New-FixtureTreeRecordStream -Structure $structure
+                $output = @($records | Format-Tree)
+
+                $output.Count | Should -Be 7
+                $output[0] | Should -Match 'dir-a'
+                $output[1] | Should -Match 'file-a\.txt'
+                $output[3] | Should -Match 'dir-b'
+                $output[4] | Should -Match 'file-b\.txt'
+                $output[6] | Should -Match 'file-root\.txt'
+            }
+        }
+    }
+
+    Context 'Modes and styles' {
+        Context 'Normal mode' {
+            It 'renders a simple tree correctly in ASCII style' {
+                InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    $structure = [ordered]@{
+                        'dir1' = [ordered]@{}
+                        'dir2' = [ordered]@{}
+                    }
+
+                    # Generate records directly from the structure
+                    $records = New-FixtureTreeRecordStream -Structure $structure
+                    $output = @($records | Format-Tree -Mode Normal -Ascii)
+
+                    $expected = @(
+                        '+== dir1'
+                        '\== dir2'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a simple tree correctly in Unicode style' {
+                InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    $structure = [ordered]@{
+                        'dir1' = [ordered]@{}
+                        'dir2' = [ordered]@{}
+                    }
+
+                    # Generate records directly from the structure
+                    $records = New-FixtureTreeRecordStream -Structure $structure
+                    $output = @($records | Format-Tree -Mode Normal)
+
+                    $expected = @(
+                        '╠══ dir1'
+                        '╚══ dir2'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a complex tree structure correctly with ASCII style' {
+                InModuleScope ShowTree -Parameters @{
+                        FixtureScripts = $script:FixtureScripts
+                        ComprehensiveStructure = $script:comprehensiveStructure
+                } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    # Use the comprehensive structure defined in BeforeAll
+                    $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                    $output = @($records | Format-Tree -Mode Normal -ShowTargets -Ascii)
+
+                    # Expected output (manually verified against the structure):
+                    $expected = @(
+                        '+-- hidden-file.tmp'
+                        '+-- system-file.sys'
+                        '|'
+                        '+== dir-1'
+                        '|   +-- file-1-1.txt'
+                        '|   +-- file-1-2.txt'
+                        '|   |'
+                        '|   \== dir-1-1'
+                        '|       \-- file-1-1-1.txt'
+                        '|'
+                        '+== link-dir -> C:\Elsewhere'
+                        '\== dir-2'
+                        '    \-- file-2-1.txt'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a complex tree structure correctly with Unicode style' {
+                InModuleScope ShowTree -Parameters @{
+                        FixtureScripts = $script:FixtureScripts
+                        ComprehensiveStructure = $script:comprehensiveStructure
+                } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    # Use the comprehensive structure defined in BeforeAll
+                    $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                    $output = @($records | Format-Tree -Mode Normal -ShowTargets)
+
+                    # Expected output (manually verified against the structure):
+                    $expected = @(
+                        '╟── hidden-file.tmp'
+                        '╟── system-file.sys'
+                        '║'
+                        '╠══ dir-1'
+                        '║   ╟── file-1-1.txt'
+                        '║   ╟── file-1-2.txt'
+                        '║   ║'
+                        '║   ╚══ dir-1-1'
+                        '║       ╙── file-1-1-1.txt'
+                        '║'
+                        '╠══ link-dir -> C:\Elsewhere'
+                        '╚══ dir-2'
+                        '    ╙── file-2-1.txt'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+        }
+
+        Context 'Tree mode' {
+            It 'renders a simple tree correctly in ASCII style' {
+                InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    $structure = [ordered]@{
+                        'dir1' = [ordered]@{}
+                        'dir2' = [ordered]@{}
+                    }
+
+                    # Generate records directly from the structure
+                    $records = New-FixtureTreeRecordStream -Structure $structure
+                    $output = @($records | Format-Tree -Mode Tree -Ascii)
+
+                    # Expected output:
+                    $expected = @(
+                        '+---dir1'
+                        '\---dir2'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a simple tree mode correctly in Unicode style' {
+                InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    $structure = [ordered]@{
+                        'dir1' = [ordered]@{}
+                        'dir2' = [ordered]@{}
+                    }
+
+                    # Generate records directly from the structure
+                    $records = New-FixtureTreeRecordStream -Structure $structure
+                    $output = @($records | Format-Tree -Mode Tree)
+
+                    # Expected output:
+                    $expected = @(
+                        '├───dir1'
+                        '└───dir2'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a complex tree structure correctly in Tree mode with ASCII style' {
+                InModuleScope ShowTree -Parameters @{
+                        FixtureScripts = $script:FixtureScripts
+                        ComprehensiveStructure = $script:comprehensiveStructure
+                } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    # Use the comprehensive structure defined in BeforeAll
+                    $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                    $output = @($records | Format-Tree -Mode Tree -Ascii)
+
+                    # Expected output (manually verified against the structure):
+                    $expected = @(
+                        '|   hidden-file.tmp'
+                        '|   system-file.sys'
+                        '|'
+                        '+---dir-1'
+                        '|   |   file-1-1.txt'
+                        '|   |   file-1-2.txt'
+                        '|   |'
+                        '|   \---dir-1-1'
+                        '|           file-1-1-1.txt'
+                        '|'
+                        '+---link-dir'
+                        '\---dir-2'
+                        '        file-2-1.txt'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a complex tree structure correctly in Tree mode with Unicode style' {
+                InModuleScope ShowTree -Parameters @{
+                        FixtureScripts = $script:FixtureScripts
+                        ComprehensiveStructure = $script:comprehensiveStructure
+                } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    # Use the comprehensive structure defined in BeforeAll
+                    $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                    $output = @($records | Format-Tree -Mode Tree)
+
+                    # Expected output (manually verified against the structure):
+                    $expected = @(
+                        '│   hidden-file.tmp'
+                        '│   system-file.sys'
+                        '│'
+                        '├───dir-1'
+                        '│   │   file-1-1.txt'
+                        '│   │   file-1-2.txt'
+                        '│   │'
+                        '│   └───dir-1-1'
+                        '│           file-1-1-1.txt'
+                        '│'
+                        '├───link-dir'
+                        '└───dir-2'
+                        '        file-2-1.txt'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+        }
+
+        Context 'List mode' {
+            It 'renders a simple tree correctly in ASCII style' {
+                InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    $structure = [ordered]@{
+                        'dir1' = [ordered]@{}
+                        'dir2' = [ordered]@{}
+                    }
+
+                    # Generate records directly from the structure
+                    $records = New-FixtureTreeRecordStream -Structure $structure
+                    $output = @($records | Format-Tree -Mode List -NoGap -Ascii)
+
+                    $expected = @(
+                        ' dir1'
+                        ' dir2'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a simple tree correctly in Unicode style' {
+                InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    $structure = [ordered]@{
+                        'dir1' = [ordered]@{}
+                        'dir2' = [ordered]@{}
+                    }
+
+                    # Generate records directly from the structure
+                    $records = New-FixtureTreeRecordStream -Structure $structure
+                    $output = @($records | Format-Tree -Mode List -NoGap)
+
+                    $expected = @(
+                        ' dir1'
+                        ' dir2'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a complex tree structure correctly with ASCII style' {
+                InModuleScope ShowTree -Parameters @{
+                        FixtureScripts = $script:FixtureScripts
+                        ComprehensiveStructure = $script:comprehensiveStructure
+                } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    # Use the comprehensive structure defined in BeforeAll
+                    $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                    $output = @($records | Format-Tree -Mode List -NoGap -Ascii)
+
+                    # Expected output (manually verified against the structure):
+                    $expected = @(
+                        ' hidden-file.tmp'
+                        ' system-file.sys'
+                        ' dir-1'
+                        '  file-1-1.txt'
+                        '  file-1-2.txt'
+                        '  dir-1-1'
+                        '   file-1-1-1.txt'
+                        ' link-dir'
+                        ' dir-2'
+                        '  file-2-1.txt'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+
+            It 'renders a complex tree structure correctly with Unicode style' {
+                InModuleScope ShowTree -Parameters @{
+                        FixtureScripts = $script:FixtureScripts
+                        ComprehensiveStructure = $script:comprehensiveStructure
+                } {
+                    param([string[]] $FixtureScripts)
+                    foreach ($script in $FixtureScripts) { . $script }
+
+                    # Use the comprehensive structure defined in BeforeAll
+                    $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                    $output = @($records | Format-Tree -Mode List -NoGap)
+
+                    # Expected output (manually verified against the structure):
+                    $expected = @(
+                        ' hidden-file.tmp'
+                        ' system-file.sys'
+                        ' dir-1'
+                        '  file-1-1.txt'
+                        '  file-1-2.txt'
+                        '  dir-1-1'
+                        '   file-1-1-1.txt'
+                        ' link-dir'
+                        ' dir-2'
+                        '  file-2-1.txt'
+                    )
+
+                    $output | Should -Be $expected
+                }
+            }
+        }
+    }
+
+    Context 'Option Handling' {
+        It 'suppresses Gap records when NoGap is specified' {
+            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
+
+                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+
+                $records = @(
+                    New-FixtureTreeRecord `
+                        -Name 'file-a' `
+                        -ParentPath $rootPath `
+                        -IsLastSibling:$false `
+                        -HasLaterSiblingDirectory:$true `
+                        -Metadata @{ IsContainer = $true }
+
+                    New-FixtureTreeRecord `
+                        -RecordType Gap `
+                        -Depth 1 `
+                        -AncestorIsLastSibling @($false)
+
+                    New-FixtureTreeRecord `
+                        -Name 'dir-a' `
+                        -ParentPath $rootPath `
+                        -IsLastSibling:$true `
+                        -Metadata @{ IsContainer = $true }
                 )
 
-                for ($i = 0; $i -lt [Math]::Max($out.Count, $expected.Count); $i++) {
-                    $expectedLine = $expected[$i]
-                    $out[$i] | Should -Be $expectedLine -ErrorAction Continue
-                }
+                $output = @($records | Format-Tree -Mode Normal -Ascii -NoGap)
 
-                $out.Count | Should -Be $expected.Count
-            }
-        }
-    }
-
-
-    Context "Modes and Styles" {
-       It "Renders in Tree.com mode" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-                $structure = [ordered]@{
-                    "File1.txt" = $null
-                }
-
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Tree')
-
-                $out[0] | Should -Be "    File1.txt"
+                $output.Count | Should -Be 2
+                $output[0] | Should -Match 'file-a'
+                $output[1] | Should -Match 'dir-a'
             }
         }
 
-       It "Renders directory in Tree.com mode" {
+        It 'renders link targets when ShowTargets is specified' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
-               $structure = [ordered]@{
-                   "Dir" = [ordered]@{
-                       "File.txt" = $null
-                       "SubDir" = [ordered]@{ }
-                   }
-               }
+                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
 
-               $root = New-FixtureTree -Structure $structure
-               $items = $root | Select-TreeItem -Expand Descendants
-               $out = @($items | Format-Tree -Mode 'Tree' -NoGap)
+                $targetPath = Join-Path $rootPath 'target.txt'
+                $records = @(
+                    New-FixtureTreeRecord `
+                        -Name 'link.txt' `
+                        -ParentPath $rootPath `
+                        -Metadata @{
+                            IsSymlink = $true
+                            Target = $targetPath
+                        }
+                )
 
-               $out[0] | Should -Be "└───Dir"
-               $out[1] | Should -Be "    │   File.txt"
-               $out[2] | Should -Be "    └───SubDir"
-           }
-       }
+                $output = @($records | Format-Tree -Mode Normal -Ascii -ShowTargets -NoGap)
 
-        It "Renders in ASCII mode" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                $escapedSourcePath = [regex]::Escape('link.txt')
+                $escapedTargetPath = [regex]::Escape($targetPath)
 
-                $structure = [ordered]@{
-                    "File1.txt" = $null
-                }
-
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal' -Ascii)
-
-                $out[0] | Should -Be "\-- File1.txt"
+                $output.Count | Should -Be 1
+                $output[0] | Should -Match $escapedSourcePath
+                $output[0] | Should -Match $escapedTargetPath
             }
         }
 
-        It "Renders in List mode" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-                $structure = [ordered]@{
-                    "File1.txt" = $null
-                }
-
-                $root = New-FixtureTree -Structure $structure
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'List')
-
-                $out[0] | Should -Be " File1.txt"
-            }
-        }
-    }
-
-    Context "Links" {
-        It "Renders symlink targets when requested" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-                $item = New-FixtureTreeItem -Name "Link" -IsSymlink $true -Target "C:\Target"
-                $out = @($item | Format-Tree -ShowTargets)
-
-                $out[0] | Should -Be "╙── Link -> C:\Target"
-            }
-        }
-    }
-
-    Context "Style Profile Path Handling" {
-        It "Accepts a file path for StyleProfile" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+        It 'accepts a file path for StyleProfile' {
+            InModuleScope ShowTree -Parameters @{
+                    FixtureScripts = $script:FixtureScripts
+                    ComprehensiveStructure = $script:comprehensiveStructure
+            } { 
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
                 $styleProfilePath = Join-Path $script:moduleSrcRoot "Data\DefaultStyleProfile.psd1"
-                $item = New-FixtureTreeItem -Name "File.txt"
-                $out = @($item | Format-Tree -StyleProfile $styleProfilePath)
 
-                $out[0] | Should -Be "╙── File.txt"
+                # Use the comprehensive structure defined in BeforeAll
+                $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
+                $output = @($records | Format-Tree -Mode Normal -StyleProfile $styleProfilePath)
+
+                $output.Count | Should -Be 13
             }
         }
     }
 
-    Context "Streaming and Graphs" {
-        It "Correctly handles a stream of items where some are children of others" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-                $structure = [ordered]@{
-                    "Root" = [ordered]@{
-                        "File1.txt" = $null
-                    }
-                }
-                $root = New-FixtureTree -Structure $structure
-
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
-
-                $out.Count | Should -Be 2
-                $out[0] | Should -Be "╚══ Root"
-                $out[1] | Should -Be "    ╙── File1.txt"
+    Context 'Error Handling' {
+        It 'throws for non TreeRecord input' {
+            InModuleScope ShowTree {
+                {
+                    [PSCustomObject]@{
+                        Name = 'not-a-record'
+                    } | Format-Tree -Mode Normal -Ascii
+                } | Should -Throw
             }
         }
 
-
-        It "Correctly handles multiple root items" {
+        It 'throws when an Item record is missing TreeLayout metadata' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+                param([string[]] $FixtureScripts)
+                foreach ($script in $FixtureScripts) { . $script }
 
-                $item1 = New-FixtureTreeItem -Name "File1.txt"
-                $item2 = New-FixtureTreeItem -Name "File2.txt"
+                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
 
-                $out = @($item1, $item2 | Format-Tree -Mode 'Normal')
+                $item = New-FixtureTreeItem `
+                    -Name 'file-a.txt' `
+                    -ParentPath $rootPath `
+                    -Depth 0
 
-                $out.Count | Should -Be 2
-                $out[0] | Should -Be "╟── File1.txt"
-                $out[1] | Should -Be "╙── File2.txt"
+                $record = [PSCustomObject]@{
+                    PSTypeName  = 'ShowTree.TreeRecord'
+                    RecordType  = 'Item'
+                    TreeItem    = $item
+                    TreeLayout  = $null
+                }
+
+                {
+                    $record | Format-Tree -Mode Normal -Ascii
+                } | Should -Throw
             }
         }
 
-       It "Renders a cousin gap between major root groups in Normal mode" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-               
-                # Root structure:
-                # Directories
-                #   SubDir
-                # Files
-                #   File.txt
-
-                $structure = [ordered]@{
-                     "Directories" = [ordered]@{
-                          "SubDir" = [ordered]@{ }
-                     }
-                     "Files" = [ordered]@{
-                          "File.txt" = $null
-                     }
+        It 'throws when a Gap record is missing TreeLayout metadata' {
+            InModuleScope ShowTree {
+                $record = [PSCustomObject]@{
+                    PSTypeName = 'ShowTree.TreeRecord'
+                    RecordType = 'Gap'
+                    TreeItem   = $null
+                    TreeLayout = $null
                 }
 
-                $root = New-FixtureTree -Structure $structure
-
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
-
-                # Expected output (Unicode):
-                # ╠══ Directories
-                # ║   ╚══ SubDir
-                # ║
-                # ╚══ Files
-                #     ╙── File.txt
-
-                $out.Count | Should -Be 5
-                $out[0] | Should -Be "╠══ Directories"
-                $out[1] | Should -Be "║   ╚══ SubDir"
-                $out[2] | Should -Be "║"
-                $out[3] | Should -Be "╚══ Files"
-                $out[4] | Should -Be "    ╙── File.txt"
-           }
-       }
-
-        It "Does not render a gap when children are filtered out (DirectoryOnly scenario)" {
-            InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
-                param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
-
-                # Structure:
-                # Private (Container, has child file filtered out)
-                # Public (Container)
-                
-                # In the real scenario, Get-TreeItem -DirectoryOnly outputs Private and Public.
-                # Private.Children might still have the file, but the file is NOT in the stream.
-                
-                $file = New-FixtureTreeItem -Name "dummy.ps1" -IsDirectory $false
-                $private = New-FixtureTreeItem -Name "Private" -IsDirectory $true -Children @($file)
-                $file.ParentPath = $private.FullPath
-                $public = New-FixtureTreeItem -Name "Public" -IsDirectory $true
-                
-                # Stream only contains Private and Public
-                $in = @($private, $public)
-                $out = @($in | Format-Tree -Mode 'Normal')
-                
-                # Expected (Unicode):
-                # ╠══ Private
-                # ╚══ Public
-                # NO gap because Private has no children in the stream.
-                
-                $out.Count | Should -Be 2
-                $out[0] | Should -Be "╠══ Private"
-                $out[1] | Should -Be "╚══ Public"
+                {
+                    $record | Format-Tree -Mode Normal -Ascii
+                } | Should -Throw
             }
         }
-
-       It "Renders a gap between files and directories at the same level" {
-           InModuleScope ShowTree {
-               . (Join-Path $script:moduleSrcRoot "Tests\Fixtures\TreeItemFixtures.ps1")
-               
-               # Structure:
-               # Root
-               #   File1.txt
-               #   Dir1
-               #     File2.txt
-
-                $structure = [ordered]@{
-                    "Root" = [ordered]@{
-                        "File1.txt" = $null
-                        "Dir1" = [ordered]@{
-                            "File2.txt" = $null
-                        }
-                    }
-                }
-
-                $root = New-FixtureTree -Structure $structure
-
-                $items = $root | Select-TreeItem -Expand Descendants
-                $out = @($items | Format-Tree -Mode 'Normal')
-
-               # Expected lines:
-               # ╚══ Root
-               #     ╟── File1.txt
-               #     ║
-               #     ╚══ Dir1
-               #         ╙── File2.txt
-
-               $out[0] | Should -Be "╚══ Root"
-               $out[1] | Should -Be "    ╟── File1.txt"
-               $out[2] | Should -Be "    ║"
-               $out[3] | Should -Be "    ╚══ Dir1"
-               $out[4] | Should -Be "        ╙── File2.txt"
-           }
-       }
     }
 }

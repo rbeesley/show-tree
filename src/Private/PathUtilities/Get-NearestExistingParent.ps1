@@ -5,8 +5,8 @@
     Finds the nearest existing parent directory.
 
 .DESCRIPTION
-    Used for Tree.com header generation when the target path
-    does not fully exist.
+    The Get-NearestExistingParent cmdlet walks up the path hierarchy until it finds a directory that exists.
+    This is primarily used for generating headers when the requested path does not exist.
 #>
 function Get-NearestExistingParent {
     param([string]$Path)

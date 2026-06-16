@@ -5,10 +5,9 @@
     Enumerates directory entries using Win32 FindFirstFile.
 
 .DESCRIPTION
-    Used in Tree.com mode to match exact ordering and behavior.
-    Returns PSCustomObject with:
-      • Directories = [...]
-      • Files       = [...]
+    The Get-RawDirectoryEntries cmdlet uses P/Invoke to call the Win32 FindFirstFile and FindNextFile APIs.
+    This provides low-level enumeration of directory contents, matching the ordering and behavior of 
+    the classic tree.com utility on Windows.
 #>
 function Get-RawDirectoryEntries {
     param(

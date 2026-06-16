@@ -1,5 +1,14 @@
 # src/Private/StyleProfile/Merge-ShowTreeHashtable.ps1
 
+<#
+.SYNOPSIS
+    Deep merges two hashtables.
+
+.DESCRIPTION
+    The Merge-ShowTreeHashtable cmdlet performs a deep merge of two hashtables, where values from
+    the Override hashtable replace or extend values in the Base hashtable. This is used for
+    combining style profiles and overrides.
+#>
 function Merge-ShowTreeHashtable {
     [CmdletBinding()]
     param(

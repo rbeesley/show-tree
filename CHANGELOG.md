@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.0.0] - 2026-06-16
+
+### Added
+- **Cross-Platform Support**: Fully validated on Linux (PowerShell 7+) alongside Windows (Desktop and Core).
+- **Localization Engine**: New localization system supporting `.psd1` based culture files.
+  - Added French (`fr`) translation.
+  - Added Pseudo-Localization (`qps-PLOC`) for UI testing.
+  - New `-Culture` parameter on `Show-Tree` to override the UI language.
+- **Style Profile System**: Complete rewrite of the styling engine.
+  - New `Set-ShowTreeStyleProfile` command to load or override styles.
+  - Modular `BaseStyleProfile.psd1` and `DefaultStyleProfile.psd1`.
+  - Support for `AnsiStyle` (SGR parameters) and kind-specific foreground colors.
+- **Streaming Traversal Engine**: Redesigned enumeration to be faster and more memory-efficient.
+  - New `Invoke-TreeTraversal` and `New-TreeChildProvider` for decoupled enumeration.
+  - Win32 provider mode for `tree.com` compatibility.
+  - PowerShell provider mode for cross-platform and non-filesystem compatibility.
+- **Enhanced Legend**: `Show-Tree -Legend` and `-LegendAll` now support platform-specific state filtering (`-Platform`).
+- **Build System**: Complete build system supporting cross-platform builds and testing. 100% PowerShell.
+  - PowerShell 7+ required for build and test.
+  - Transpiles to PowerShell Core 6+ for runtime compatibility.
+- **Comprehensive Test Suite**: Significant expansion of Pester tests covering rendering, filtering, gap logic, and localization.
+
+### Changed
+- Refactored project structure into `Public/`, `Private/`, and `Data/`.
+- `New-TreeItem` is now a public function for use in custom providers or styling tests.
+- Improved gap logic to handle complex mixed file/directory structures more cleanly.
+
+### Fixed
+- Fixed several cross-platform path resolution issues.
+- Corrected attribute detection on Linux (Executable bits, Hidden files).
+- Improved handling of broken symbolic links.
+
+### Removed
+- Removed legacy monolithic internal scripts in favor of modular private functions.
+
+---
+
 ## [1.2.1] - 2026-04-30
 
 ### Fixed

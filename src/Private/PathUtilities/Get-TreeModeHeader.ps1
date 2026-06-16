@@ -3,9 +3,10 @@
 <#
 .SYNOPSIS
     Generates the volume and header information for Tree mode.
+
 .DESCRIPTION
-    Encapsulates the logic to validate a drive and retrieve volume name
-    and serial number, matching tree.com output format.
+    The Get-TreeModeHeader cmdlet generates the volume label and serial number header,
+    matching the classic tree.com output. It also validates the drive and path. Used only in Tree.com compatibility mode.
 #>
 function Get-TreeModeHeader {
     [CmdletBinding()]

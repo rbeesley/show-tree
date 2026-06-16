@@ -34,129 +34,143 @@ function New-TestItem {
     return $treeItem
 }
 
-function New-TestTree {
+function New-TestProviderItem {
     param(
         [Parameter(Mandatory)]
-        [hashtable]$Structure,
-        [string]$ParentPath
+        [string] $Name,
+
+        [string] $ParentPath,
+
+        [switch] $IsDirectory,
+
+        [IO.FileAttributes] $Attributes = [IO.FileAttributes]::Normal,
+
+        [long] $Length = 0,
+
+        [object] $Target = $null,
+
+        [string] $DirectoryName,
+
+        [string] $UnixMode
     )
 
     if (-not $ParentPath) {
         $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
     }
 
-    function BuildNode($name, $value, $parentPath) {
+    $fullPath = Join-Path $ParentPath $Name
 
-        # Case 1: Directory (OrderedDictionary)
-        if ($value -is [System.Collections.Specialized.OrderedDictionary]) {
-            $children = foreach ($key in $value.Keys) {
-                BuildNode $key $value[$key] (Join-Path $parentPath $name)
-            }
+    if ($IsDirectory -and (($Attributes -band [IO.FileAttributes]::Directory) -eq 0)) {
+        $Attributes = $Attributes -bor [IO.FileAttributes]::Directory
+    }
 
-            return New-TestItem -Name $name `
-                                -ParentPath $parentPath `
-                                -IsDirectory:$true `
-                                -Attributes ([IO.FileAttributes]::Directory) `
-                                -Children $children
-        }
+    $item = [PSCustomObject]@{
+        Name           = $Name
+        FullName       = $fullPath
+        PSIsContainer  = $IsDirectory
+        Attributes     = $Attributes
+        Length         = if ($IsDirectory) { $null } else { $Length }
+        CreationTime   = [datetime]'2026-01-01'
+        LastWriteTime  = [datetime]'2026-01-02'
+        LastAccessTime = [datetime]'2026-01-03'
+    }
 
-        # Case 2: File or directory with metadata
-        if ($value -is [hashtable]) {
+    if ($PSBoundParameters.ContainsKey('Target')) {
+        $item | Add-Member -MemberType NoteProperty -Name Target -Value $Target
+    }
 
-            $attrs = [IO.FileAttributes]::Normal
-            if ($value.ContainsKey('Attributes')) {
-                $attrs = [IO.FileAttributes]::$($value.Attributes)
-            }
+    if ($PSBoundParameters.ContainsKey('DirectoryName')) {
+        $item | Add-Member -MemberType NoteProperty -Name DirectoryName -Value $DirectoryName
+    }
 
-            $isDir = $value.ContainsKey('Children')
+    if ($PSBoundParameters.ContainsKey('UnixMode')) {
+        $item | Add-Member -MemberType NoteProperty -Name UnixMode -Value $UnixMode
+    }
 
-            if ($isDir) {
-                $children = foreach ($key in $value.Children.Keys) {
-                    BuildNode $key $value.Children[$key] (Join-Path $parentPath $name)
+    return $item
+}
+
+function New-TestTreeChildProvider {
+    param(
+        [Parameter(Mandatory)]
+        $Root,
+
+        [string] $Name = 'Test'
+    )
+
+    $capturedRoot = $Root
+
+    [PSCustomObject]@{
+        PSTypeName   = 'ShowTree.TreeChildProvider'
+        Name         = $Name
+        ProviderMode = 'Test'
+        GetChildren  = {
+            param(
+                [Parameter(Mandatory)]
+                [string] $Path,
+
+                [int] $Depth = 0
+            )
+
+            function Find-CapturedTestNodeByPath {
+                param(
+                    [Parameter(Mandatory)]
+                    $Node,
+
+                    [Parameter(Mandatory)]
+                    [string] $TargetPath
+                )
+
+                if ($Node.FullPath -eq $TargetPath) {
+                    return $Node
                 }
 
-                return New-TestItem -Name $name `
-                                    -ParentPath $parentPath `
-                                    -IsDirectory:$true `
-                                    -Attributes $attrs `
-                                    -Children $children
+                foreach ($child in @($Node.Children)) {
+                    if ($child.FullPath -eq $TargetPath) {
+                        return $child
+                    }
+
+                    if ($child.IsContainer -and $child.Children) {
+                        $found = Find-CapturedTestNodeByPath `
+                            -Node $child `
+                            -TargetPath $TargetPath
+
+                        if ($null -ne $found) {
+                            return $found
+                        }
+                    }
+                }
+
+                return $null
             }
-            else {
-                return New-TestItem -Name $name `
-                                    -ParentPath $parentPath `
-                                    -IsDirectory:$false `
-                                    -Attributes $attrs
+
+            $node = Find-CapturedTestNodeByPath `
+                -Node $capturedRoot `
+                -TargetPath $Path
+
+            if ($null -eq $node) {
+                return [PSCustomObject]@{
+                    Files       = @()
+                    Directories = @()
+                }
             }
-        }
 
-        # Case 3: Simple file ($null)
-        return New-TestItem -Name $name `
-                            -ParentPath $parentPath `
-                            -IsDirectory:$false `
-                            -Attributes ([IO.FileAttributes]::Normal)
-    }
+            $files = @()
+            $directories = @()
 
-    $rootName = ($Structure.GetEnumerator() | Select-Object -First 1).Key
-    BuildNode $rootName $Structure[$rootName] $ParentPath
-}
-
-function Convert-TestTreeToRaw {
-    param(
-        [Parameter(Mandatory)]
-        $Root,
-        [Parameter(Mandatory)]
-        [string]$Path
-    )
-
-    $node = Find-TestNodeByPath -Root $Root -Path $Path
-    if ($null -eq $node) {
-        return [pscustomobject]@{
-            Files       = @()
-            Directories = @()
-        }
-    }
-
-    $files = @()
-    $dirs  = @()
-
-    foreach ($child in $node.Children) {
-        if ($child.IsDirectory) {
-            $dirs += $child
-        }
-        else {
-            $files += $child
-        }
-    }
-
-    [pscustomobject]@{
-        Files       = $files
-        Directories = $dirs
-    }
-}
-
-function Find-TestNodeByPath {
-    param(
-        [Parameter(Mandatory)]
-        $Root,
-        [Parameter(Mandatory)]
-        [string]$Path
-    )
-
-    if ($Root.FullPath -eq $Path) {
-        return $Root
-    }
-
-    foreach ($child in $Root.Children) {
-        if ($child.IsDirectory) {
-            $found = Find-TestNodeByPath -Root $child -Path $Path
-            if ($null -ne $found) {
-                return $found
+            foreach ($child in @($node.Children)) {
+                if ($child.IsContainer) {
+                    $directories += $child
+                }
+                else {
+                    $files += $child
+                }
             }
-        }
-        elseif ($child.FullPath -eq $Path) {
-            return $child
-        }
-    }
 
-    return $null
+            [PSCustomObject]@{
+                Files       = $files
+                Directories = $directories
+            }
+        }.GetNewClosure()
+    }
 }

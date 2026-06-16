@@ -5,7 +5,8 @@
     Returns the filesystem label for a drive.
 
 .DESCRIPTION
-    Used only in Tree.com compatibility mode.
+    The Get-VolumeName cmdlet retrieves the filesystem label (volume name) for the drive associated
+    with the specified path. Used only in Tree.com compatibility mode. 
 #>
 function Get-VolumeName {
     param([string]$Path = ".")

@@ -25,7 +25,6 @@ $requiredCommands = @(
     'Format-Tree'
     'Get-TreeItem'
     'New-TreeItem'
-    'Select-TreeItem'
     'Set-ShowTreeStyleProfile'
     'Show-Tree'
     'Show-TreeLegend'

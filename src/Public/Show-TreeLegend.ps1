@@ -5,12 +5,37 @@
     Displays a color legend for base types and state overlays.
 
 .DESCRIPTION
-    Useful for understanding how Show-Tree applies color to files,
-    directories, symlinks, junctions, and state combinations.
+    The Show-TreeLegend cmdlet displays a visual guide to the colors used by Show-Tree.
+    It shows how base types (File, Directory) and various states (Hidden, ReadOnly, System, etc.)
+    are rendered in the current style profile.
 
     By default, only states relevant to the current platform are shown.
     Use -Platform to preview another platform's states, or -All to show every
     state defined by the active style profile.
+
+.PARAMETER StyleProfile
+    A specific style profile to use for the legend. Defaults to the active profile.
+
+.PARAMETER Culture
+    The culture to use for loading a style profile and displaying localized strings.
+
+.PARAMETER Platform
+    The platform states to display ('Current', 'Windows', 'Unix').
+
+.PARAMETER All
+    If set, displays all states defined in the style profile, regardless of the platform.
+
+.EXAMPLE
+    Show-TreeLegend
+    Displays the legend for the current style profile and platform.
+
+.EXAMPLE
+    Show-TreeLegend -Platform Unix
+    Displays the legend as it would appear on a Unix platform.
+
+.LINK
+    Show-Tree
+    Get-ItemStyle
 #>
 function Show-TreeLegend {
     param(
