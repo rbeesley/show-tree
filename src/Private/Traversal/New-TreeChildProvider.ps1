@@ -15,7 +15,8 @@ function New-TreeChildProvider {
         [string] $ProviderMode = 'PowerShell'
     )
 
-    if ($ProviderMode -eq 'Win32' -and $PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
+    $localIsWindows = $IsWindows ? $IsWindows : $true
+    if ($ProviderMode -eq 'Win32' -and -not $localIsWindows) {
         throw "Win32 tree child provider is only supported on Windows."
     }
     
@@ -51,6 +52,8 @@ function New-TreeChildProvider {
                         [int] $Depth = 0
                     )
 
+                    $localIsWindows = $null -ne $IsWindows ? $IsWindows : $true
+
                     $resolvedPath = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
                     if ($resolvedPath) {
                         $Path = $resolvedPath.ProviderPath
@@ -72,17 +75,17 @@ function New-TreeChildProvider {
                         $isContainer = $item.PSIsContainer
 
                         $native = [PSCustomObject]@{
-                            Platform       = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                            Platform       = $localIsWindows ? 'Windows' : 'Unix'
                             FileAttributes = $item.Attributes
                             Raw            = $null
                         }
 
-                        $kind = if ($isContainer) { 'Directory' } else { 'File' }
+                        $kind = $isContainer ? 'Directory' : 'File'
                         $link = $null
-                        $states = [System.Collections.Generic.List[string]]::new()
+                        $states = [System.Collections.Generic.HashSet[string]]::new()
 
                         if (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-                            $kind = if ($isContainer -and $IsWindows) { 'Junction' } else { 'Symlink' }
+                            $kind = ($isContainer -and $localIsWindows) ? 'Junction' : 'Symlink'
 
                             $target = $null
                             if ($item.PSObject.Properties.Match('Target')) {
@@ -128,14 +131,14 @@ function New-TreeChildProvider {
                             }
 
                             $link = [PSCustomObject]@{
-                                Type       = if ($kind -eq 'Junction') { 'Junction' } else { 'SymbolicLink' }
+                                Type       = ($kind -eq 'Junction') ? 'Junction' : 'SymbolicLink'
                                 Target     = $target
                                 TargetPath = $targetPath
                                 IsBroken   = $isBroken
                             }
                         }
 
-                        $isHidden = if ($IsWindows) {
+                        $isHidden = if ($localIsWindows) {
                             ($item.Attributes -band [IO.FileAttributes]::Hidden) -ne 0
                         }
                         else {
@@ -165,7 +168,7 @@ function New-TreeChildProvider {
                             [void] $states.Add('BrokenLink')
                         }
 
-                        if (-not $IsWindows -and $kind -notin @('Symlink', 'Junction') -and $item.PSObject.Properties.Match('UnixMode')) {
+                        if (-not $localIsWindows -and $kind -notin @('Symlink', 'Junction') -and $item.PSObject.Properties.Match('UnixMode')) {
                             $unixMode = [string] $item.UnixMode
 
                             # PowerShell commonly exposes UnixMode as a 10-character string
@@ -235,6 +238,9 @@ function New-TreeChildProvider {
                         else {
                             -1
                         }
+                        
+                        $statesArray = New-Object string[] $states.Count
+                        $states.CopyTo($statesArray)
 
                         $treeItem = New-TreeItem `
                             -FullPath $item.FullName `
@@ -249,7 +255,7 @@ function New-TreeChildProvider {
                             -LastAccessTime $item.LastAccessTime `
                             -Link $link `
                             -Native $native `
-                            -States $states.ToArray()
+                            -States $statesArray
 
                         if ($isContainer) {
                             [void] $directories.Add($treeItem)

@@ -55,7 +55,7 @@ Describe 'Resolve-TreePath' {
     It 'resolves absolute paths' {
         InModuleScope ShowTree {
 
-            $absPath = if ($IsWindows) { 'C:\Windows' } else { '/etc' }
+            $absPath = $IsWindows ? 'C:\Windows' : '/etc'
             Resolve-TreePath -Path $absPath |
                     Should -Be $absPath
         }
@@ -65,7 +65,7 @@ Describe 'Resolve-TreePath' {
         InModuleScope ShowTree {
 
             $errors = $null
-            $nope = if ($IsWindows) { 'C:\Nope' } else { '/Nope' }
+            $nope = $IsWindows ? 'C:\Nope' : '/Nope'
 
             $result = Resolve-TreePath -Path $nope -ErrorAction SilentlyContinue -ErrorVariable errors
 
@@ -89,7 +89,7 @@ Describe 'Resolve-TreePath' {
     It 'returns the original path for nonexistent paths in Tree mode' {
         InModuleScope ShowTree {
 
-            $nope = if ($IsWindows) { 'C:\Nope' } else { '/Nope' }
+            $nope = $IsWindows ? 'C:\Nope' : '/Nope'
             Resolve-TreePath -Path $nope -Mode 'Tree' |
                 Should -Be $nope
         }

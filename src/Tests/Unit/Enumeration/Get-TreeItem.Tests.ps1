@@ -21,7 +21,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -65,7 +65,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -107,7 +107,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -145,7 +145,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -182,7 +182,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -219,7 +219,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -260,7 +260,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -299,7 +299,7 @@ Describe 'Get-TreeItem behavior' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $parentPath = if ($IsWindows) { 'C:\' } else { '/tmp' }
+            $parentPath = $IsWindows ? 'C:\' : '/tmp'
             $rootPath = Join-Path $parentPath 'Root'
 
             $structure = [ordered]@{
@@ -340,7 +340,7 @@ Describe 'Get-TreeItem' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'
@@ -396,7 +396,7 @@ Describe 'Get-TreeItem' {
 
     It 'uses unresolved path text when Resolve-Path does not resolve the path' {
         InModuleScope ShowTree {
-            $path = if ($IsWindows) { 'C:\MissingRoot' } else { '/missing-root' }
+            $path = $IsWindows ? 'C:\MissingRoot' : '/missing-root'
 
             $provider = [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'
@@ -428,7 +428,7 @@ Describe 'Get-TreeItem' {
 
     It 'passes ProviderMode to New-TreeChildProvider' {
         InModuleScope ShowTree {
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'
@@ -468,7 +468,7 @@ Describe 'Get-TreeItem' {
 
     It 'passes filtering switches to Invoke-TreeTraversal' {
         InModuleScope ShowTree {
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'
@@ -527,7 +527,7 @@ Describe 'Get-TreeItem' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'

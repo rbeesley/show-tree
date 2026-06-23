@@ -22,7 +22,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -75,7 +75,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -108,7 +108,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -158,7 +158,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -194,7 +194,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -230,7 +230,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -267,7 +267,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -304,7 +304,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $hiddenAttributes = [IO.FileAttributes]::Hidden
                 if (-not $IsWindows) {
@@ -346,7 +346,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
                 $systemAttributes = [IO.FileAttributes]::System
 
                 $rawChildren = @(
@@ -384,7 +384,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -433,7 +433,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $raw = [pscustomobject]@{
                     Files = @(
@@ -491,7 +491,7 @@ Describe 'Get-ImmediateTreeChild' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $raw = [pscustomobject]@{
                     Files = @(

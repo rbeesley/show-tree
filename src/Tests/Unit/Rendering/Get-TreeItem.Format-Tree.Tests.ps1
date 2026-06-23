@@ -21,7 +21,7 @@ Describe 'Get-TreeItem | Format-Tree' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'
@@ -75,7 +75,7 @@ Describe 'Get-TreeItem | Format-Tree' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
 
             $provider = [PSCustomObject]@{

@@ -32,7 +32,7 @@ Describe "TreeItem Visibility" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
 
             $directory = New-TestItem `
                 -Name "TestFixtures" `
@@ -63,7 +63,7 @@ Describe "TreeItem Visibility" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
 
             $srcFixtures = New-TestItem `
                 -Name "TestFixtures" `
@@ -95,7 +95,7 @@ Describe "TreeItem Visibility" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
             $nestedParent = Join-Path $rootPath 'src'
 
             $nestedFixtures = New-TestItem `
@@ -174,8 +174,8 @@ Describe "TreeItem Recursion" {
             # $kind = 'Symlink'
             # $link = [PSCustomObject]@{
             #     Type = 'SymbolicLink'
-            #     Target = if ($IsWindows) { 'C:\Target' } else { '/tmp/target' }
-            #     TargetPath = if ($IsWindows) { 'C:\Target' } else { '/tmp/target' }
+            #     Target = $IsWindows ? 'C:\Test' : '/tmp/test'
+            #     TargetPath = $IsWindows ? 'C:\Test' : '/tmp/test'
             #     IsBroken = $false
             # }
             # $item = New-TreeItem `

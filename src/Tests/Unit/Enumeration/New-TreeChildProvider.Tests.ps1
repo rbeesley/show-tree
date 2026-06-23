@@ -57,7 +57,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem -Name 'dir-b' -ParentPath $rootPath -IsDirectory
@@ -97,7 +97,7 @@ Describe 'New-TreeChildProvider' {
 
         It 'returns empty Files and Directories collections when the path is not a container' {
             InModuleScope ShowTree {
-                $rootPath = if ($IsWindows) { 'C:\Root\file.txt' } else { '/root/file.txt' }
+                $rootPath = $IsWindows ? 'C:\Root\file.txt' : '/root/file.txt'
 
                 Mock Resolve-Path { $null }
                 Mock Test-Path { $false }
@@ -118,7 +118,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $attributes = 
                         [IO.FileAttributes]::Hidden -bor
@@ -149,7 +149,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
                 $targetPath = Join-Path $rootPath 'target.txt'
 
                 $rawChildren = @(
@@ -194,7 +194,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
                 $targetPath = Join-Path $rootPath 'missing.txt'
 
                 $rawChildren = @(
@@ -232,7 +232,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
                 $systemAttributes = [IO.FileAttributes]::System
 
                 $rawChildren = @(
@@ -272,7 +272,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $rawChildren = @(
                     New-TestProviderItem `
@@ -453,7 +453,7 @@ Describe 'New-TreeChildProvider' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $raw = [PSCustomObject]@{
                     Files = @(

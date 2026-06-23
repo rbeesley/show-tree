@@ -28,11 +28,13 @@ $content = Get-Content $SourcePath -Raw
 function Transpile-Ast {
     param(
         [string]$Source,
+        [string]$Label = "Transforming",
         [scriptblock]$MatchCondition,
         [scriptblock]$ReplacementGenerator
     )
 
     $currentSource = $Source
+    $iteration = 0
     while ($true) {
         $tokens = $null
         $errors = $null
@@ -41,6 +43,9 @@ function Transpile-Ast {
         $matches = $ast.FindAll($MatchCondition, $true) | Sort-Object { $_.Extent.StartOffset } -Descending
         
         if (-not $matches) { break }
+
+        $iteration++
+        Write-Progress -Activity "Transpiling AST" -Status "$Label (Match $iteration)"
 
         # Replace the last one first to preserve offsets for earlier ones (if we were doing it in one pass)
         # But we loop and re-parse to be absolutely safe with nested expressions.
@@ -54,11 +59,12 @@ function Transpile-Ast {
         $end = $node.Extent.EndOffset
         $currentSource = $currentSource.Substring(0, $start) + $newText + $currentSource.Substring($end)
     }
+    Write-Progress -Activity "Transpiling AST" -Status "$Label - Completed" -Completed
     return $currentSource
 }
 
 # Ternary Expressions: $a ? $b : $c -> (&{if($a){$b}else{$c}})
-$content = Transpile-Ast -Source $content `
+$content = Transpile-Ast -Source $content -Label "Ternary" `
     -MatchCondition { $args[0] -is [System.Management.Automation.Language.TernaryExpressionAst] } `
     -ReplacementGenerator {
     param($node, $src)
@@ -69,7 +75,7 @@ $content = Transpile-Ast -Source $content `
 }
 
 # Null-coalescing assignment: $a ??= $b -> if ($null -eq $a) { $a = $b }
-$content = Transpile-Ast -Source $content `
+$content = Transpile-Ast -Source $content -Label "Null-Coalesce" `
     -MatchCondition {
     $node = $args[0]
     $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
@@ -90,7 +96,7 @@ $content = Transpile-Ast -Source $content `
 }
 
 # Static New: [Type]::new(...) -> (New-Object -TypeName Type -ArgumentList ...)
-$content = Transpile-Ast -Source $content `
+$content = Transpile-Ast -Source $content -Label "Static New" `
     -MatchCondition {
     $node = $args[0]
     $node -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and
@@ -110,29 +116,72 @@ $content = Transpile-Ast -Source $content `
     return "($newText)"
 }
 
-# ---------------------------------------------------------------------------
-# Brittle Regex Cleanups (Legacy support for things hard to do in AST or not yet moved)
-# ---------------------------------------------------------------------------
-
-# Ensure $results = @() becomes a List if we use .Add later
-$content = [regex]::Replace($content, '(?m)^\s*(\$(?:results|children|childPool|roots))\s*=\s*@\(\)', '$1 = New-Object System.Collections.Generic.List[object]')
-
-# Fix List[object]::new() that might have been missed
-$content = [regex]::Replace($content, '\[System\.Collections\.Generic\.List\[object\]\]::new\(\)', '(New-Object System.Collections.Generic.List[object])')
-
-# Use GetType().IsArray check for count to be robust in PS5.1
-$content = [regex]::Replace($content, '(?<!@\()\$roots\.Count', '(&{ if($null -ne $roots -and $roots.GetType().IsArray){ $roots.Length } else { $roots.Count } })')
-
-# Fix Resolve-Path -ErrorAction SilentlyContinue pattern
-$resolvePathPattern = '(?s)\$resolvedPath\s*=\s*Resolve-Path\s*\$Path\s*-ErrorAction\s*SilentlyContinue\s*if\s*\(-not\s*\$resolvedPath\)\s*\{\s*\$resolvedPath\s*=\s*\$Path\s*\}\s*else\s*\{\s*\$resolvedPath\s*=\s*\$resolvedPath\.Path\s*\}'
-if ($content -match $resolvePathPattern) {
-    $newResolve = '$resolvedPath = $null; $errPref = $ErrorActionPreference; $ErrorActionPreference = "SilentlyContinue"; try { $res = Resolve-Path $Path; if($null -ne $res){ $resolvedPath = $res.Path } } catch {}; $ErrorActionPreference = $errPref; if($null -eq $resolvedPath){ $resolvedPath = $Path }'
-    $content = [regex]::Replace($content, $resolvePathPattern, $newResolve)
+# Generic List AddRange: $list.AddRange($other) -> foreach($i in $other){[void]$list.Add($i)}
+$content = Transpile-Ast -Source $content -Label "AddRange" `
+    -MatchCondition {
+    $node = $args[0]
+    $node -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and
+            $node.Member -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
+            $node.Member.Value -eq 'AddRange' -and
+            -not $node.Static
+} `
+    -ReplacementGenerator {
+    param($node, $src)
+    $list = $src.Substring($node.Expression.Extent.StartOffset, $node.Expression.Extent.EndOffset - $node.Expression.Extent.StartOffset)
+    $other = $src.Substring($node.Arguments[0].Extent.StartOffset, $node.Arguments[0].Extent.EndOffset - $node.Arguments[0].Extent.StartOffset)
+    return "foreach(`$____item in $other){[void]$list.Add(`$____item)}"
 }
 
-# Fix types in New-Object -TypeName [Type] to just Type
-$content = $content -replace 'New-Object -TypeName \[([^\]]+)\]', 'New-Object -TypeName $1'
+# New-Object Type unwrapping: New-Object -TypeName [Type] -> New-Object -TypeName Type
+$content = Transpile-Ast -Source $content -Label "New-Object Type" `
+    -MatchCondition {
+    $node = $args[0]
+    if ($node -isnot [System.Management.Automation.Language.CommandAst] -or
+        $node.GetCommandName() -ne 'New-Object') {
+        return $false
+    }
 
+    # Only match if it actually contains a [Type] literal for TypeName
+    $typeNameFound = $false
+    foreach ($element in $node.CommandElements) {
+        if ($element -is [System.Management.Automation.Language.CommandParameterAst] -and
+                ($element.ParameterName -eq 'TypeName' -or $element.ParameterName -eq 'T')) {
+            $typeNameFound = $true
+            continue
+        }
+        if ($typeNameFound) {
+            return ($element -is [System.Management.Automation.Language.StringConstantExpressionAst] -and
+                    $element.Value -match '^\[.+\]$')
+        }
+    }
+    return $false
+} `
+    -ReplacementGenerator {
+    param($node, $src)
+    $typeNameFound = $false
+    $newElements = foreach ($element in $node.CommandElements) {
+        if ($element -is [System.Management.Automation.Language.CommandParameterAst] -and
+                ($element.ParameterName -eq 'TypeName' -or $element.ParameterName -eq 'T')) {
+            $typeNameFound = $true
+            $element.Extent.Text
+            continue
+        }
+
+        if ($typeNameFound -and $element -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $element.Value -match '^\[(.+)\]$') {
+            $typeNameFound = $false
+            $matches[1]
+            continue
+        }
+
+        $typeNameFound = $false
+        $element.Extent.Text
+    }
+
+    return $newElements -join ' '
+}
+
+# ---------------------------------------------------------------------------
 # Write the transpiled output with a UTF-8 BOM
+# ---------------------------------------------------------------------------
 $utf8Bom = New-Object System.Text.UTF8Encoding($true)
 [System.IO.File]::WriteAllText($DestinationPath, $content, $utf8Bom)

@@ -56,7 +56,7 @@ function Format-Tree {
     begin {
         $gap = -not $NoGap.IsPresent
 
-        $resolvedStyleProfile = if ($null -ne $StyleProfile) {
+        $resolvedStyleProfile = if ($StyleProfile) {
             if ($StyleProfile -is [string]) {
                 Get-ShowTreeStyleProfile -Path $StyleProfile
             }

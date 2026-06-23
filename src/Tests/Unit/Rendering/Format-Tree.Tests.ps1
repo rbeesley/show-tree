@@ -537,7 +537,7 @@ Describe 'Format-Tree' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $records = @(
                     New-FixtureTreeRecord `
@@ -572,7 +572,7 @@ Describe 'Format-Tree' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $targetPath = Join-Path $rootPath 'target.txt'
                 $records = @(
@@ -631,7 +631,7 @@ Describe 'Format-Tree' {
                 param([string[]] $FixtureScripts)
                 foreach ($script in $FixtureScripts) { . $script }
 
-                $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+                $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
                 $item = New-FixtureTreeItem `
                     -Name 'file-a.txt' `

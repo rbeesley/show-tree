@@ -27,15 +27,6 @@
 .PARAMETER Depth
     The depth of the item in the tree relative to the root.
 
-.PARAMETER IsHidden
-    Legacy input for setting the 'Hidden' state.
-
-.PARAMETER IsExecutable
-    Legacy input for setting the 'Executable' state.
-
-.PARAMETER IsReadOnly
-    Legacy input for setting the 'ReadOnly' state.
-
 .PARAMETER Length
     The size of the item in bytes.
 
@@ -100,12 +91,6 @@ function New-TreeItem {
 
         [int] $Depth = 0,
 
-    # Compatibility inputs. These are folded into States and are not stored
-    # as independent values on the TreeItem.
-        [object] $IsHidden = $null,
-        [object] $IsExecutable = $null,
-        [object] $IsReadOnly = $null,
-
         [long] $Length = -1,
 
         [datetime] $CreationTime,
@@ -154,18 +139,6 @@ function New-TreeItem {
         }
     }
 
-    $legacyStateMap = @{
-        Hidden     = $IsHidden
-        Executable = $IsExecutable
-        ReadOnly   = $IsReadOnly
-    }
-
-    foreach ($stateName in $legacyStateMap.Keys) {
-        if ($legacyStateMap[$stateName] -eq $true -and -not $resolvedStates.Contains($stateName)) {
-            [void] $resolvedStates.Add($stateName)
-        }
-    }
-
     foreach ($stateName in @($Kind)) {
         if ($stateName -in @('Symlink', 'Junction') -and -not $resolvedStates.Contains($stateName)) {
             [void] $resolvedStates.Add($stateName)
@@ -183,7 +156,7 @@ function New-TreeItem {
         Kind           = $Kind
         IsContainer    = $IsContainer
 
-        Length         = $Length -ge 0 ? $Length : $null
+        Length         = ($Length -ge 0) ? $Length : $null
         CreationTime   = $CreationTime
         LastWriteTime  = $LastWriteTime
         LastAccessTime = $LastAccessTime

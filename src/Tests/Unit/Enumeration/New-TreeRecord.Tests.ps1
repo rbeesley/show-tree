@@ -21,7 +21,7 @@ Describe 'New-TreeRecord' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $item = New-FixtureTreeItem `
                 -Name 'file.txt' `
                 -ParentPath $rootPath `

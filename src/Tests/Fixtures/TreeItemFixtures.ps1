@@ -11,7 +11,7 @@ function New-FixtureTreeItem {
     )
 
     if (-not $ParentPath) {
-        $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+        $ParentPath = $IsWindows ? 'C:\Test' : '/tmp/test'
     }
 
     $fullPath = Join-Path $ParentPath $Name
@@ -28,7 +28,7 @@ function New-FixtureTreeItem {
     $link = $null
     if ($Metadata.ContainsKey('Target')) {
         $link = [PSCustomObject]@{
-            Type = if ($kind -eq 'Junction') { 'Junction' } else { 'SymbolicLink' }
+            Type = ($kind -eq 'Junction') ? 'Junction' : 'SymbolicLink'
             Target = $Metadata.Target; TargetPath = $Metadata.Target; IsBroken = $false
         }
     }
@@ -38,7 +38,7 @@ function New-FixtureTreeItem {
     if ($Metadata.ContainsKey('FileAttributes')) { $attr = [IO.FileAttributes]$Metadata.FileAttributes }
 
     $native = [PSCustomObject]@{
-        Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+        Platform = $IsWindows ? 'Windows' : 'Unix'
         FileAttributes = $attr
     }
     if ($Metadata.Native) { $native = $Metadata.Native }
@@ -70,7 +70,7 @@ function New-FixtureTree {
     }
 
     if ([string]::IsNullOrWhiteSpace($ParentPath)) {
-        $ParentPath = if ($IsWindows) { 'C:\' } else { '/' }
+        $ParentPath = $IsWindows ? 'C:\' : '/'
     }
     $rootName   = 'Root'
 
@@ -136,7 +136,7 @@ function New-FixtureTree {
             # Directory descriptor
             if ($value.ContainsKey('Children')) {
                 $isDir = $true
-                $kind  = if ($kind -eq 'Unknown') { 'Directory' } else { $kind }
+                $kind  = ($kind -eq 'Unknown') ? 'Directory' : $kind
 
                 $childSource = $value.Children
                 if ($childSource -is [System.Collections.IDictionary]) {
@@ -184,7 +184,7 @@ function New-FixtureTree {
                 'Length','CreationTime','LastWriteTime','LastAccessTime',
                 'Link','Permissions','Native'
             )) {
-                if ($Descriptor.ContainsKey($key) -and $null -ne $Descriptor[$key]) {
+                if ($Descriptor.ContainsKey($key) -and $Descriptor[$key]) {
                     $splat[$key] = $Descriptor[$key]
                 }
             }
@@ -197,9 +197,9 @@ function New-FixtureTree {
         # Fill descriptor with only the values you discovered
         if ($kind -ne 'Unknown')     { $descriptor.Kind = $kind }
         if ($isDir)                  { $descriptor.IsContainer = $true }
-        if ($null -ne $isHidden)     { $descriptor.IsHidden = $isHidden }
-        if ($null -ne $isExec)       { $descriptor.IsExecutable = $isExec }
-        if ($null -ne $isRO)         { $descriptor.IsReadOnly = $isRO }
+        if ($isHidden)               { $descriptor.IsHidden = $isHidden }
+        if ($isExec)                 { $descriptor.IsExecutable = $isExec }
+        if ($isRO)                   { $descriptor.IsReadOnly = $isRO }
         if ($length -ge 0)           { $descriptor.Length = $length }
         if ($ctime)                  { $descriptor.CreationTime = $ctime }
         if ($mtime)                  { $descriptor.LastWriteTime = $mtime }
@@ -261,7 +261,7 @@ function Copy-FixtureTreeItemForProvider {
         'Permissions'
         'Native'
     )) {
-        if ($Item.PSObject.Properties.Match($propertyName) -and $null -ne $Item.$propertyName) {
+        if ($Item.PSObject.Properties.Match($propertyName) -and $Item.$propertyName) {
             $splat[$propertyName] = $Item.$propertyName
         }
     }
@@ -393,7 +393,7 @@ function New-FixtureTreeChildProvider {
                             -Node $child `
                             -TargetPath $TargetPath
 
-                        if ($null -ne $found) {
+                        if ($found) {
                             return $found
                         }
                     }
@@ -438,7 +438,7 @@ function New-FixtureTreeChildProvider {
                     'Permissions'
                     'Native'
                 )) {
-                    if ($Item.PSObject.Properties.Match($propertyName) -and $null -ne $Item.$propertyName) {
+                    if ($Item.PSObject.Properties.Match($propertyName) -and $Item.$propertyName) {
                         $splat[$propertyName] = $Item.$propertyName
                     }
                 }
@@ -524,7 +524,7 @@ function New-FixtureTreeRecordStream {
     )
 
     if (-not $ParentPath) {
-        $ParentPath = if ($IsWindows) { 'C:\' } else { '/' }
+        $ParentPath = $IsWindows ? 'C:\' : '/'
         $ParentPath = Join-Path $ParentPath 'Root'
     }
 
@@ -641,7 +641,7 @@ function Convert-TreeRecordToFixtureStructure {
                 } else { $target[$item.Name] = $kids }
                 $script:DictStack.Add($kids)
             } else {
-                $isSystem = ($null -ne $item.Native.FileAttributes) -and ($item.Native.FileAttributes -band [IO.FileAttributes]::System)
+                $isSystem = ($item.Native.FileAttributes) -and ($item.Native.FileAttributes -band [IO.FileAttributes]::System)
                 if ($item.IsHidden -or $item.Kind -eq 'Symlink' -or $isSystem) {
                     $desc = @{ }
                     if ($item.IsHidden) { $desc.IsHidden = $true }

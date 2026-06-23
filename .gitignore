@@ -32,5 +32,4 @@
 # Project files and directories
 /dist/
 /build/.cache/
-/TestAttributes/
 /TestFixtures/

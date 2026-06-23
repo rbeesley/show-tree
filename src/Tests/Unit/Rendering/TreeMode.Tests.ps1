@@ -40,7 +40,7 @@ BeforeAll {
                 if ($child.IsContainer)
                 {
                     $found = Find-FixtureNodeByPath -Root $child -Path $Path
-                    if ($null -ne $found)
+                    if ($found)
                     {
                         return $found
                     }
@@ -307,6 +307,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 '├───a'
                 '│   └───aa'
                 '└───b'
+                ''
             )
         }
     }
@@ -366,6 +367,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 '│   └───aa'
                 '│'
                 '└───b'
+                ''
             )
         }
     }
@@ -425,6 +427,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 '│       file.txt'
                 '│'
                 '└───b'
+                ''
             )
         }
     }
@@ -518,12 +521,12 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
             $output = @($records | Format-Tree -Mode Tree)
 
             $output | Should -Be @(
-                "├───a"
-                "│       a1"
-                "│       a2"
-                "│"
-                "└───b"
-                "        b1"
+                '├───a'
+                '│       a1'
+                '│       a2'
+                '│'
+                '└───b'
+                '        b1'
             )
         }
     }

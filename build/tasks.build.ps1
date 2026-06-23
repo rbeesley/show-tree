@@ -224,7 +224,7 @@ task Test ValidateManifest, {
     if ($config -isnot [PesterConfiguration]) {
         $pesterConfig = New-PesterConfiguration
         foreach ($key in $config.Keys) {
-            if ($null -ne $pesterConfig.$key) {
+            if ($pesterConfig.$key) {
                 foreach ($subKey in $config.$key.Keys) {
                     $pesterConfig.$key.$subKey = $config.$key.$subKey
                 }

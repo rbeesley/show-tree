@@ -87,12 +87,12 @@ public class RawEnum {
             FileAttributes = [IO.FileAttributes]$e.dwFileAttributes
         }
 
-        $kind = if ($isDir) { 'Directory' } else { 'File' }
+        $kind = $isDir ? 'Directory' : 'File'
         $link = $null
         $states = [System.Collections.Generic.List[string]]::new()
 
         if (($e.dwFileAttributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-            $kind = if ($isDir) { 'Junction' } else { 'Symlink' }
+            $kind = $isDir ? 'Junction' : 'Symlink'
 
             $target = $null
             $targetPath = $null
@@ -126,7 +126,7 @@ public class RawEnum {
             }
 
             $link = [PSCustomObject]@{
-                Type       = if ($isDir) { 'Junction' } else { 'SymbolicLink' }
+                Type       = $isDir ? 'Junction' : 'SymbolicLink'
                 Target     = $target
                 TargetPath = $targetPath
                 IsBroken   = $isBroken

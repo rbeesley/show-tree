@@ -10,16 +10,16 @@ function New-TestItem {
     )
 
     if (-not $ParentPath) {
-        $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+        $ParentPath = $IsWindows ? 'C:\Test' : '/tmp/test'
     }
 
     $fullPath = Join-Path $ParentPath $Name
 
-    $kind = if ($IsDirectory) { 'Directory' } else { 'File' }
+    $kind = $IsDirectory ? 'Directory' : 'File'
     if ($Attributes -band [IO.FileAttributes]::ReparsePoint) { $kind = 'Symlink' }
 
     $native = [PSCustomObject]@{
-        Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+        Platform = $IsWindows ? 'Windows' : 'Unix'
         FileAttributes = $Attributes
     }
 
@@ -55,7 +55,7 @@ function New-TestProviderItem {
     )
 
     if (-not $ParentPath) {
-        $ParentPath = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+        $ParentPath = $IsWindows ? 'C:\Test' : '/tmp/test'
     }
 
     $fullPath = Join-Path $ParentPath $Name
@@ -69,7 +69,7 @@ function New-TestProviderItem {
         FullName       = $fullPath
         PSIsContainer  = $IsDirectory
         Attributes     = $Attributes
-        Length         = if ($IsDirectory) { $null } else { $Length }
+        Length         = $IsDirectory ? $null : $Length
         CreationTime   = [datetime]'2026-01-01'
         LastWriteTime  = [datetime]'2026-01-02'
         LastAccessTime = [datetime]'2026-01-03'
@@ -135,7 +135,7 @@ function New-TestTreeChildProvider {
                             -Node $child `
                             -TargetPath $TargetPath
 
-                        if ($null -ne $found) {
+                        if ($found) {
                             return $found
                         }
                     }

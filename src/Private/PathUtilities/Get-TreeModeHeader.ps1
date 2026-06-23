@@ -17,7 +17,7 @@ function Get-TreeModeHeader {
         [object]$StyleProfile = $null
     )
 
-    $StyleProfile = if ($null -eq $StyleProfile) { Get-ActiveShowTreeStyleProfile } else { $StyleProfile }
+    $StyleProfile = $StyleProfile ? (Get-ActiveShowTreeStyleProfile) : $StyleProfile
     $ui = $StyleProfile.UIStrings.TreeMode
 
     # Extract drive letter
@@ -39,13 +39,14 @@ function Get-TreeModeHeader {
     Write-Output ($ui.VolumeSerial -f $serialNumber)
 
     # 3. Write the root path and stylize it
+    $localIsWindows = $IsWindows ? $IsWindows : $true
     $rootItem = Get-Item -LiteralPath $Path -Force
     $native = [PSCustomObject]@{
-        Platform       = if ($IsWindows) { 'Windows' } else { 'Unix' }
+        Platform       = $localIsWindows ? 'Windows' : 'Unix'
         FileAttributes = $rootItem.Attributes
     }
 
-    $kind = if ($rootItem.PSIsContainer) { 'Directory' } else { 'File' }
+    $kind = $rootItem.PSIsContainer ? 'Directory' : 'File'
 
     $treeItem = New-TreeItem `
         -FullPath $rootItem.FullName `

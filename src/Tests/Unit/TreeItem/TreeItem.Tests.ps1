@@ -19,7 +19,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $tree = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $tree = $IsWindows ? 'C:\Test' : '/tmp/test'
             $fullPath = Join-Path $tree 'File.txt'
             $item = New-TreeItem -FullPath $fullPath -IsContainer:$false -Kind 'File'
 
@@ -44,7 +44,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $tree = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $tree = $IsWindows ? 'C:\Test' : '/tmp/test'
             $fullPath = Join-Path $tree 'Dir'
             $item = New-TreeItem -FullPath $fullPath -IsContainer:$true -Kind 'Directory'
 
@@ -59,7 +59,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $tree = if ($IsWindows) { 'C:\X' } else { '/tmp/X' }
+            $tree = $IsWindows ? 'C:\X' : '/tmp/X'
             $fullPath = Join-Path $tree 'Y'
             $item = New-TreeItem `
                 -FullPath $fullPath `
@@ -76,7 +76,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $tree = if ($IsWindows) { 'C:\Hidden' } else { '/tmp/Hidden' }
+            $tree = $IsWindows ? 'C:\Hidden' : '/tmp/Hidden'
             $fullPath = Join-Path $tree 'File.txt'
             $native = [PSCustomObject]@{
                 Platform = 'Windows'
@@ -86,7 +86,7 @@ Describe "New-TreeItem" {
                 -FullPath $fullPath `
                 -IsContainer:$false `
                 -Native $native `
-                -IsHidden $true
+                -States @('Hidden')
 
             $item.Native.FileAttributes -band [IO.FileAttributes]::Hidden | Should -Not -Be 0
             $item.IsHidden | Should -Be $true
@@ -94,11 +94,11 @@ Describe "New-TreeItem" {
         }
     }
 
-    It "folds legacy boolean flags into States" {
+    It "adds states via the States parameter" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $item = New-TreeItem -FullPath 'C:\test' -IsHidden $true -IsExecutable $true -IsReadOnly $true
+            $item = New-TreeItem -FullPath 'C:\test' -States @('Hidden', 'Executable', 'ReadOnly')
             $item.States | Should -Contain 'Hidden'
             $item.States | Should -Contain 'Executable'
             $item.States | Should -Contain 'ReadOnly'
@@ -108,11 +108,11 @@ Describe "New-TreeItem" {
         }
     }
 
-    It "does not add state when legacy boolean flag is false" {
+    It "does not add state when not specified" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $item = New-TreeItem -FullPath 'C:\test' -IsHidden $false
+            $item = New-TreeItem -FullPath 'C:\test'
             $item.States | Should -Not -Contain 'Hidden'
             $item.IsHidden | Should -Be $false
         }
@@ -146,7 +146,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $tree = if ($IsWindows) { 'C:\Test' } else { '/tmp/test' }
+            $tree = $IsWindows ? 'C:\Test' : '/tmp/test'
             $childPath = Join-Path $tree 'Child.txt'
             $child = New-TreeItem -FullPath $childPath -IsContainer:$false -Kind 'File'
             $parent = New-TreeItem -FullPath $tree -IsContainer:$true -Kind 'Directory' -Children @($child)
@@ -160,7 +160,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $tree = if ($IsWindows) { 'C:\' } else { '/tmp/' }
+            $tree = $IsWindows ? 'C:\' : '/tmp/'
             $linkPath = Join-Path $tree 'Link'
             $targetPath = Join-Path $tree 'Target'
             $link = [PSCustomObject]@{
@@ -185,7 +185,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $parent = if ($IsWindows) { 'C:\A' } else { '/tmp/A' }
+            $parent = $IsWindows ? 'C:\A' : '/tmp/A'
             $fullPath = Join-Path $parent 'B'
             $item = New-TreeItem `
                 -FullPath $fullPath `
@@ -219,7 +219,7 @@ Describe "New-TreeItem" {
                 Set-ItResult -Skip
             }
             else {
-                $item = New-TreeItem -FullPath '/home/user/.bashrc' -IsContainer:$false -Kind 'File' -IsHidden $true
+            $item = New-TreeItem -FullPath '/home/user/.bashrc' -IsContainer:$false -Kind 'File' -States @('Hidden')
                 $item.IsHidden | Should -Be $true
             }
         }
@@ -232,7 +232,7 @@ Describe "New-TreeItem" {
             
             try {
                 $native = [PSCustomObject]@{
-                    Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                    Platform = $IsWindows ? 'Windows' : 'Unix'
                     FileAttributes = $fileInfo.Attributes
                 }
                 $item = New-TreeItem `
@@ -256,7 +256,7 @@ Describe "New-TreeItem" {
 
             try {
                 $native = [PSCustomObject]@{
-                    Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+                    Platform = $IsWindows ? 'Windows' : 'Unix'
                     FileAttributes = $dirInfo.Attributes
                 }
                 $item = New-TreeItem `
@@ -280,7 +280,7 @@ Describe "New-TreeItem" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
-            $expectedTarget = if ($IsWindows) { 'C:\Target' } else { '/tmp/Target' }
+            $expectedTarget = $IsWindows ? 'C:\Target' : '/tmp/Target'
             $structure = [ordered]@{
                 'Folder' = [ordered]@{
                     'File.txt' = $null

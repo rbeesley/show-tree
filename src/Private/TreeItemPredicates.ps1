@@ -1,4 +1,4 @@
-﻿# src/Private/TestItemPredicates.ps1
+﻿# src/Private/TreeItemPredicates.ps1
 
 <#
 .SYNOPSIS
@@ -138,15 +138,15 @@ function Test-TreeItemVisible {
 
     $isHidden = $false
     if ($HideHidden) {
-        $isHidden = $Item.IsHidden -eq $true -or
-                ($null -ne $Item.Native.FileAttributes -and
+        $isHidden = $Item.IsHidden -or
+                ($Item.Native.FileAttributes -and
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
         )
     }
 
     $isSystem = $false
     if ($HideSystem) {
-        $isSystem = $null -ne $Item.Native.FileAttributes -and
+        $isSystem = $Item.Native.FileAttributes -and
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
     }
 
@@ -233,7 +233,7 @@ function Test-TreeItemRecurse {
 
     # If hidden/system and hidden/system are to be hidden
     if ($HideHidden) {
-        $isHidden = $Item.IsHidden -eq $true -or (
+        $isHidden = $Item.IsHidden -or (
         $null -ne $Item.Native.FileAttributes -and
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
         )
@@ -243,7 +243,7 @@ function Test-TreeItemRecurse {
     }
 
     if ($HideSystem) {
-        $isSystem = $null -ne $Item.Native.FileAttributes -and
+        $isSystem = $Item.Native.FileAttributes -and
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
         if ($isSystem -and -not $isRescued) {
             return $false

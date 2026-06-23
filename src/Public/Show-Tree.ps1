@@ -182,14 +182,14 @@ function Show-Tree {
     #
     # Resolve Mode (explicit or implied)
     #
-    if ($AsTree)    { $Mode = 'Tree' }
-    if ($AsListing) { $Mode = 'List' }
+    if ($AsTree)        { $Mode = 'Tree' }
+    elseif ($AsListing) { $Mode = 'List' }
 
     $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
     if ($Culture) {
         $resolvedStyleProfile = Get-ShowTreeStyleProfile -Culture $Culture
     }
-    elseif ($null -eq $resolvedStyleProfile) {
+    elseif ($resolvedStyleProfile) {
         $resolvedStyleProfile = Get-ShowTreeStyleProfile
     }
     $uiErrors = $resolvedStyleProfile.UIStrings.Errors
@@ -211,7 +211,8 @@ function Show-Tree {
         return
     }
 
-    if ($Mode -eq 'Tree' -and $PSVersionTable.PSEdition -eq 'Core' -and -not $IsWindows) {
+    $localIsWindows = $IsWindows ? $IsWindows : $true
+    if ($Mode -eq 'Tree' -and -not $localIsWindows) {
         throw $uiErrors.WindowsOnly
     }
 
@@ -278,10 +279,10 @@ function Show-Tree {
         # Normal + Listing modes: Print resolved path with style
         $rootItem = Get-Item $resolvedPath
         $native = [PSCustomObject]@{
-            Platform = if ($IsWindows) { 'Windows' } else { 'Unix' }
+            Platform = $localIsWindows ? 'Windows' : 'Unix'
             FileAttributes = $rootItem.Attributes
         }
-        $kind = if ($rootItem.PSIsContainer) { 'Directory' } else { 'File' }
+        $kind = $rootItem.PSIsContainer ? 'Directory' : 'File'
         $treeItem = New-TreeItem `
             -FullPath $rootItem.FullName `
             -IsContainer $rootItem.PSIsContainer `
@@ -299,14 +300,14 @@ function Show-Tree {
     #
     # Enumerate -> Select -> Render
     #
-    $providerMode = if ($Mode -eq 'Tree') { 'Win32' } else { 'PowerShell' }
+    $providerMode = ($Mode -eq 'Tree') ? 'Win32' : 'PowerShell'
 
     $formatParams = @{
         Mode         = $Mode
-        Colorize    = $EffectiveColorize
-        ShowTargets = $EffectiveShowTargets
-        Ascii       = $Ascii
-        NoGap       = -not $EffectiveGap
+        Colorize     = $EffectiveColorize
+        ShowTargets  = $EffectiveShowTargets
+        Ascii        = $Ascii
+        NoGap        = -not $EffectiveGap
         StyleProfile = $resolvedStyleProfile
     }
 
@@ -324,7 +325,5 @@ function Show-Tree {
     #
     # Footer / Last Line logic
     #
-    if ($Mode -ne 'Tree') {
-        Write-Output ""
-    }
+    Write-Output ""
 }

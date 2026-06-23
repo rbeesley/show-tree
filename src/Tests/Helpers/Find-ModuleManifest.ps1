@@ -47,5 +47,5 @@ while ($cursor) {
     $cursor = $parent
 }
 
-$target = if ($ModuleName) { "module manifest for '$ModuleName'" } else { 'module manifest (*.psd1)' }
+$target = $ModuleName ? "module manifest for '$ModuleName'" : 'module manifest (*.psd1)'
 throw "Could not locate $target starting from '$StartPath'."

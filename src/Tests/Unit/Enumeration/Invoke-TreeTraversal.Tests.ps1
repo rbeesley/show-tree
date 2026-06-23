@@ -21,7 +21,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 Name = 'Test'
@@ -83,7 +83,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 Name = 'Test'
@@ -148,7 +148,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 Name = 'Test'
@@ -220,7 +220,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
             $dirBPath = Join-Path $rootPath 'dir-b'
 
@@ -319,7 +319,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
 
             $providerCallCount = 0
@@ -384,7 +384,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
             $dirBPath = Join-Path $rootPath 'dir-b'
 
@@ -464,7 +464,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
 
             $provider = [PSCustomObject]@{
@@ -538,7 +538,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 Name = 'Test'
@@ -596,7 +596,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $aPath = Join-Path $rootPath 'a'
             $bPath = Join-Path $aPath 'b'
             $cPath = Join-Path $bPath 'c'
@@ -704,7 +704,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
 
             $provider = [PSCustomObject]@{
@@ -766,7 +766,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
 
             $provider = [PSCustomObject]@{
@@ -844,7 +844,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
 
             $provider = [PSCustomObject]@{
                 Name = 'Test'
@@ -902,7 +902,7 @@ Describe 'Invoke-TreeTraversal' {
             param([string[]] $FixtureScripts)
             foreach ($script in $FixtureScripts) { . $script }
 
-            $rootPath = if ($IsWindows) { 'C:\Root' } else { '/root' }
+            $rootPath = $IsWindows ? 'C:\Root' : '/root'
             $dirAPath = Join-Path $rootPath 'dir-a'
 
             $provider = [PSCustomObject]@{

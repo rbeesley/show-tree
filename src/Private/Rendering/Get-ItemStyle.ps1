@@ -22,7 +22,6 @@ function Get-ItemStyle {
 
     $isContainer = $Item.IsContainer
     $attrs       = $Item.Native.FileAttributes
-    $kind        = $Item.Kind
 
     #
     # Determine base style
@@ -76,7 +75,6 @@ function Get-ItemStyle {
     #
     # 1. Start with explicit States from the item
     # 2. Add States derived from Native FileAttributes for Windows/provider support
-    # 3. Add legacy Traits if any are present
     #
     $allStates = [System.Collections.Generic.List[string]]::new()
     if ($Item.States) {
@@ -84,7 +82,7 @@ function Get-ItemStyle {
     }
 
     # Derive states from Native FileAttributes.
-    if ($null -ne $attrs) {
+    if ($attrs) {
         foreach ($flag in Get-FileAttributes $attrs) {
             $flagName = $flag.ToString()
             if (-not $allStates.Contains($flagName)) { [void]$allStates.Add($flagName) }
@@ -110,22 +108,18 @@ function Get-ItemStyle {
     }
 
     $orderedStates = [System.Collections.Generic.List[string]]::new()
-    foreach ($stateName in $knownStates) {
-        [void]$orderedStates.Add($stateName)
-    }
-    foreach ($stateName in $customStates) {
-        [void]$orderedStates.Add($stateName)
-    }
+    $orderedStates.AddRange($knownStates)
+    $orderedStates.AddRange($customStates)
 
     # Lookup styles from States.
     foreach ($stateName in $orderedStates) {
         $overlay = $null
         
-        if ($null -ne $StyleProfile.States -and $StyleProfile.States.ContainsKey($stateName)) {
+        if ($StyleProfile.States -and $StyleProfile.States.ContainsKey($stateName)) {
             $overlay = $StyleProfile.States[$stateName]
         }
 
-        if ($null -ne $overlay) {
+        if ($overlay) {
             # Add state style SGR fragments.
             $ansiStyle = $overlay.AnsiStyle
             if ($ansiStyle) {

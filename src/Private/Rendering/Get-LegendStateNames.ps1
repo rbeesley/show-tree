@@ -24,8 +24,9 @@ function Get-LegendStateNames {
         return @($StyleProfile.States.Keys)
     }
 
+    $localIsWindows = $IsWindows ? $IsWindows : $true
     $resolvedPlatform = if ($Platform -eq 'Current') {
-        $IsWindows ? 'Windows' : 'Unix'
+        $localIsWindows ? 'Windows' : 'Unix'
     }
     else {
         $Platform
