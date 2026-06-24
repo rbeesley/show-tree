@@ -130,8 +130,19 @@ public class RawEnum {
                 Target     = $target
                 TargetPath = $targetPath
                 IsBroken   = $isBroken
+                TargetMetadata = $null
             }
 
+            if (-not $isBroken) {
+                $targetInfo = Get-Item -LiteralPath $candidateTargetPath -Force -ErrorAction SilentlyContinue
+                if ($targetInfo) {
+                    $link.TargetMetadata = [PSCustomObject]@{
+                        IsContainer = $targetInfo.PSIsContainer
+                        Attributes  = $targetInfo.Attributes
+                    }
+                }
+            }
+            
             if ($kind -eq 'Symlink') {
                 [void]$states.Add('Symlink')
             }
@@ -139,7 +150,7 @@ public class RawEnum {
                 [void]$states.Add('Junction')
             }
 
-            if ($isBroken -eq $true) {
+            if ($isBroken) {
                 [void]$states.Add('BrokenLink')
             }
         }

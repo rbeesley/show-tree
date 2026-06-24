@@ -201,22 +201,22 @@ Show-Tree -HideHidden -HideSystem -Include '.config'
 
 ## Parameter Summary
 
-| Parameter                                   | Description                                                                                              |
-|---------------------------------------------|----------------------------------------------------------------------------------------------------------|
-| `‑Mode Normal \| Tree \| List`              | Selects the output mode.                                                                                 |
-| `‑MaxDepth` / `‑Depth`                      | Maximum recursion depth (`‑1` = unlimited).                                                              |
-| `‑Recurse`                                  | Shortcut for unlimited depth.                                                                            |
-| `‑Color` / `‑Mono`                          | Force color on or off. For `tree.com` compatiblity, `‑Mono` for tree mode by default.                    |
-| `‑Files` / `‑NoFiles`                       | Control if files are shown.. For `tree.com` compatiblity, `‑NoFiles` for tree mode by default.           |
-| `‑ShowTargets` / `‑NoTargets`               | Show or hide reparse point targets. `‑ShowTargets` for normal and tree modes by default.                 |
-| `‑ShowHidden` / `‑HideHidden`               | Control visibility of hidden items. For `tree.com` compatiblity, `‑HideHidden` for tree mode by default. |
-| `‑ShowSystem` / `‑HideSystem`               | Control visibility of system items. For `tree.com` compatiblity, `‑HideSystem` for tree mode by default. |
-| `‑Exclude` *pattern* / `‑Include` *pattern* | Glob patterns that explicitly exclude or include items. Exact matches override all other filters.        |
-| `‑NoGap`                                    | Disable gap lines.                                                                                       |
-| `‑Ascii`                                    | Use ASCII connectors instead of Unicode.                                                                 |
-| `‑Legend` / `-LegendAll`                    | Show the style legend.                                                                                   |
-| `‑Platform`                                 | Preview another platform's states in legend (Windows/Unix).                                              |
-| `-Culture`                                  | Override culture for localized strings.                                                                  |
+| Parameter                                   | Description                                                                                                          |
+|---------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
+| `‑Mode Normal \| Tree \| List`              | Selects the output mode.                                                                                             |
+| `‑MaxDepth` / `‑Depth`                      | Maximum recursion depth (`‑1` = unlimited).                                                                          |
+| `‑Recurse`                                  | Shortcut for unlimited depth.                                                                                        |
+| `‑Color` / `‑Mono`                          | Force color on or off. For `tree.com` compatiblity, `‑Mono` for tree mode by default.                                |
+| `‑Files` / `‑NoFiles`                       | Control if files are shown.. For `tree.com` compatiblity, `‑NoFiles` for tree mode by default.                       |
+| `‑ShowTargets` / `‑NoTargets`               | Show or hide reparse point targets. `‑ShowTargets` for normal and tree modes by default.                             |
+| `‑ShowHidden` / `‑HideHidden`               | Control visibility of hidden items. For `tree.com` compatiblity, `‑HideHidden` for tree mode by default.             |
+| `‑ShowSystem` / `‑HideSystem`               | Control visibility of system items. For `tree.com` compatiblity, `‑HideSystem` for tree mode by default.             |
+| `‑Exclude` *pattern* / `‑Include` *pattern* | Glob patterns that explicitly exclude or include items. Exact matches override all other filters.                    |
+| `-Gap` / `‑NoGap`                           | Control gap lines. Gaps make it easier to distinguish between directories and files by adding additional whitespace. |
+| `‑Ascii`                                    | Use ASCII connectors instead of Unicode.                                                                             |
+| `‑Legend` / `-LegendAll`                    | Show the style legend.                                                                                               |
+| `‑Platform`                                 | Preview another platform's states in legend (Windows/Unix).                                                          |
+| `-Culture`                                  | Override culture for localized strings.                                                                              |
 
 ---
 
@@ -430,19 +430,6 @@ States = @{
 ```
 
 `Directory` and `File` are kinds, not states, so they belong under `Base`, not `States`.
-
----
-
-## Deprecation Notice
-
-The legacy switches `-Tree` and `-List` have been removed.  
-Use the unified `-Mode` parameter instead:
-
-```powershell
-Show-Tree -Mode Normal
-Show-Tree -Mode Tree
-Show-Tree -Mode List
-```
 
 ---
 

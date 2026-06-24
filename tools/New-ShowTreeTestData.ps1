@@ -311,11 +311,10 @@ $dirsRoot    = Join-Path $rootFull "Directories"
 $filesRoot   = Join-Path $rootFull "Files"
 $linksRoot   = Join-Path $rootFull "Links"
 $specialRoot = Join-Path $rootFull "SpecialPermissions"
-$metaRoot    = Join-Path $rootFull "Metadata"
 
 $metadataIndex = [System.Collections.Generic.List[object]]::new()
 
-New-Item -ItemType Directory -Path $dirsRoot, $filesRoot, $linksRoot, $metaRoot -Force | Out-Null
+New-Item -ItemType Directory -Path $dirsRoot, $filesRoot, $linksRoot -Force | Out-Null
 
 # -----------------------
 # Directories
@@ -325,45 +324,46 @@ $dirCases = @(
     @{
         Name = "normal-dir"
         RequestedAttr = [IO.FileAttributes]::Normal
-        AddInfoFile = $true
+        AddInfoFile = $false
     }
     @{
-        Name = ".hidden-dir"
+        Name = $IsWindows ? "hidden-dir" : ".hidden-dir"
         RequestedAttr = [IO.FileAttributes]::Hidden
-        AddInfoFile = $true
+        AddInfoFile = $false
     }
     @{
         Name = "readonly-dir"
         RequestedAttr = [IO.FileAttributes]::ReadOnly
-        AddInfoFile = $true
+        AddInfoFile = $false
     }
     @{
         Name = "system-dir"
         RequestedAttr = [IO.FileAttributes]::System
-        AddInfoFile = $true
-        WindowsOnly = $true
-    }
-    @{
-        Name = ".hidden-readonly-dir"
-        RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::ReadOnly
-        AddInfoFile = $true
-    }
-    @{
-        Name = ".hidden-system-dir"
-        RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System
-        AddInfoFile = $true
-        WindowsOnly = $true
-    }
-    @{
-        Name = ".hidden-system-readonly-dir"
-        RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System -bor [IO.FileAttributes]::ReadOnly
-        AddInfoFile = $true
-        WindowsOnly = $true
-    }
-    @{
-        Name = "empty-dir"
-        RequestedAttr = [IO.FileAttributes]::Normal
         AddInfoFile = $false
+        WindowsOnly = $true
+    }
+    @{
+        Name = "readonly-system-dir"
+        RequestedAttr = [IO.FileAttributes]::ReadOnly -bor [IO.FileAttributes]::System
+        AddInfoFile = $false
+        WindowsOnly = $true
+    }
+    @{
+        Name = $IsWindows ? "hidden-readonly-dir" : ".hidden-readonly-dir"
+        RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::ReadOnly
+        AddInfoFile = $false
+    }
+    @{
+        Name = $IsWindows ? "hidden-system-dir" : ".hidden-system-dir"
+        RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System
+        AddInfoFile = $false
+        WindowsOnly = $true
+    }
+    @{
+        Name = $IsWindows ? "hidden-system-readonly-dir" : ".hidden-system-readonly-dir"
+        RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System -bor [IO.FileAttributes]::ReadOnly
+        AddInfoFile = $false
+        WindowsOnly = $true
     }
     @{
         Name = "nested-dir"
@@ -419,21 +419,15 @@ $fileCases = @(
         WindowsOnly = $true
     }
     @{
-        Name = "empty.txt"
-        Content = @()
-        RequestedAttr = [IO.FileAttributes]::Normal
-        Empty = $true
-        Executable = $false
-    }
-    @{
         Name = "executable.ps1"
         Content = @("Write-Output 'Hello, world!'")
         RequestedAttr = [IO.FileAttributes]::Normal
         Empty = $false
         Executable = $true
+        UnixOnly = $true
     }
     @{
-        Name = ".hidden.txt"
+        Name = $IsWindows ? "hidden.txt" : ".hidden.txt"
         Content = @("hidden file")
         RequestedAttr = [IO.FileAttributes]::Hidden
         Empty = $false
@@ -455,7 +449,7 @@ $fileCases = @(
         WindowsOnly = $true
     }
     @{
-        Name = ".hidden-system.txt"
+        Name = $IsWindows ? "hidden-system.txt" : ".hidden-system.txt"
         Content = @("hidden system file")
         RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System
         Empty = $false
@@ -463,7 +457,7 @@ $fileCases = @(
         WindowsOnly = $true
     }
     @{
-        Name = ".hidden-readonly.txt"
+        Name = $IsWindows ? "hidden-readonly.txt" : ".hidden-readonly.txt"
         Content = @("hidden readonly file")
         RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::ReadOnly
         Empty = $false
@@ -478,7 +472,7 @@ $fileCases = @(
         WindowsOnly = $true
     }
     @{
-        Name = ".hidden-system-readonly.txt"
+        Name = $IsWindows ? "hidden-system-readonly.txt" : ".hidden-system-readonly.txt"
         Content = @("hidden system readonly file")
         RequestedAttr = [IO.FileAttributes]::Hidden -bor [IO.FileAttributes]::System -bor [IO.FileAttributes]::ReadOnly
         Empty = $false
@@ -489,6 +483,7 @@ $fileCases = @(
 
 foreach ($case in $fileCases) {
     if ($case.WindowsOnly -band -not $IsWindows) { continue }
+    if ($case.UnixOnly -band $IsWindows) { continue }
     
     $path = Join-Path $filesRoot $case.Name
 
@@ -500,11 +495,8 @@ foreach ($case in $fileCases) {
     }
 
     $execApplied = $false
-    if ($case.Executable -and -not $IsWindows) {
+    if ($case.Executable) {
         $execApplied = Invoke-Chmod -Mode '+x' -Path $path
-    }
-    elseif ($case.Executable -and $IsWindows) {
-        $execApplied = $true
     }
 
     $attrResult = Set-AttributesPortable -Path $path -Attributes $case.RequestedAttr
@@ -522,18 +514,6 @@ foreach ($case in $fileCases) {
         appliedTimestamp     = $timeApplied
         platform             = $PSVersionTable.Platform
     }
-}
-
-$binaryPath = Join-Path $filesRoot "binary-random.bin"
-$bytes = [byte[]]::new(256)
-[System.Random]::new().NextBytes($bytes)
-[System.IO.File]::WriteAllBytes($binaryPath, $bytes)
-
-New-Metadata -ItemPath $binaryPath -RootPath $rootFull -Data @{
-    type     = "file"
-    fileName = "binary-random.bin"
-    kind     = "binary-ish"
-    platform = $PSVersionTable.Platform
 }
 
 # -----------------------
@@ -643,7 +623,7 @@ if (-not $IsWindows) {
 # Metadata index
 # -----------------------
 
-$metadataFile = Join-Path $metaRoot "metadata-index.json"
+$metadataFile = Join-Path $rootFull "metadata-index.json"
 
 $indexDocument = [ordered]@{
     schemaVersion = 1

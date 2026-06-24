@@ -20,7 +20,7 @@
     #
     Base = @{
         File      = '39'
-        Directory = '1;34'
+        Directory = '94'
     }
 
     #
@@ -41,16 +41,16 @@
 
         Symlink = @{
             Foreground = @{
-                File      = '1;36'
-                Directory = '1;36'
+                File      = '96'
+                Directory = '96'
             }
             AnsiStyle = '4'
         }
 
         BrokenLink = @{
             Foreground = @{
-                File      = '1;31'
-                Directory = '1;31'
+                File      = '91'
+                Directory = '91'
             }
             AnsiStyle = '4;9'
         }
@@ -60,31 +60,30 @@
         #
         System = @{
             Foreground = @{
-                File      = '35'
-                Directory = '35'
+                File      = '31'
+                Directory = '95'
             }
-            AnsiStyle = '2;3'
         }
 
         ReparsePoint = @{
             Foreground = @{
-                File      = '1;36'
-                Directory = '1;36'
+                File      = '96'
+                Directory = '96'
             }
             AnsiStyle = '4'
         }
 
         Compressed = @{
             Foreground = @{
-                File      = '1;31'
-                Directory = '1;31'
+                File      = '91'
+                Directory = '91'
             }
         }
 
         Encrypted = @{
             Foreground = @{
-                File      = '1;32'
-                Directory = '1;32'
+                File      = '92'
+                Directory = '92'
             }
         }
 
@@ -113,15 +112,15 @@
 
         NoScrubData = @{
             Foreground = @{
-                File      = '1;33'
-                Directory = '1;33'
+                File      = '93'
+                Directory = '93'
             }
         }
 
         Device = @{
             Foreground = @{
-                File      = '1;33'
-                Directory = '1;33'
+                File      = '93'
+                Directory = '93'
             }
         }
 
@@ -130,8 +129,8 @@
         #
         Executable = @{
             Foreground = @{
-                File      = '1;32'
-                Directory = '1;34'
+                File      = '92'
+                Directory = '94'
             }
         }
 

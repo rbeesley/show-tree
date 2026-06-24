@@ -61,7 +61,7 @@ Describe 'Get-TreeItem | Format-Tree' {
 
             $output = @(
             Get-TreeItem -Path $rootPath -Depth 0 |
-                    Format-Tree -Mode Normal -Ascii -NoGap
+                    Format-Tree -Mode Normal -Ascii -GapPolicy None
             )
 
             $output.Count | Should -Be 2

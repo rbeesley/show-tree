@@ -11,6 +11,9 @@
 
 .PARAMETER Path
     The path to traverse. Default is '.'.
+    
+.PARAMETER Mode
+    The formatting mode ('Normal', 'Tree', 'List').
 
 .PARAMETER Depth
     The maximum depth to traverse. -1 for unlimited.
@@ -18,6 +21,10 @@
 .PARAMETER ProviderMode
     The provider to use for enumerating items ('PowerShell' or 'Win32').
     'Win32' is faster on Windows but may have different behavior for certain file types.
+    
+.PARAMETER GapPolicy
+    Policy followed when rendering the gaps ('None', 'Tree', 'Show').
+    'None' suppresses all gaps, 'Show' shows all gaps, and 'Tree' is used for a special tree.com compatible mode. 
 
 .PARAMETER FollowLinks
     If set, follows symbolic links and junctions during traversal.
@@ -51,10 +58,16 @@ function Get-TreeItem {
         [Parameter(Position = 0)]
         [string] $Path = '.',
 
+        [ValidateSet('Normal', 'Tree', 'List')]
+        [string] $Mode = 'Normal',
+        
         [int] $Depth = -1,
 
         [ValidateSet('PowerShell', 'Win32')]
         [string] $ProviderMode = 'PowerShell',
+
+        [ValidateSet('None', 'Tree', 'Show')]
+        [string] $GapPolicy = 'Show',
 
         [switch] $FollowLinks,
 
@@ -92,16 +105,22 @@ function Get-TreeItem {
         $Depth - 1
     }
 
-    Invoke-TreeTraversal `
-        -Path $resolvedPath `
-        -RootPath $resolvedPath `
-        -MaxDepth $traversalDepth `
-        -CurrentDepth 0 `
-        -Provider $provider `
-        -Include $Include `
-        -Exclude $Exclude `
-        -HideHidden:$HideHidden `
-        -HideSystem:$HideSystem `
-        -DirectoryOnly:$DirectoryOnly `
-        -FollowLinks:$FollowLinks
+    $invokeTreeTraversalParams = @{
+        Path          = $resolvedPath
+        Mode          = $Mode
+        RootPath      = $resolvedPath
+        MaxDepth      = $traversalDepth
+        CurrentDepth  = 0
+        Provider      = $provider
+        GapPolicy     = $GapPolicy
+        Include       = $Include
+        Exclude       = $Exclude
+        HideHidden    = $HideHidden
+        HideSystem    = $HideSystem
+        DirectoryOnly = $DirectoryOnly
+        FollowLinks   = $FollowLinks
+    }
+
+    Invoke-TreeTraversal @invokeTreeTraversalParams
+
 }

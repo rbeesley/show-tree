@@ -307,7 +307,6 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 '├───a'
                 '│   └───aa'
                 '└───b'
-                ''
             )
         }
     }
@@ -367,7 +366,6 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 '│   └───aa'
                 '│'
                 '└───b'
-                ''
             )
         }
     }
@@ -394,18 +392,73 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
 
                 if ($Path -eq $rootPath) {
                     return [pscustomobject]@{
+                        Files = @(
+                            New-TreeItem -FullPath (Join-Path $Path 'file.txt') -Name 'file.txt' -Kind File -IsContainer $false -Depth $Depth -ParentPath $Path
+                        )
+                        Directories = @(
+                            New-TreeItem -FullPath (Join-Path $Path 'Directories') -Name 'Directories' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
+                            New-TreeItem -FullPath (Join-Path $Path 'Files') -Name 'Files' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
+                        )
+                    }
+                }
+
+                if ($Path -eq (Join-Path $rootPath 'Directories')) {
+                    return [pscustomobject]@{
+                        Files = @()
+                        Directories = @(
+                            New-TreeItem -FullPath (Join-Path $Path 'nested-dir') -Name 'nested-dir' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
+                            New-TreeItem -FullPath (Join-Path $Path 'normal-dir') -Name 'normal-dir' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
+                        )
+                    }
+                }
+
+                if ($Path -eq (Join-Path $rootPath 'Directories' 'nested-dir')) {
+                    return [pscustomobject]@{
                         Files = @()
                         Directories = @(
                             New-TreeItem -FullPath (Join-Path $Path 'a') -Name 'a' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
+                        )
+                    }
+                }
+
+                if ($Path -eq (Join-Path $rootPath 'Directories' 'nested-dir' 'a')) {
+                    return [pscustomobject]@{
+                        Files = @()
+                        Directories = @(
                             New-TreeItem -FullPath (Join-Path $Path 'b') -Name 'b' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
                         )
                     }
                 }
 
-                if ($Path -eq (Join-Path $rootPath 'a')) {
+                if ($Path -eq (Join-Path $rootPath 'Directories' 'nested-dir' 'a' 'b')) {
+                    return [pscustomobject]@{
+                        Files = @()
+                        Directories = @(
+                            New-TreeItem -FullPath (Join-Path $Path 'c') -Name 'c' -Kind Directory -IsContainer $true -Depth $Depth -ParentPath $Path
+                        )
+                    }
+                }
+
+                if ($Path -eq (Join-Path $rootPath 'Directories' 'nested-dir' 'a' 'b' 'c')) {
                     return [pscustomobject]@{
                         Files = @(
-                            New-TreeItem -FullPath (Join-Path $Path 'file.txt') -Name 'file.txt' -Kind File -IsContainer $false -Depth $Depth -ParentPath $Path
+                            New-TreeItem -FullPath (Join-Path $Path 'leaf.txt') -Name 'leaf.txt' -Kind File -IsContainer $false -Depth $Depth -ParentPath $Path
+                        )
+                        Directories = @()
+                    }
+                }
+
+                if ($Path -eq (Join-Path $rootPath 'Directories' 'normal-dir')) {
+                    return [pscustomobject]@{
+                        Files = @()
+                        Directories = @()
+                    }
+                }
+
+                if ($Path -eq (Join-Path $rootPath 'Files')) {
+                    return [pscustomobject]@{
+                        Files = @(
+                            New-TreeItem -FullPath (Join-Path $Path 'normal.txt') -Name 'normal.txt' -Kind File -IsContainer $false -Depth $Depth -ParentPath $Path
                         )
                         Directories = @()
                     }
@@ -423,11 +476,18 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 'Folder PATH listing for volume Test'
                 'Volume serial number is 0000-0000'
                 'C:\Test'
-                '├───a'
-                '│       file.txt'
+                '│   file.txt'
                 '│'
-                '└───b'
-                ''
+                '├───Directories'
+                '│   ├───nested-dir'
+                '│   │   └───a'
+                '│   │       └───b'
+                '│   │           └───c'
+                '│   │                   leaf.txt'
+                '│   │'
+                '│   └───normal-dir'
+                '└───Files'
+                '        normal.txt'
             )
         }
     }

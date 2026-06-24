@@ -51,7 +51,7 @@ $script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile
 # <ShowTreeDistributionExportBlock>
 # This block is rewritten when building the published distribution.
 # Do not edit the content inside this block in generated dist files.
-# Source builds intentionally discover public functions from src/Public.
+# In source builds, this discovers functions intended for export.
 $script:PublicFunctions = `
         Get-ChildItem -Path $PSScriptRoot `
             -Recurse `

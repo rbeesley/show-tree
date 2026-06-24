@@ -435,7 +435,7 @@ Describe 'Format-Tree' {
 
                     # Generate records directly from the structure
                     $records = New-FixtureTreeRecordStream -Structure $structure
-                    $output = @($records | Format-Tree -Mode List -NoGap -Ascii)
+                    $output = @($records | Format-Tree -Mode List -GapPolicy None -Ascii)
 
                     $expected = @(
                         ' dir1'
@@ -458,7 +458,7 @@ Describe 'Format-Tree' {
 
                     # Generate records directly from the structure
                     $records = New-FixtureTreeRecordStream -Structure $structure
-                    $output = @($records | Format-Tree -Mode List -NoGap)
+                    $output = @($records | Format-Tree -Mode List -GapPolicy None)
 
                     $expected = @(
                         ' dir1'
@@ -479,7 +479,7 @@ Describe 'Format-Tree' {
 
                     # Use the comprehensive structure defined in BeforeAll
                     $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
-                    $output = @($records | Format-Tree -Mode List -NoGap -Ascii)
+                    $output = @($records | Format-Tree -Mode List -GapPolicy None -Ascii)
 
                     # Expected output (manually verified against the structure):
                     $expected = @(
@@ -509,7 +509,7 @@ Describe 'Format-Tree' {
 
                     # Use the comprehensive structure defined in BeforeAll
                     $records = New-FixtureTreeRecordStream -Structure $ComprehensiveStructure
-                    $output = @($records | Format-Tree -Mode List -NoGap)
+                    $output = @($records | Format-Tree -Mode List -GapPolicy None)
 
                     # Expected output (manually verified against the structure):
                     $expected = @(
@@ -559,7 +559,7 @@ Describe 'Format-Tree' {
                         -Metadata @{ IsContainer = $true }
                 )
 
-                $output = @($records | Format-Tree -Mode Normal -Ascii -NoGap)
+                $output = @($records | Format-Tree -Mode Normal -Ascii -GapPolicy None)
 
                 $output.Count | Should -Be 2
                 $output[0] | Should -Match 'file-a'
@@ -585,7 +585,7 @@ Describe 'Format-Tree' {
                         }
                 )
 
-                $output = @($records | Format-Tree -Mode Normal -Ascii -ShowTargets -NoGap)
+                $output = @($records | Format-Tree -Mode Normal -Ascii -ShowTargets -GapPolicy None)
 
                 $escapedSourcePath = [regex]::Escape('link.txt')
                 $escapedTargetPath = [regex]::Escape($targetPath)

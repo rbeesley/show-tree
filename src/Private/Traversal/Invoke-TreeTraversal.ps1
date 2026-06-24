@@ -15,6 +15,9 @@ function Invoke-TreeTraversal {
         [Parameter(Mandatory)]
         [string] $Path,
 
+        [ValidateSet('Normal', 'Tree', 'List')]
+        [string] $Mode = 'Normal',
+        
         [string] $RootPath,
 
         [int] $MaxDepth = -1,
@@ -23,6 +26,9 @@ function Invoke-TreeTraversal {
 
         [Parameter(Mandatory)]
         [object] $Provider,
+
+        [ValidateSet('None', 'Tree', 'Show')]
+        [string] $GapPolicy = 'Show',
 
         [bool[]] $AncestorIsLastSibling = @(),
 
@@ -86,7 +92,10 @@ function Invoke-TreeTraversal {
             -RecordType Item `
             -TreeItem $child `
             -TreeLayout $layout
+        
+        $script:lastRecordKind = $child.Kind
 
+        # Sibling Gap Logic
         if (-not $child.IsContainer -and $hasNextSibling -and $children[$i + 1].IsContainer) {
             $fileToDirectoryGapLayout = New-TreeLayout `
                 -Depth $CurrentDepth `
@@ -121,10 +130,12 @@ function Invoke-TreeTraversal {
 
             $recurseParams = @{
                 Path                             = $child.FullPath
+                Mode                             = $Mode
                 RootPath                         = $RootPath
                 MaxDepth                         = $MaxDepth
                 CurrentDepth                     = $CurrentDepth + 1
                 Provider                         = $Provider
+                GapPolicy                        = $GapPolicy
                 HasNextSiblingAfterThisDirectory = $hasNextSibling
                 Include                          = $Include
                 Exclude                          = $Exclude
@@ -143,7 +154,10 @@ function Invoke-TreeTraversal {
         }
     }
 
-    if ($emittedVisibleChild -and $HasNextSiblingAfterThisDirectory) {
+    # Only for Tree mode, if the last tree item was a directory and the next tree item is a directory,
+    # then regardless of how close they are on the tree, suppress the gap.
+    $supressGap = $Mode -eq 'Tree' -and $GapPolicy -eq 'Tree' -and $script:lastRecordKind -ne 'File'
+    if ($emittedVisibleChild -and $HasNextSiblingAfterThisDirectory -and -not $supressGap) {
         $gapAncestorIsLastSibling = [System.Collections.Generic.List[bool]]::new()
 
         if ($AncestorIsLastSibling.Count -gt 1) {
@@ -152,12 +166,7 @@ function Invoke-TreeTraversal {
             }
         }
 
-        $gapDepth = if ($CurrentDepth -gt 0) {
-            $CurrentDepth - 1
-        }
-        else {
-            0
-        }
+        $gapDepth = ($CurrentDepth -gt 0) ? ($CurrentDepth - 1) : 0
 
         $gapLayoutParams = @{
             Depth          = $gapDepth

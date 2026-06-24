@@ -122,7 +122,7 @@ Describe 'Show-Tree path resolution' {
 
         Push-Location $testRoot
         try {
-            $result = @(Show-Tree '.' -List -Mono -Depth 0)
+            $result = @(Show-Tree '.' -Mode List -Mono -Depth 0)
 
             $result[0] | Should -Be (Get-Location).ProviderPath
         }
@@ -144,7 +144,7 @@ Describe 'Show-Tree path resolution' {
 
         Push-Location $testRoot
         try {
-            $result = @(Show-Tree '.\child' -List -Mono -Depth 0)
+            $result = @(Show-Tree '.\child' -Mode List -Mono -Depth 0)
 
             $result[0] | Should -Be (Get-Item -LiteralPath $childPath).FullName
         }

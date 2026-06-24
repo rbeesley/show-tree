@@ -135,7 +135,18 @@ function New-TreeChildProvider {
                                 Target     = $target
                                 TargetPath = $targetPath
                                 IsBroken   = $isBroken
+                                TargetMetadata = $null
                             }
+
+                            if (-not $isBroken) {
+                                $targetInfo = Get-Item -LiteralPath $candidateTargetPath -Force -ErrorAction SilentlyContinue
+                                if ($targetInfo) {
+                                    $link.TargetMetadata = [PSCustomObject]@{
+                                        IsContainer = $targetInfo.PSIsContainer
+                                        Attributes  = $targetInfo.Attributes
+                                    }
+                                }
+                            }                            
                         }
 
                         $isHidden = if ($localIsWindows) {
@@ -164,7 +175,7 @@ function New-TreeChildProvider {
                             [void] $states.Add('Junction')
                         }
 
-                        if ($link -and $link.IsBroken -eq $true) {
+                        if ($link -and $link.IsBroken) {
                             [void] $states.Add('BrokenLink')
                         }
 

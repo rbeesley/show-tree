@@ -25,43 +25,43 @@
     Excludes items that match the specified glob patterns.
 
 .PARAMETER Color
-    Forces colorization in Tree mode.
+    Forces colorization in Tree mode. Colorization is applied by default in Normal and List modes.
 
 .PARAMETER Mono
     Disables colorization in Normal or List modes.
 
 .PARAMETER Files
-    Shows files in Tree mode.
+    Shows files in Tree mode. (Alias: ShowFiles)
 
 .PARAMETER NoFiles
     Hides files in Normal or List modes.
 
 .PARAMETER ShowHidden
-    Shows hidden items in Tree mode.
+    Shows hidden items in Tree mode. Hidden items are shown by default in Normal and List modes.
 
 .PARAMETER HideHidden
     Hides hidden items in Normal or List modes.
 
 .PARAMETER ShowSystem
-    Shows system items in Tree mode.
+    Shows system items in Tree mode. System items are shown by default in Normal and List modes.
 
 .PARAMETER HideSystem
     Hides system items in Normal or List modes.
 
 .PARAMETER ShowTargets
-    Shows symbolic link and junction targets in List mode.
+    Shows symbolic link and junction targets in List and Tree modes.
 
 .PARAMETER NoTargets
-    Hides symbolic link and junction targets in Normal or Tree modes.
+    Hides symbolic link and junction targets in Normal mode.
 
 .PARAMETER Gap
-    Adds gap lines between items in Tree mode for better readability.
+    Adds gap lines between items in List or Tree modes for better readability.
 
 .PARAMETER NoGap
     Removes gap lines in Normal or Tree modes.
 
 .PARAMETER MaxDepth
-    The maximum depth to traverse.
+    The maximum depth to traverse. This defaults to 6 for all modes and can be overridden to no maximum depth with a setting of -1 or using Recurse.
 
 .PARAMETER Recurse
     Recursively traverses all subdirectories.
@@ -86,8 +86,8 @@
     Displays the current directory in Normal mode.
 
 .EXAMPLE
-    Show-Tree -Mode Tree -Files
-    Displays the current directory in Tree mode, including files.
+    Show-Tree -Mode Tree -Files -Color
+    Displays the current directory in Tree mode, including files, and using color rendering.
 
 .EXAMPLE
     Show-Tree C:\Windows -MaxDepth 2
@@ -105,14 +105,6 @@ function Show-Tree {
         #
         [ValidateSet('Normal', 'Tree', 'List')]
         [string]$Mode = 'Normal',
-
-        # Backward-compatible aliases
-        [Alias('Tree')]
-        [switch]$AsTree,
-
-        [Alias('List','Listing')]
-        [switch]$AsListing,
-
 
         #
         # PATH
@@ -180,11 +172,8 @@ function Show-Tree {
     )
 
     #
-    # Resolve Mode (explicit or implied)
+    # Resolve Style Profile
     #
-    if ($AsTree)        { $Mode = 'Tree' }
-    elseif ($AsListing) { $Mode = 'List' }
-
     $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
     if ($Culture) {
         $resolvedStyleProfile = Get-ShowTreeStyleProfile -Culture $Culture
@@ -237,31 +226,34 @@ function Show-Tree {
     #
     switch ($Mode) {
         'Tree' {
-            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : -1
+            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : $Recurse.IsPresent ? -1 : 6
             $EffectiveColorize    = $Color.IsPresent
             $EffectiveFiles       = $Files.IsPresent
             $EffectiveHideHidden  = -not $ShowHidden.IsPresent
             $EffectiveHideSystem  = -not $ShowSystem.IsPresent
-            $EffectiveShowTargets = -not $NoTargets.IsPresent
-            $EffectiveGap         = ($Files.IsPresent -or $Gap.IsPresent) -and -not $NoGap.IsPresent
+            $EffectiveShowTargets = $ShowTargets.IsPresent
+            $GapPolicy = if ($NoGap.IsPresent) { 'None' }
+                elseif ($Gap.IsPresent) { 'Show' }
+                elseif ($Mode -eq 'Tree' -and $Files.IsPresent) { 'Tree' }
+                else { 'None' }
         }
         'List' {
-            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : -1
+            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : $Recurse.IsPresent ? -1 : 6
             $EffectiveColorize    = -not $Mono.IsPresent
             $EffectiveFiles       = -not $NoFiles.IsPresent
             $EffectiveHideHidden  = $HideHidden.IsPresent
             $EffectiveHideSystem  = $HideSystem.IsPresent
             $EffectiveShowTargets = $ShowTargets.IsPresent
-            $EffectiveGap         = $false
+            $GapPolicy            = 'None'
         }
         'Normal' {
-            $EffectiveMaxDepth    = $Recurse.IsPresent ? -1 : ($PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : -1)
+            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : $Recurse.IsPresent ? -1 : 6
             $EffectiveColorize    = -not $Mono.IsPresent
             $EffectiveFiles       = -not $NoFiles.IsPresent
             $EffectiveHideHidden  = $HideHidden.IsPresent
             $EffectiveHideSystem  = $HideSystem.IsPresent
             $EffectiveShowTargets = -not $NoTargets.IsPresent
-            $EffectiveGap         = -not $NoGap.IsPresent
+            $GapPolicy            = $NoGap.IsPresent ? 'None' : 'Show'
         }
     }
 
@@ -302,28 +294,35 @@ function Show-Tree {
     #
     $providerMode = ($Mode -eq 'Tree') ? 'Win32' : 'PowerShell'
 
-    $formatParams = @{
+    $getTreeItemParams = @{
+        Path          = $resolvedPath
+        Mode          = $Mode
+        Depth         = $EffectiveMaxDepth
+        ProviderMode  = $providerMode
+        GapPolicy     = $GapPolicy
+        Include       = $Include
+        Exclude       = $Exclude
+        HideHidden    = $EffectiveHideHidden
+        HideSystem    = $EffectiveHideSystem
+        DirectoryOnly = (-not $EffectiveFiles)
+    }
+
+    $formatTreeParams = @{
         Mode         = $Mode
         Colorize     = $EffectiveColorize
         ShowTargets  = $EffectiveShowTargets
         Ascii        = $Ascii
-        NoGap        = -not $EffectiveGap
+        GapPolicy    = $GapPolicy
         StyleProfile = $resolvedStyleProfile
     }
 
-    Get-TreeItem `
-        -Path $resolvedPath `
-        -Depth $EffectiveMaxDepth `
-        -ProviderMode $providerMode `
-        -Include $Include `
-        -Exclude $Exclude `
-        -HideHidden:$EffectiveHideHidden `
-        -HideSystem:$EffectiveHideSystem `
-        -DirectoryOnly:(!$EffectiveFiles) |
-            Format-Tree @formatParams
+    Get-TreeItem @getTreeItemParams |
+            Format-Tree @formatTreeParams
 
     #
     # Footer / Last Line logic
     #
-    Write-Output ""
+    if ($Mode -ne 'Tree') {
+        Write-Output ""
+    }
 }

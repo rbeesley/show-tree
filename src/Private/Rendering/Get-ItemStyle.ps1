@@ -114,7 +114,7 @@ function Get-ItemStyle {
     # Lookup styles from States.
     foreach ($stateName in $orderedStates) {
         $overlay = $null
-        
+
         if ($StyleProfile.States -and $StyleProfile.States.ContainsKey($stateName)) {
             $overlay = $StyleProfile.States[$stateName]
         }
@@ -123,7 +123,9 @@ function Get-ItemStyle {
             # Add state style SGR fragments.
             $ansiStyle = $overlay.AnsiStyle
             if ($ansiStyle) {
-                foreach ($a in ($ansiStyle -split ';')) { [void]$codes.Add($a) }
+                foreach ($a in ($ansiStyle -split ';')) {
+                    if ($a -ne '' -and $codes -notcontains $a) { [void]$codes.Add($a) }
+                }
             }
 
             # Foreground override.

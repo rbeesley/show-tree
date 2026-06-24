@@ -23,8 +23,8 @@
 .PARAMETER ShowTargets
     Displays symlink and junction targets.
 
-.PARAMETER NoGap
-    Suppresses gap lines between items.
+.PARAMETER GapPolicy
+    Controls gap lines between items.
 
 .PARAMETER StyleProfile
     A custom style profile or path to a style profile to use for formatting.
@@ -40,22 +40,23 @@
 function Format-Tree {
     [CmdletBinding()]
     param(
-        [Parameter(ValueFromPipeline, Mandatory)]
-        [object[]] $InputObject,
+        [Parameter(ValueFromPipeline)]
+        [object] $InputObject,
 
         [ValidateSet('Normal', 'Tree', 'List')]
         [string] $Mode = 'Normal',
 
-        [switch] $Ascii,
         [switch] $Colorize,
         [switch] $ShowTargets,
-        [switch] $NoGap,
+        [switch] $Ascii,
+
+        [ValidateSet('None', 'Tree', 'Show')]
+        [string] $GapPolicy = 'Show',
+
         [object] $StyleProfile
     )
 
     begin {
-        $gap = -not $NoGap.IsPresent
-
         $resolvedStyleProfile = if ($StyleProfile) {
             if ($StyleProfile -is [string]) {
                 Get-ShowTreeStyleProfile -Path $StyleProfile
@@ -74,7 +75,7 @@ function Format-Tree {
 
     process {
         foreach ($record in $InputObject) {
-            if ($null -eq $record) {
+            if (-not $record) {
                 continue
             }
 
@@ -125,20 +126,36 @@ function Format-Tree {
 
                     $targetText = ''
                     if ($ShowTargets -and $item.IsLink -and $item.Link.Target) {
-                        $targetText = " ${dim}->${reset} $($item.Link.Target)"
+                        $targetSuffix = $item.Link.Target
+                        if ($Colorize -and $item.Link.TargetMetadata) {
+                            $targetStyleItem = [PSCustomObject]@{
+                                PSTypeName  = 'ShowTree.TreeItem'
+                                IsContainer = $item.Link.TargetMetadata.IsContainer
+                                States      = @()
+                                Native      = [PSCustomObject]@{
+                                    FileAttributes = $item.Link.TargetMetadata.Attributes
+                                }
+                            }
+                            $targetStyle = Get-ItemStyle `
+                                -Item $targetStyleItem `
+                                -Colorize:$Colorize `
+                                -StyleProfile $resolvedStyleProfile
+                            $targetSuffix = "$($targetStyle.Ansi)$($item.Link.Target)$reset"
+                        }
+                        $targetText = " ${dim}->${reset} $targetSuffix"
                     }
 
                     Write-Output "${dim}${prefixes}${dim}${connector}${reset}$($style.Ansi)$($item.Name)$reset$targetText".TrimEnd()
                 }
 
                 'Gap' {
-                    if (-not $gap) {
+                    if ($GapPolicy -eq 'None') {
                         continue
                     }
 
                     $layout = $record.TreeLayout
 
-                    if ($null -eq $layout -or $layout.PSTypeNames -notcontains 'ShowTree.TreeLayout') {
+                    if (-not $layout -or $layout.PSTypeNames -notcontains 'ShowTree.TreeLayout') {
                         throw "Gap record is missing ShowTree.TreeLayout metadata."
                     }
 
@@ -159,10 +176,6 @@ function Format-Tree {
                         -StyleProfile $resolvedStyleProfile
 
                     Write-Output "${dim}${prefixes}${gapConnector}${reset}".TrimEnd()
-                }
-
-                default {
-                    throw "Unsupported tree record type '$($record.RecordType)'."
                 }
             }
         }
