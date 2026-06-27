@@ -17,21 +17,16 @@ function ConvertTo-TreeFilterPattern {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [string]$Pattern
+        [string]$Pattern,
+
+        [string]$RootPath
     )
 
     $directoryOnly = $Pattern.EndsWith('\') -or $Pattern.EndsWith('/')
+    $isPathPattern = $Pattern.Contains('\') -or $Pattern.Contains('/')
 
     $normalized = $Pattern -replace '/', '\'
     $normalized = $normalized.TrimEnd('\')
-
-    $isExplicitRelativePath = $normalized.StartsWith('.\')
-
-    if ($isExplicitRelativePath) {
-        $normalized = $normalized.Substring(2)
-    }
-
-    $isPathPattern = $isExplicitRelativePath -or $normalized.Contains('\')
 
     [PSCustomObject]@{
         Raw           = $Pattern
@@ -39,30 +34,6 @@ function ConvertTo-TreeFilterPattern {
         DirectoryOnly = $directoryOnly
         IsPathPattern = $isPathPattern
     }
-}
-
-function Get-TreeItemRelativePath {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)]
-        [object]$Item,
-
-        [string]$RootPath
-    )
-
-    if ([string]::IsNullOrWhiteSpace($RootPath)) {
-        return $null
-    }
-
-    $root = [System.IO.Path]::GetFullPath($RootPath).TrimEnd('\', '/')
-    $full = [System.IO.Path]::GetFullPath($Item.FullPath).TrimEnd('\', '/')
-
-    if (-not $full.StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
-        return $null
-    }
-
-    $relative = $full.Substring($root.Length).TrimStart('\', '/')
-    $relative -replace '/', '\'
 }
 
 function Test-TreeItemFilterMatch {
@@ -77,24 +48,129 @@ function Test-TreeItemFilterMatch {
         [string]$RootPath
     )
 
-    $filter = ConvertTo-TreeFilterPattern -Pattern $Pattern
+    $filter = ConvertTo-TreeFilterPattern -Pattern $Pattern -RootPath $RootPath
 
     if ($filter.DirectoryOnly -and -not $Item.IsContainer) {
         return $false
     }
 
     if ($filter.IsPathPattern) {
-        $relativePath = Get-TreeItemRelativePath -Item $Item -RootPath $RootPath
-        if ([string]::IsNullOrWhiteSpace($relativePath)) {
-            return $false
+        $itemPath = [System.IO.Path]::GetFullPath($Item.FullPath).TrimEnd('\', '/')
+
+        # Canonicalize the pattern path
+        $patternPath = $filter.Pattern
+        if (-not [System.IO.Path]::IsPathRooted($patternPath)) {
+            $base = [string]::IsNullOrWhiteSpace($RootPath) ? $PWD.ProviderPath : $RootPath
+            $patternPath = [System.IO.Path]::Combine($base, $patternPath)
+        }
+        $patternPath = [System.IO.Path]::GetFullPath($patternPath).TrimEnd('\', '/')
+
+        $hasWildcard = $patternPath.Contains('*') -or $patternPath.Contains('?')
+        if ($hasWildcard) {
+            return $itemPath -like $patternPath -or $itemPath -like ($patternPath + '\*')
         }
 
-        return $relativePath -like $filter.Pattern
+        return $itemPath -eq $patternPath -or $itemPath.StartsWith($patternPath + '\', [System.StringComparison]::OrdinalIgnoreCase)
     }
 
     return $Item.Name -like $filter.Pattern
 }
 
+function Get-TreeItemFilterStatus {
+    param(
+        [object]$Item,
+        [string[]]$Include,
+        [string[]]$Exclude,
+        [string]$RootPath
+    )
+
+    $name = $Item.Name
+    $itemFullPath = [System.IO.Path]::GetFullPath($Item.FullPath).TrimEnd('\', '/')
+
+    # 1. Exact Name Exclude Priority
+    # Explicit exclusions of a specific name should always win.
+    if ($Exclude -contains $name) { return 'Excluded' }
+
+    # 2. Direct Inclusion Check
+    if ($Include) {
+        foreach ($pattern in $Include) {
+            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
+                return 'Included'
+            }
+        }
+    }
+
+    # 3. Rescue Check (Structural Visibility for ancestors)
+    $isAncestorOfInclusion = $false
+    if ($Include) {
+        foreach ($pattern in $Include) {
+            if ($Item.IsContainer) {
+                $filter = ConvertTo-TreeFilterPattern -Pattern $pattern -RootPath $RootPath
+
+                # Check if we are a structural requirement for an absolute path inclusion
+                if ($filter.IsPathPattern) {
+                    $patternPath = $filter.Pattern
+                    if (-not [System.IO.Path]::IsPathRooted($patternPath)) {
+                        $base = [string]::IsNullOrWhiteSpace($RootPath) ? $PWD.ProviderPath : $RootPath
+                        $patternPath = [System.IO.Path]::Combine($base, $patternPath)
+                    }
+                    $patternPath = [System.IO.Path]::GetFullPath($patternPath).TrimEnd('\', '/')
+
+                    if ($patternPath.StartsWith($itemFullPath + '\', [System.StringComparison]::OrdinalIgnoreCase)) {
+                        $isAncestorOfInclusion = $true
+                        break
+                    }
+                }
+                else {
+                    # Simple name inclusion rescue: 
+                    # If we have children loaded, check if any of them (or their descendants) 
+                    # match the inclusion pattern.
+                    if ($Item.Children) {
+                        function Test-AnyChildMatches {
+                            param($Nodes, $Pat, $Root)
+                            foreach ($node in $Nodes) {
+                                if (Test-TreeItemFilterMatch -Item $node -Pattern $Pat -RootPath $Root) { return $true }
+                                if ($node.Children -and (Test-AnyChildMatches -Nodes $node.Children -Pat $Pat -Root $Root)) { return $true }
+                            }
+                            return $false
+                        }
+
+                        if (Test-AnyChildMatches -Nodes $Item.Children -Pat $pattern -Root $RootPath) {
+                            $isAncestorOfInclusion = $true
+                            break
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if ($isAncestorOfInclusion) { return 'Ancestor' }
+
+    # 4. Path-based Exclusion Check
+    if ($Exclude) {
+        foreach ($pattern in $Exclude) {
+            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
+                return 'Excluded'
+            }
+        }
+    }
+
+    return 'Default'
+}
+
+<#
+.SYNOPSIS
+    Determines if a TreeItem should be displayed.
+
+.DESCRIPTION
+    Test-TreeItemVisible evaluates an item against the current traversal settings (Include, Exclude, 
+    HideHidden, etc.) to decide if it should be emitted to the pipeline.
+
+    It implements "structural rescue" logic, where an ancestor directory is kept visible if 
+    any of its descendants match an inclusion pattern, even if the directory itself doesn't 
+    match or is marked for exclusion.
+#>
 function Test-TreeItemVisible {
     [CmdletBinding()]
     param(
@@ -111,37 +187,26 @@ function Test-TreeItemVisible {
         [switch]$DirectoryOnly
     )
 
-    $name = $Item.Name
+    $status = Get-TreeItemFilterStatus -Item $Item -Include $Include -Exclude $Exclude -RootPath $RootPath
 
-    $isIncludedExact = $Include -contains $name
-    $isExcludedExact = $Exclude -contains $name
+    # Structural ancestors to inclusions are ALWAYS visible, 
+    # overriding any potential exclusions for that specific branch node.
+    if ($status -eq 'Ancestor' -or $status -eq 'Included') { return $true }
+    if ($status -eq 'Excluded') { return $false }
 
-    $isIncludedGlob = $false
-    if (-not $isIncludedExact -and $Include) {
-        foreach ($pattern in $Include) {
-            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
-                $isIncludedGlob = $true
-                break
-            }
-        }
+    # Files are subject to directory-only filtering even if they aren't explicitly excluded.
+    if ($DirectoryOnly -and -not $Item.IsContainer -and $status -ne 'Included') {
+        return $false
     }
 
-    $isExcludedGlob = $false
-    if (-not $isExcludedExact -and $Exclude) {
-        foreach ($pattern in $Exclude) {
-            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
-                $isExcludedGlob = $true
-                break
-            }
-        }
-    }
+    if ($status -eq 'Included' -or $status -eq 'Ancestor') { return $true }
 
     $isHidden = $false
     if ($HideHidden) {
         $isHidden = $Item.IsHidden -or
                 ($Item.Native.FileAttributes -and
-                ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
-        )
+                        ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
+                )
     }
 
     $isSystem = $false
@@ -150,19 +215,21 @@ function Test-TreeItemVisible {
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
     }
 
-    $isFileToRemove = $DirectoryOnly -and -not $Item.IsContainer
-
-    if ($isIncludedExact) { return $true }
-    if ($isFileToRemove)  { return $false }
-    if ($isExcludedExact) { return $false }
-    if ($isIncludedGlob)  { return $true }
-    if ($isHidden)        { return $false }
-    if ($isSystem)        { return $false }
-    if ($isExcludedGlob)  { return $false }
+    if ($isHidden) { return $false }
+    if ($isSystem) { return $false }
 
     return $true
 }
 
+<#
+.SYNOPSIS
+    Determines if a directory should be traversed.
+
+.DESCRIPTION
+    Test-TreeItemRecurse checks if the traversal engine should enter a specific directory. 
+    It prunes the search tree based on Exclude patterns, recursion depth, and visibility 
+    settings like HideHidden.
+#>
 function Test-TreeItemRecurse {
     [CmdletBinding()]
     param(
@@ -180,80 +247,29 @@ function Test-TreeItemRecurse {
         [switch]$FollowLinks
     )
 
-    # Only directories can be recursed into
-    if (-not $Item.IsContainer) {
-        return $false
-    }
+    if (-not $Item.IsContainer) { return $false }
+    if ($Item.IsLink -and -not $FollowLinks) { return $false }
 
-    # If it's a link and we don't follow links, don't recurse
-    if ($Item.IsLink -and -not $FollowLinks) {
-        return $false
-    }
+    $status = Get-TreeItemFilterStatus -Item $Item -Include $Include -Exclude $Exclude -RootPath $RootPath
 
-    $name = $Item.Name
+    # If it's excluded, we ONLY recurse if it's an ancestor to an inclusion.
+    if ($status -eq 'Excluded') { return $false }
+    if ($status -eq 'Included' -or $status -eq 'Ancestor') { return $true }
 
-    # Exclude/hide/system can prune traversal unless Include explicitly rescues the item.
-
-    $isIncludedExact = $Include -contains $name
-    $isExcludedExact = $Exclude -contains $name
-
-    # If it's explicitly included, we should definitely recurse (if it's a directory)
-    if ($isIncludedExact) {
-        return $true
-    }
-
-    # If it's explicitly excluded, we should definitely NOT recurse
-    if ($isExcludedExact) {
-        return $false
-    }
-
-    # If it matches an exclude glob, don't recurse
-    $isRescued = $false
-    if ($Exclude) {
-        foreach ($pattern in $Exclude) {
-            if (Test-TreeItemFilterMatch -Item $Item -Pattern $pattern -RootPath $RootPath) {
-                # Check if it's rescued by a glob include
-                $isRescued = $false
-                if ($Include) {
-                    foreach ($incPattern in $Include) {
-                        if (Test-TreeItemFilterMatch -Item $Item -Pattern $incPattern -RootPath $RootPath) {
-                            $isRescued = $true
-                            break
-                        }
-                    }
-                }
-                if (-not $isRescued) {
-                    return $false
-                }
-                # If rescued by glob include, we continue to check HideHidden/HideSystem
-                break
-            }
-        }
-    }
-
-    # If hidden/system and hidden/system are to be hidden
+    # Standard traversal pruning for hidden/system items.
     if ($HideHidden) {
         $isHidden = $Item.IsHidden -or (
         $null -ne $Item.Native.FileAttributes -and
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::Hidden) -ne 0
         )
-        if ($isHidden -and -not $isRescued) {
-            return $false
-        }
+        if ($isHidden) { return $false }
     }
 
     if ($HideSystem) {
         $isSystem = $Item.Native.FileAttributes -and
                 ($Item.Native.FileAttributes -band [IO.FileAttributes]::System) -ne 0
-        if ($isSystem -and -not $isRescued) {
-            return $false
-        }
+        if ($isSystem) { return $false }
     }
 
-    # SPECIAL CASE: If Include is specified, and this directory doesn't match it,
-    # we STILL recurse because we might find matches deep inside.
-    # This matches the "Visible? maybe no, Recurse? yes" logic in the issue description.
-
-    # By default, recurse into directories
     return $true
 }

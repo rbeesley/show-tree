@@ -5,8 +5,16 @@
     Creates a tree child provider used by streaming tree traversal.
 
 .DESCRIPTION
-    The New-TreeChildProvider cmdlet returns a provider object (PowerShell or Win32)
-    that is used to enumerate files and directories during a tree traversal.
+    The New-TreeChildProvider cmdlet returns a provider object that abstracts file system 
+    enumeration. It supports two modes:
+    
+    - 'PowerShell': Uses Get-ChildItem. It is cross-platform and handles PSRemoting and 
+      other providers, but is slower for large directory structures.
+    - 'Win32': Uses direct Windows API calls (via Get-RawDirectoryEntries) for maximum 
+      performance on local NTFS volumes.
+
+    The returned object implements a standard 'GetChildren' method that returns a collection 
+    of ShowTree.TreeItem objects.
 #>
 function New-TreeChildProvider {
     [CmdletBinding()]

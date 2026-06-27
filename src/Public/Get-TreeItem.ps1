@@ -13,21 +13,22 @@
     The path to traverse. Default is '.'.
     
 .PARAMETER Mode
-    The formatting mode ('Normal', 'Tree', 'List').
+    The formatting mode ('Normal', 'Tree', 'List'). This affects how traversal is prioritized and filtered.
 
 .PARAMETER Depth
-    The maximum depth to traverse. -1 for unlimited.
+    The maximum depth to traverse. -1 for unlimited, 0 for the root item only.
 
 .PARAMETER ProviderMode
     The provider to use for enumerating items ('PowerShell' or 'Win32').
-    'Win32' is faster on Windows but may have different behavior for certain file types.
+    'Win32' is significantly faster on Windows for large directories but may have different behavior for certain virtual or networked file types.
+    'PowerShell' is the default and provides cross-platform compatibility.
     
 .PARAMETER GapPolicy
     Policy followed when rendering the gaps ('None', 'Tree', 'Show').
-    'None' suppresses all gaps, 'Show' shows all gaps, and 'Tree' is used for a special tree.com compatible mode. 
+    'None' suppresses all gaps, 'Show' shows all gaps, and 'Tree' is used for a special tree.com compatible mode where gaps only appear between files and folders.
 
 .PARAMETER FollowLinks
-    If set, follows symbolic links and junctions during traversal.
+    If set, follows symbolic links and junctions during traversal. Use with caution to avoid infinite loops.
 
 .PARAMETER Include
     Filters items to include based on glob patterns.
@@ -46,11 +47,16 @@
 
 .EXAMPLE
     Get-TreeItem -Path C:\Source -Depth 2 | Format-Tree
-    Retrieves items from C:\Source up to 2 levels deep and formats them.
+    Retrieves items from C:\Source up to 2 levels deep and formats them using the default style.
+
+.EXAMPLE
+    Get-TreeItem -Path . -ProviderMode Win32 -DirectoryOnly
+    Efficiently retrieves only directories from the current path using Win32 APIs on Windows.
 
 .LINK
     Invoke-TreeTraversal
     Format-Tree
+    New-TreeItem
 #>
 function Get-TreeItem {
     [CmdletBinding()]
@@ -93,6 +99,37 @@ function Get-TreeItem {
         $Path
     }
 
+    # Preprocessing Step: Resolve relative filters to explicit path candidates.
+    # We generate candidates by joining the base of every exclusion with every inclusion.
+    $processedInclude = [System.Collections.Generic.List[string]]::new()
+    if ($Include) {
+        foreach ($pattern in $Include) {
+            [void]$processedInclude.Add($pattern)
+
+            # For every exclusion, try to find if the inclusion exists relative to it.
+            if ($Exclude) {
+                foreach ($exPattern in $Exclude) {
+                    $exFilter = ConvertTo-TreeFilterPattern -Pattern $exPattern -RootPath $resolvedPath
+                    if ($exFilter.IsPathPattern) {
+                        $exPath = $exFilter.Pattern
+                        $exBase = Split-Path $exPath -Parent
+
+                        $candidates = @(
+                            Join-Path $exPath $pattern
+                            Join-Path $exBase $pattern
+                        )
+
+                        foreach ($c in $candidates) {
+                            if (Test-Path -LiteralPath $c) {
+                                [void]$processedInclude.Add($c)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     $provider = New-TreeChildProvider -ProviderMode $ProviderMode
 
     $traversalDepth = if ($Depth -eq -1) {
@@ -113,7 +150,7 @@ function Get-TreeItem {
         CurrentDepth  = 0
         Provider      = $provider
         GapPolicy     = $GapPolicy
-        Include       = $Include
+        Include       = $processedInclude.ToArray()
         Exclude       = $Exclude
         HideHidden    = $HideHidden
         HideSystem    = $HideSystem
@@ -122,5 +159,4 @@ function Get-TreeItem {
     }
 
     Invoke-TreeTraversal @invokeTreeTraversalParams
-
 }

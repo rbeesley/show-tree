@@ -5,9 +5,15 @@
     Computes the ANSI style for a file or directory.
 
 .DESCRIPTION
-    The Get-ItemStyle cmdlet determines the color and styling for an item based on its type
-    (File or Directory) and its states (Hidden, System, etc.). It combines base styles
-    with state-based overlays and foreground/background overrides from the active style profile.
+    The Get-ItemStyle cmdlet determines the color and styling for an item based on its type 
+    (File or Directory) and its states (Hidden, System, Symlink, etc.). 
+    
+    It performs a multi-pass resolution:
+    1. Selects the base style (File vs Directory).
+    2. Overlays styles for active states (e.g., Dim for Hidden).
+    3. Resolves Foreground/Background overrides based on the profile's StylePriority.
+    
+    Returns a PSCustomObject containing the resolved ANSI escape sequence.
 #>
 function Get-ItemStyle {
     param(

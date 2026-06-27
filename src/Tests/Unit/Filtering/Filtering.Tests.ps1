@@ -77,17 +77,44 @@ Describe "TreeItem Visibility" {
                 -IsDirectory:$true `
                 -Attributes ([IO.FileAttributes]::Directory)
 
+            # In the engine, relative paths are now expected to be resolved to absolute paths or 
+            # relative to the current working location.
+            $excludePath = Join-Path $rootPath 'src\TestFixtures'
+
             Test-TreeItemVisible `
                 -Item $srcFixtures `
-                -Exclude ".\src\TestFixtures\" `
+                -Exclude $excludePath `
                 -RootPath $rootPath |
                     Should -Be $false
 
             Test-TreeItemVisible `
                 -Item $testFixtures `
-                -Exclude ".\src\TestFixtures\" `
+                -Exclude $excludePath `
                 -RootPath $rootPath |
                     Should -Be $true
+        }
+    }
+
+    It "Matches nested relative directory filters with glob stars" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
+
+            $srcFixtures = New-TestItem `
+                -Name "TestFixtures" `
+                -ParentPath (Join-Path $rootPath 'src') `
+                -IsDirectory:$true `
+                -Attributes ([IO.FileAttributes]::Directory)
+
+            # Resolve the wildcard path against the mock root for the test
+            $excludePath = Join-Path $rootPath '*\TestFixtures'
+
+            Test-TreeItemVisible `
+                -Item $srcFixtures `
+                -Exclude $excludePath `
+                -RootPath $rootPath |
+                    Should -Be $false
         }
     }
 
@@ -147,6 +174,92 @@ Describe "TreeItem Visibility" {
             $item = New-TestItem -Name ".config" -Attributes ([IO.FileAttributes]::Hidden)
             $visible = Test-TreeItemVisible -Item $item -HideHidden -Include ".config"
             $visible | Should -Be $true
+        }
+    }
+
+    It 'Rescues a specific subdirectory and its children from an excluded parent branch' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            # Use absolute paths for the mock root, but test relative filter resolution
+            $root = $IsWindows ? 'C:\TestFixtures' : '/tmp/TestFixtures'
+
+            $dir1 = [PSCustomObject]@{ FullName = Join-Path $root 'Directories'; Name = 'Directories'; IsContainer = $true; FullPath = Join-Path $root 'Directories' }
+            $nested = [PSCustomObject]@{ FullName = Join-Path $dir1.FullName 'nested-dir'; Name = 'nested-dir'; IsContainer = $true; FullPath = Join-Path $dir1.FullName 'nested-dir' }
+            $child = [PSCustomObject]@{ FullName = Join-Path $nested.FullName 'leaf.txt'; Name = 'leaf.txt'; IsContainer = $false; FullPath = Join-Path $nested.FullName 'leaf.txt' }
+            $sibling = [PSCustomObject]@{ FullName = Join-Path $dir1.FullName 'hidden-dir'; Name = 'hidden-dir'; IsContainer = $true; FullPath = Join-Path $dir1.FullName 'hidden-dir' }
+
+            $exclude = @('.\Directories\')
+            $include = @('.\Directories\nested-dir\')
+            $traversalRoot = $root
+
+            # 1. 'Directories' should be visible as structural ancestor
+            Test-TreeItemVisible -Item $dir1 -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $true
+            Test-TreeItemRecurse -Item $dir1 -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $true
+
+            # 2. 'nested-dir' should be visible as a direct match
+            Test-TreeItemVisible -Item $nested -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $true
+            Test-TreeItemRecurse -Item $nested -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $true
+
+            # 3. 'leaf.txt' should be visible as a descendant of inclusion
+            Test-TreeItemVisible -Item $child -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $true
+
+                # 4. 'hidden-dir' (sibling) should be hidden because it matches the excluded branch and is not an ancestor/descendant
+                Test-TreeItemVisible -Item $sibling -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $false
+        }
+    }
+
+    It 'Rescues a branch when a descendant matches a name-only inclusion but the branch is excluded by path' {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $root = $IsWindows ? 'C:\Test' : '/tmp/test'
+            $dirPath = Join-Path $root 'Directories'
+            
+            # Construct hierarchy
+            $nested = New-TestItem -Name 'nested-dir' -ParentPath $dirPath -IsDirectory:$true
+            $dir = New-TestItem -Name 'Directories' -ParentPath $root -IsDirectory:$true -Children @($nested)
+
+            # Simulate the resolution that happens in Get-TreeItem:
+            # 1. The original name inclusion
+            # 2. The candidate absolute path discovered during preprocessing
+            $include = @('nested-dir\', $nested.FullPath)
+            $exclude = @([System.IO.Path]::GetFullPath((Join-Path $root 'Directories')))
+
+            # 'Directories' should be visible as an ancestor to 'nested-dir'
+            Test-TreeItemVisible -Item $dir -Include $include -Exclude $exclude -RootPath $root | Should -Be $true
+            
+            # 'nested-dir' should be visible as a direct match
+            Test-TreeItemVisible -Item $nested -Include $include -Exclude $exclude -RootPath $root | Should -Be $true
+        }
+    }
+
+    It "Excludes a subdirectory using a relative path filter" {
+        InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
+            param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
+
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
+            $dirPath = Join-Path $rootPath 'Directories'
+
+            $item = New-TestItem `
+                -Name "Directories" `
+                -ParentPath $rootPath `
+                -IsDirectory:$true `
+                -Attributes ([IO.FileAttributes]::Directory)
+
+            $child = New-TestItem `
+                -Name "child" `
+                -ParentPath $dirPath `
+                -IsDirectory:$false
+
+            # Resolve the relative path to absolute as Show-Tree would do
+            $exclude = Join-Path $rootPath 'Directories'
+
+            # Direct match exclusion
+            Test-TreeItemVisible -Item $item -Exclude $exclude -RootPath $rootPath | Should -Be $false
+
+            # Descendant exclusion
+            Test-TreeItemVisible -Item $child -Exclude $exclude -RootPath $rootPath | Should -Be $false
         }
     }
 }

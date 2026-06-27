@@ -5,9 +5,16 @@
     Deep merges two hashtables.
 
 .DESCRIPTION
-    The Merge-ShowTreeHashtable cmdlet performs a deep merge of two hashtables, where values from
-    the Override hashtable replace or extend values in the Base hashtable. This is used for
-    combining style profiles and overrides.
+    The Merge-ShowTreeHashtable cmdlet performs a deep merge of two hashtables. Values from 
+    the Override hashtable replace or extend values in the Base hashtable. If a key exists 
+    in both and both values are hashtables, they are merged recursively. This is primarily 
+    used for applying custom overrides to base style profiles.
+
+.PARAMETER Base
+    The base hashtable providing default values.
+
+.PARAMETER Override
+    The hashtable containing values that should override or extend the base.
 #>
 function Merge-ShowTreeHashtable {
     [CmdletBinding()]

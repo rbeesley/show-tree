@@ -5,9 +5,70 @@
     Streams tree traversal records for a path.
 
 .DESCRIPTION
-    The Invoke-TreeTraversal cmdlet performs a depth-first traversal of a directory structure.
-    It emits ShowTree.TreeRecord objects for each item and for "gaps" (formatting markers).
-    It manages the traversal depth and applies filtering and visibility rules.
+    Invoke-TreeTraversal is the internal recursive engine for ShowTree. It performs a 
+    depth-first search of the file system using a provided TreeChildProvider. It emits 
+    ShowTree.TreeRecord objects for every item and "gap" (structural separator) found.
+
+    It handles recursion depth, visibility logic (via predicates), and layout state 
+    tracking (e.g., whether an ancestor was a last sibling).
+
+.PARAMETER Path
+    The path to traverse. Defaults to the current directory ('.'). Supports both relative and absolute paths.
+    If the path represents a file, only that file will be emitted.
+
+.PARAMETER Mode
+    The formatting mode ('Normal', 'Tree', 'List'). This influence how layout metadata (gaps, connectors) 
+    is computed during traversal.
+
+.PARAMETER Depth
+    The maximum depth to traverse. 
+    - Use -1 for unlimited traversal.
+    - Use 0 for the root item only.
+    - Defaults to -1.
+
+.PARAMETER ProviderMode
+    The enumeration provider to use ('PowerShell' or 'Win32'). 
+    'Win32' is significantly faster on Windows for deep trees but may exhibit different behavior for 
+    certain virtualized or specialized file types.
+
+.PARAMETER GapPolicy
+    The policy for rendering gap lines ('None', 'Tree', 'Show').
+    - 'None': No gaps are emitted.
+    - 'Show': Emits gap lines between logical groups (e.g., between a set of files and the next directory).
+    - 'Tree': A legacy-compatible mode specifically for Tree.com behavior.
+
+.PARAMETER FollowLinks
+    If specified, the cmdlet will follow symbolic links and directory junctions during traversal.
+
+.PARAMETER Include
+    An array of glob patterns to include. If specified, only items matching these patterns (or their 
+    ancestors required for structural integrity) will be emitted.
+
+.PARAMETER Exclude
+    An array of glob patterns to exclude. Items matching these patterns and their descendants will be 
+    pruned from the traversal.
+
+.PARAMETER HideHidden
+    If specified, hides items marked with the Hidden attribute (Windows) or dot-prefixed items (Unix).
+
+.PARAMETER HideSystem
+    If specified, hides items marked with the System attribute.
+
+.PARAMETER DirectoryOnly
+    If specified, only directories are included in the traversal output.
+
+.EXAMPLE
+    Get-TreeItem -Path "C:\Projects\ShowTree" -Depth 2 | Format-Tree
+    Retrieves and displays the project structure up to two levels deep.
+
+.EXAMPLE
+    Get-TreeItem -Include "*.json" -Exclude "node_modules"
+    Streams all JSON files in the current directory and subdirectories, excluding the node_modules branch.
+
+.LINK
+    Invoke-TreeTraversal
+    Format-Tree
+    Show-Tree
 #>
 function Invoke-TreeTraversal {
     [CmdletBinding()]
