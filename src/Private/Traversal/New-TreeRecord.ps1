@@ -22,11 +22,11 @@ function New-TreeRecord {
         [object] $TreeLayout
     )
 
-    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)
     {
         $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
     }
-    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    if (-not $PSBoundParameters.ContainsKey('Verbose') -and $PSCmdlet)
     {
         $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
     }

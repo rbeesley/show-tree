@@ -178,11 +178,11 @@ function Show-Tree {
         [string]$Culture
     )
 
-    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)
     {
         $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
     }
-    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    if (-not $PSBoundParameters.ContainsKey('Verbose') -and $PSCmdlet)
     {
         $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
     }
@@ -269,14 +269,8 @@ function Show-Tree {
         return $results.ToArray()
     }
     
-    Write-Verbose "Include: $Include"
-    Write-Verbose "Exclude: $Exclude"
-
     $effectiveInclude = Resolve-FilterPaths -Patterns $Include
     $effectiveExclude = Resolve-FilterPaths -Patterns $Exclude
-
-    Write-Verbose "effectiveInclude: $effectiveInclude"
-    Write-Verbose "effectiveExclude: $effectiveExclude"
 
     #
     # Compute effective settings
@@ -379,7 +373,7 @@ function Show-Tree {
     #
     # Footer / Last Line logic
     #
-    if ($Mode -ne 'Tree') {
+    # if ($Mode -ne 'Tree') {
         Write-Output ""
-    }
+    # }
 }

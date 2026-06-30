@@ -15,11 +15,11 @@ function Get-RawDirectoryEntries {
         [int]$Depth = 0
     )
 
-    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)
     {
         $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
     }
-    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    if (-not $PSBoundParameters.ContainsKey('Verbose') -and $PSCmdlet)
     {
         $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
     }
@@ -99,70 +99,6 @@ public class RawEnum {
         $kind = $isDir ? 'Directory' : 'File'
         $link = $null
         $states = [System.Collections.Generic.List[string]]::new()
-
-        if (($e.dwFileAttributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
-            $kind = $isDir ? 'Junction' : 'Symlink'
-
-            $target = $null
-            $targetPath = $null
-            $isBroken = $null
-
-            # In raw mode (Win32 API), use Get-Item to retrieve PowerShell's
-            # link metadata when available.
-            $info = Get-Item -LiteralPath $fullPath -Force -ErrorAction SilentlyContinue
-            if ($info -and $info.PSObject.Properties.Match('Target')) {
-                $target = $info.Target
-            }
-
-            $targetPath = $target
-            if ($target -is [array]) {
-                $targetPath = $target | Select-Object -First 1
-            }
-
-            if (-not [string]::IsNullOrWhiteSpace([string]$targetPath)) {
-                $targetText = [string]$targetPath
-
-                $candidateTargetPath = if ([System.IO.Path]::IsPathRooted($targetText)) {
-                    $targetText
-                }
-                else {
-                    Join-Path -Path $Path -ChildPath $targetText
-                }
-
-                if (-not [string]::IsNullOrWhiteSpace($candidateTargetPath)) {
-                    $isBroken = -not (Test-Path -LiteralPath $candidateTargetPath)
-                }
-            }
-
-            $link = [PSCustomObject]@{
-                Type       = $isDir ? 'Junction' : 'SymbolicLink'
-                Target     = $target
-                TargetPath = $targetPath
-                IsBroken   = $isBroken
-                TargetMetadata = $null
-            }
-
-            if (-not $isBroken) {
-                $targetInfo = Get-Item -LiteralPath $candidateTargetPath -Force -ErrorAction SilentlyContinue
-                if ($targetInfo) {
-                    $link.TargetMetadata = [PSCustomObject]@{
-                        IsContainer = $targetInfo.PSIsContainer
-                        Attributes  = $targetInfo.Attributes
-                    }
-                }
-            }
-            
-            if ($kind -eq 'Symlink') {
-                [void]$states.Add('Symlink')
-            }
-            elseif ($kind -eq 'Junction') {
-                [void]$states.Add('Junction')
-            }
-
-            if ($isBroken) {
-                [void]$states.Add('BrokenLink')
-            }
-        }
 
         $item = New-TreeItem `
             -FullPath $fullPath `
