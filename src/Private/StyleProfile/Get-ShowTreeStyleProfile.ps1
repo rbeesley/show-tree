@@ -15,6 +15,15 @@ function Get-ShowTreeStyleProfile {
         [string] $Culture
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $baseProfile    = Import-PowerShellDataFile -LiteralPath $script:BaseStyleProfilePath
     $defaultProfile = Import-PowerShellDataFile -LiteralPath $script:DefaultStyleProfilePath
 

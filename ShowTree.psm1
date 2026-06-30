@@ -18,7 +18,11 @@ else {
 . (Join-Path $moduleSrcRoot 'Public\Show-TreeLegend.ps1')
 
 # Dot-source private functions
-. (Join-Path $moduleSrcRoot 'Private\TreeItemPredicates.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Filtering\ConvertTo-TreeFilterPattern.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Filtering\Get-TreeItemFilterStatus.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Filtering\Test-TreeItemFilterMatch.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Filtering\Test-TreeItemRecurse.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Filtering\Test-TreeItemVisible.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Resolve-TreePath.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-FileAttributes.ps1')
 . (Join-Path $moduleSrcRoot 'Private\PathUtilities\Get-NearestExistingParent.ps1')

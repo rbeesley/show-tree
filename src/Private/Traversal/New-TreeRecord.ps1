@@ -2,11 +2,12 @@
 
 <#
 .SYNOPSIS
-    Creates a streamed tree traversal record.
+    Creates a TreeRecord object.
 
 .DESCRIPTION
-    The New-TreeRecord cmdlet creates a ShowTree.TreeRecord object, which is the primary unit of data
-    piped from traversal to formatting. It contains an item or a formatting gap, along with its layout metadata.
+    New-TreeRecord is a factory for ShowTree.TreeRecord objects. These objects 
+    combine a TreeItem (the data) with a TreeLayout (the visual state) and are the 
+    primary unit of communication between the traversal engine and the renderer.
 #>
 function New-TreeRecord {
     [CmdletBinding()]
@@ -20,6 +21,15 @@ function New-TreeRecord {
         [Parameter(Mandatory)]
         [object] $TreeLayout
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     if ($RecordType -eq 'Item' -and $null -eq $TreeItem) {
         throw "Tree record type 'Item' requires a TreeItem."

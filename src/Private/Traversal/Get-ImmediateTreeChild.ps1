@@ -2,12 +2,13 @@
 
 <#
 .SYNOPSIS
-    Gets the visible immediate children for a single tree traversal step.
+    Enumerates the immediate children of a path.
 
 .DESCRIPTION
-    The Get-ImmediateTreeChild cmdlet enumerates only the direct children of Path using the supplied child provider.
-    It applies visibility and filtering rules (Include, Exclude, Hidden, System) and returns the visible sibling group.
-    This function does not recurse; recursion is handled by Invoke-TreeTraversal.
+    Get-ImmediateTreeChild uses the provided TreeChildProvider to fetch the files and 
+    directories directly under a path. It applies immediate filtering (like HideHidden) 
+    and sorts the results (usually files before directories) before returning them 
+    to the traversal engine.
 #>
 function Get-ImmediateTreeChild {
     [CmdletBinding()]
@@ -29,6 +30,15 @@ function Get-ImmediateTreeChild {
         [switch] $HideSystem,
         [switch] $DirectoryOnly
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     if ([string]::IsNullOrWhiteSpace($RootPath)) {
         $RootPath = $Path

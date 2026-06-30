@@ -85,44 +85,51 @@ function Get-TreeItem {
         [switch] $DirectoryOnly
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $resolvedPathInfo = Resolve-Path -LiteralPath $Path -ErrorAction SilentlyContinue
 
-    $resolvedPath = if ($resolvedPathInfo) {
-        if ($resolvedPathInfo.PSObject.Properties.Match('ProviderPath')) {
-            $resolvedPathInfo.ProviderPath
-        }
-        else {
-            $resolvedPathInfo.Path
-        }
-    }
-    else {
-        $Path
-    }
+    $resolvedPath = $resolvedPathInfo `
+                ? ($resolvedPathInfo.PSObject.Properties.Match('ProviderPath')) `
+                        ? $resolvedPathInfo.ProviderPath `
+                        : $resolvedPathInfo.Path `
+                : $Path
 
     # Preprocessing Step: Resolve relative filters to explicit path candidates.
-    # We generate candidates by joining the base of every exclusion with every inclusion.
+    # We generate candidates by joining every exclusion with every inclusion.
+    # This enables "structural rescue" for relative inclusions under excluded directories.
     $processedInclude = [System.Collections.Generic.List[string]]::new()
     if ($Include) {
         foreach ($pattern in $Include) {
             [void]$processedInclude.Add($pattern)
 
-            # For every exclusion, try to find if the inclusion exists relative to it.
             if ($Exclude) {
                 foreach ($exPattern in $Exclude) {
                     $exFilter = ConvertTo-TreeFilterPattern -Pattern $exPattern -RootPath $resolvedPath
-                    if ($exFilter.IsPathPattern) {
-                        $exPath = $exFilter.Pattern
-                        $exBase = Split-Path $exPath -Parent
 
-                        $candidates = @(
-                            Join-Path $exPath $pattern
-                            Join-Path $exBase $pattern
-                        )
+                    # If it's a path pattern, or a name that happens to be a directory, we should attempt rescue joins
+                    $isExDir = $exFilter.DirectoryOnly -or (Test-Path -LiteralPath (Join-Path $resolvedPath $exFilter.Pattern) -PathType Container)
+                    $hasSep = $exPattern.Contains([System.IO.Path]::DirectorySeparatorChar)
+                    
+                    if ($hasSep -or $isExDir) {
+                        $candidate = [System.IO.Path]::Combine($exFilter.Pattern, $pattern)
 
-                        foreach ($c in $candidates) {
-                            if (Test-Path -LiteralPath $c) {
-                                [void]$processedInclude.Add($c)
-                            }
+                        # Verify if the candidate exists before adding it as an explicit rescue
+                        $absCandidate = if ([System.IO.Path]::IsPathRooted($candidate)) {
+                            $candidate
+                        } else {
+                            [System.IO.Path]::Combine($resolvedPath, $candidate)
+                        }
+
+                        if (Test-Path -LiteralPath $absCandidate) {
+                            [void]$processedInclude.Add($candidate)
                         }
                     }
                 }
@@ -130,17 +137,11 @@ function Get-TreeItem {
         }
     }
     
+    Write-Verbose "processedInclude: $processedInclude"
+    
     $provider = New-TreeChildProvider -ProviderMode $ProviderMode
 
-    $traversalDepth = if ($Depth -eq -1) {
-        -1
-    }
-    elseif ($Depth -le 0) {
-        0
-    }
-    else {
-        $Depth - 1
-    }
+    $traversalDepth = ($Depth -eq -1) ? -1 : ($Depth -le 0) ? 0 : ($Depth - 1)
 
     $invokeTreeTraversalParams = @{
         Path          = $resolvedPath

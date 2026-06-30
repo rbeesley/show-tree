@@ -48,6 +48,15 @@ function Set-ShowTreeStyleProfile {
         [switch] $Reset
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     switch ($PSCmdlet.ParameterSetName) {
         'Reset' {
             $script:ShowTreeState.StyleProfile = Get-ShowTreeStyleProfile

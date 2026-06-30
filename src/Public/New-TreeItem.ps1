@@ -105,6 +105,15 @@ function New-TreeItem {
         [object[]] $Children
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     if ([string]::IsNullOrEmpty($Name)) {
         $Name = Split-Path -Path $FullPath -Leaf
     }

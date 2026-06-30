@@ -37,9 +37,6 @@
     - 'Show': Emits gap lines between logical groups (e.g., between a set of files and the next directory).
     - 'Tree': A legacy-compatible mode specifically for Tree.com behavior.
 
-.PARAMETER FollowLinks
-    If specified, the cmdlet will follow symbolic links and directory junctions during traversal.
-
 .PARAMETER Include
     An array of glob patterns to include. If specified, only items matching these patterns (or their 
     ancestors required for structural integrity) will be emitted.
@@ -56,19 +53,9 @@
 
 .PARAMETER DirectoryOnly
     If specified, only directories are included in the traversal output.
-
-.EXAMPLE
-    Get-TreeItem -Path "C:\Projects\ShowTree" -Depth 2 | Format-Tree
-    Retrieves and displays the project structure up to two levels deep.
-
-.EXAMPLE
-    Get-TreeItem -Include "*.json" -Exclude "node_modules"
-    Streams all JSON files in the current directory and subdirectories, excluding the node_modules branch.
-
-.LINK
-    Invoke-TreeTraversal
-    Format-Tree
-    Show-Tree
+    
+.PARAMETER FollowLinks
+    If specified, the cmdlet will follow symbolic links and directory junctions during traversal.
 #>
 function Invoke-TreeTraversal {
     [CmdletBinding()]
@@ -103,6 +90,15 @@ function Invoke-TreeTraversal {
         [switch] $DirectoryOnly,
         [switch] $FollowLinks
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     if ([string]::IsNullOrWhiteSpace($RootPath)) {
         $RootPath = $Path

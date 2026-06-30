@@ -14,6 +14,15 @@ function Get-VolumeSerialNumber {
         [string]$Path = "."
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     if (-not ([System.Management.Automation.PSTypeName]'VolumeInfo').Type) {
         $definition = @"
 using System;

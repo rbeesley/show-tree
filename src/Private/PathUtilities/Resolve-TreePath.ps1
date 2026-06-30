@@ -2,12 +2,12 @@
 
 <#
 .SYNOPSIS
-    Resolves a user-supplied path into a fully qualified provider path.
+    Resolves and validates a path for tree display.
 
 .DESCRIPTION
-    The Resolve-TreePath cmdlet converts user input into a canonical provider path. 
-    It handles caller-relative resolution, normalization, and mode-specific error behavior 
-    (Normal/List vs. Tree mode).
+    Resolve-TreePath ensures a given path is valid and accessible. It handles PowerShell 
+    provider paths and ensures that drive-rooted paths are correctly resolved for 
+    both Normal and legacy Tree modes.
 #>
 function Resolve-TreePath {
     [CmdletBinding()]
@@ -18,6 +18,15 @@ function Resolve-TreePath {
         [ValidateSet('Normal','Tree','List')]
         [string]$Mode = 'Normal'
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     try {
         # Use the caller/runspace working directory, not the module session state's location.

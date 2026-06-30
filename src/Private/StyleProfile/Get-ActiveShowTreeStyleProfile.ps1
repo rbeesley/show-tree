@@ -2,15 +2,24 @@
 
 <#
 .SYNOPSIS
-    Returns the currently active style profile.
+    Retrieves the currently active style profile object.
 
 .DESCRIPTION
-    The Get-ActiveShowTreeStyleProfile cmdlet retrieves the style profile currently being used by the module.
-    If no profile is set in the session state, it returns the default profile.
+    Get-ActiveShowTreeStyleProfile looks up the style profile currently set in the 
+    module's state. If no profile is set, it initializes and returns the default profile.
 #>
 function Get-ActiveShowTreeStyleProfile {
     [CmdletBinding()]
     param()
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     if ($null -eq $script:ShowTreeState -or $null -eq $script:ShowTreeState.StyleProfile) {
         return Get-ShowTreeStyleProfile

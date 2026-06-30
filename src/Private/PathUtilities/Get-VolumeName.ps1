@@ -11,6 +11,15 @@
 function Get-VolumeName {
     param([string]$Path = ".")
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $driveLetter = (Get-Item $Path).PSDrive.Name
     $volume      = Get-Volume -DriveLetter $driveLetter
     $volume.FileSystemLabel

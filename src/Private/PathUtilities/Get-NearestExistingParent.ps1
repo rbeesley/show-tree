@@ -5,11 +5,21 @@
     Finds the nearest existing parent directory.
 
 .DESCRIPTION
-    The Get-NearestExistingParent cmdlet walks up the path hierarchy until it finds a directory that exists.
-    This is primarily used for generating headers when the requested path does not exist.
+    The Get-NearestExistingParent cmdlet walks up the path hierarchy until it finds a 
+    directory that exists on disk. This is used to resolve volume information even 
+    when the requested sub-path does not exist.
 #>
 function Get-NearestExistingParent {
     param([string]$Path)
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     $current = [System.IO.Path]::GetFullPath($Path)
 

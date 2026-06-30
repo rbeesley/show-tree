@@ -26,6 +26,15 @@ function Get-Connector {
         [object]$StyleProfile
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $encoding = $Ascii ? 'Ascii' : 'Unicode'
     $connectorSet = $StyleProfile.Connectors[$Mode][$encoding]
 

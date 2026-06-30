@@ -1,10 +1,12 @@
-﻿<#
+﻿# /src/Private/Rendering/Get-LegendStateNames.ps1
+
+<#
 .SYNOPSIS
-    Returns a list of state names to display in the legend.
+    Returns a list of state names for legend rendering.
 
 .DESCRIPTION
-    The Get-LegendStateNames cmdlet filters the states defined in a style profile based on the 
-    specified platform (Windows, Unix, or Current) to show only relevant states in the legend output.
+    Get-LegendStateNames provides the ordered list of states (like Hidden, ReadOnly, 
+    Symlink) that should be displayed when rendering the color legend.
 #>
 function Get-LegendStateNames {
     param(
@@ -15,6 +17,15 @@ function Get-LegendStateNames {
 
         [switch]$All
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     if (-not $StyleProfile.States) {
         return @()

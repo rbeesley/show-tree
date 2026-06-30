@@ -11,6 +11,15 @@
 function Get-FileAttributes {
     param([IO.FileAttributes]$Attributes)
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     foreach ($flag in [System.Enum]::GetValues([IO.FileAttributes])) {
         if ($Attributes -band $flag) {
             $flag

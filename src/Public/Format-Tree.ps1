@@ -57,6 +57,15 @@ function Format-Tree {
     )
 
     begin {
+        if (-not $PSBoundParameters.ContainsKey('Debug'))
+        {
+            $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+        }
+        if (-not $PSBoundParameters.ContainsKey('Verbose'))
+        {
+            $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+        }
+
         $resolvedStyleProfile = if ($StyleProfile) {
             if ($StyleProfile -is [string]) {
                 Get-ShowTreeStyleProfile -Path $StyleProfile

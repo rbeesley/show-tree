@@ -53,15 +53,9 @@ function Resolve-SafeTestDataRoot {
             continue
         }
 
-        $normalizedFullPath = $fullPath.TrimEnd(
-                [System.IO.Path]::DirectorySeparatorChar,
-                [System.IO.Path]::AltDirectorySeparatorChar
-        )
+        $normalizedFullPath = $fullPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar)
 
-        $normalizedDangerousPath = $dangerousPath.TrimEnd(
-                [System.IO.Path]::DirectorySeparatorChar,
-                [System.IO.Path]::AltDirectorySeparatorChar
-        )
+        $normalizedDangerousPath = $dangerousPath.TrimEnd([System.IO.Path]::DirectorySeparatorChar)
 
         if ($normalizedFullPath -eq $normalizedDangerousPath) {
             throw "Refusing to use unsafe test-data root: '$fullPath'"

@@ -2,12 +2,12 @@
 
 <#
 .SYNOPSIS
-    Displays a color legend for base types and state overlays.
+    Displays a color and style legend.
 
 .DESCRIPTION
-    The Show-TreeLegend cmdlet displays a visual guide to the colors used by Show-Tree.
-    It shows how base types (File, Directory) and various states (Hidden, ReadOnly, System, etc.)
-    are rendered in the current style profile.
+    The Show-TreeLegend cmdlet prints a reference guide showing how different file types 
+    and states (e.g., Hidden, System, Symlink) are styled in the current profile. This is 
+    useful for understanding the color coding used in the tree output.
 
     By default, only states relevant to the current platform are shown.
     Use -Platform to preview another platform's states, or -All to show every
@@ -38,6 +38,7 @@
     Get-ItemStyle
 #>
 function Show-TreeLegend {
+    [CmdletBinding()]
     param(
         $StyleProfile = $null,
 
@@ -48,6 +49,15 @@ function Show-TreeLegend {
 
         [switch]$All
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     if ($Culture) {
         $StyleProfile = Get-ShowTreeStyleProfile -Culture $Culture

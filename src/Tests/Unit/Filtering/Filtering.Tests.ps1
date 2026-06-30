@@ -18,12 +18,14 @@ Describe "TreeItem Visibility" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
+
             $item = New-TestItem -Name ".git"
-            $visible = Test-TreeItemVisible -Item $item -Exclude ".git"
+            $visible = Test-TreeItemVisible -Item $item -Exclude ".git" -RootPath $rootPath
             $visible | Should -Be $false
 
             $item2 = New-TestItem -Name ".github"
-            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".git"
+            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".git" -RootPath $rootPath
             $visible2 | Should -Be $true
         }
     }
@@ -55,7 +57,7 @@ Describe "TreeItem Visibility" {
                 -Item $file `
                 -Exclude "TestFixtures\" `
                 -RootPath $rootPath |
-                    Should -Be $true
+                    Should -Be $false
         }
     }
 
@@ -139,16 +141,18 @@ Describe "TreeItem Visibility" {
         }
     }
 
-    It "Glob include resurrects items excluded by glob" {
+    It "Include resurrects items excluded by glob" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
+
             $item = New-TestItem -Name ".github"
-            $visible = Test-TreeItemVisible -Item $item -Exclude ".*" -Include ".github"
+            $visible = Test-TreeItemVisible -Item $item -Exclude ".*" -Include ".github" -RootPath $rootPath
             $visible | Should -Be $true
 
             $item2 = New-TestItem -Name ".git"
-            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".*" -Include ".github"
+            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".*" -Include ".github" -RootPath $rootPath
             $visible2 | Should -Be $false
         }
     }
@@ -157,12 +161,14 @@ Describe "TreeItem Visibility" {
         InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
             param( [string[]] $FixtureScripts ); foreach ($script in $FixtureScripts) { . $script }
 
+            $rootPath = $IsWindows ? 'C:\Test' : '/tmp/test'
+
             $item = New-TestItem -Name ".git"
-            $visible = Test-TreeItemVisible -Item $item -Exclude ".git" -Include ".git*"
+            $visible = Test-TreeItemVisible -Item $item -Exclude ".git" -Include ".git*" -RootPath $rootPath
             $visible | Should -Be $false
 
             $item2 = New-TestItem -Name ".gitignore"
-            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".git" -Include ".git*"
+            $visible2 = Test-TreeItemVisible -Item $item2 -Exclude ".git" -Include ".git*" -RootPath $rootPath
             $visible2 | Should -Be $true
         }
     }
@@ -183,14 +189,15 @@ Describe "TreeItem Visibility" {
 
             # Use absolute paths for the mock root, but test relative filter resolution
             $root = $IsWindows ? 'C:\TestFixtures' : '/tmp/TestFixtures'
+            $sep = [System.IO.Path]::DirectorySeparatorChar
 
             $dir1 = [PSCustomObject]@{ FullName = Join-Path $root 'Directories'; Name = 'Directories'; IsContainer = $true; FullPath = Join-Path $root 'Directories' }
             $nested = [PSCustomObject]@{ FullName = Join-Path $dir1.FullName 'nested-dir'; Name = 'nested-dir'; IsContainer = $true; FullPath = Join-Path $dir1.FullName 'nested-dir' }
             $child = [PSCustomObject]@{ FullName = Join-Path $nested.FullName 'leaf.txt'; Name = 'leaf.txt'; IsContainer = $false; FullPath = Join-Path $nested.FullName 'leaf.txt' }
             $sibling = [PSCustomObject]@{ FullName = Join-Path $dir1.FullName 'hidden-dir'; Name = 'hidden-dir'; IsContainer = $true; FullPath = Join-Path $dir1.FullName 'hidden-dir' }
 
-            $exclude = @('.\Directories\')
-            $include = @('.\Directories\nested-dir\')
+            $exclude = @('Directories','') -Join $sep
+            $include = @('Directories', 'nested-dir', '') -Join $sep
             $traversalRoot = $root
 
             # 1. 'Directories' should be visible as structural ancestor
@@ -204,8 +211,8 @@ Describe "TreeItem Visibility" {
             # 3. 'leaf.txt' should be visible as a descendant of inclusion
             Test-TreeItemVisible -Item $child -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $true
 
-                # 4. 'hidden-dir' (sibling) should be hidden because it matches the excluded branch and is not an ancestor/descendant
-                Test-TreeItemVisible -Item $sibling -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $false
+            # 4. 'hidden-dir' (sibling) should be hidden because it matches the excluded branch and is not an ancestor/descendant
+            Test-TreeItemVisible -Item $sibling -Include $include -Exclude $exclude -RootPath $traversalRoot | Should -Be $false
         }
     }
 

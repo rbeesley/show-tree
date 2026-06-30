@@ -2,11 +2,12 @@
 
 <#
 .SYNOPSIS
-    Creates layout metadata for a streamed tree record.
+    Creates a TreeLayout object for a record.
 
 .DESCRIPTION
-    The New-TreeLayout cmdlet creates a ShowTree.TreeLayout object that describes the positional state
-    of an item in the tree (depth, whether it's the last sibling, etc.), which is used by Format-Tree for rendering.
+    New-TreeLayout calculates the indentation and connector state for a tree item. 
+    It tracks whether an item is the last sibling and carries forward the "last sibling" 
+    status of ancestors to correctly draw vertical span lines.
 #>
 function New-TreeLayout {
     [CmdletBinding()]
@@ -21,6 +22,15 @@ function New-TreeLayout {
 
         [bool] $HasLaterSiblingDirectory = $false
     )
+
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
 
     [PSCustomObject]@{
         PSTypeName                = 'ShowTree.TreeLayout'

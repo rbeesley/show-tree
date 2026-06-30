@@ -178,6 +178,15 @@ function Show-Tree {
         [string]$Culture
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     #
     # Resolve Style Profile
     #
@@ -238,32 +247,36 @@ function Show-Tree {
         $cwd = $PWD.ProviderPath
         foreach ($p in $Patterns) {
             # Only resolve if it's an explicit relative path or a drive-rooted path.
-            # Names with trailing slashes (e.g. folder\) should remain as name patterns.
-            if ($p.StartsWith('.\') -or $p.StartsWith('..\') -or [System.IO.Path]::IsPathRooted($p)) {
+            # Names with trailing slashes (e.g. folder/) should remain as name patterns.
+            $isRelative = $p.StartsWith('.' + [System.IO.Path]::DirectorySeparatorChar) -or
+                    $p.StartsWith('..' + [System.IO.Path]::DirectorySeparatorChar) -or
+                    $p.StartsWith('./') -or $p.StartsWith('../')
+
+            if ($isRelative -or [System.IO.Path]::IsPathRooted($p)) {
                 $resolved = $p
-                if ($p.StartsWith('.\')) { $resolved = $p.Substring(2) }
+                if ($p.StartsWith('.\') -or $p.StartsWith('./')) { $resolved = $p.Substring(2) }
                 if (-not [System.IO.Path]::IsPathRooted($resolved)) {
                     $resolved = [System.IO.Path]::Combine($cwd, $resolved)
                 }
-                # Preserve wildcards but normalize pathing
-                $resolved = $resolved -replace '/', '\'
+                # Preserve wildcards
                 $results.Add($resolved)
             }
             else {
                 $results.Add($p)
             }
         }
+        
         return $results.ToArray()
     }
-
-    Write-Host "Include: $Include"
-    Write-Host "Exclude: $Exclude"
+    
+    Write-Verbose "Include: $Include"
+    Write-Verbose "Exclude: $Exclude"
 
     $effectiveInclude = Resolve-FilterPaths -Patterns $Include
     $effectiveExclude = Resolve-FilterPaths -Patterns $Exclude
 
-    Write-Host "effectiveInclude: $effectiveInclude"
-    Write-Host "effectiveExclude: $effectiveExclude"
+    Write-Verbose "effectiveInclude: $effectiveInclude"
+    Write-Verbose "effectiveExclude: $effectiveExclude"
 
     #
     # Compute effective settings

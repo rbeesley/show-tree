@@ -17,6 +17,15 @@ function Get-TreeModeHeader {
         [object]$StyleProfile = $null
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $StyleProfile = $StyleProfile ? (Get-ActiveShowTreeStyleProfile) : $StyleProfile
     $ui = $StyleProfile.UIStrings.TreeMode
 

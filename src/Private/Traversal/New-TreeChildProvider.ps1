@@ -23,6 +23,15 @@ function New-TreeChildProvider {
         [string] $ProviderMode = 'PowerShell'
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $localIsWindows = $IsWindows ? $IsWindows : $true
     if ($ProviderMode -eq 'Win32' -and -not $localIsWindows) {
         throw "Win32 tree child provider is only supported on Windows."

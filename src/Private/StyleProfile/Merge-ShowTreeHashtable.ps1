@@ -26,6 +26,15 @@ function Merge-ShowTreeHashtable {
         [System.Collections.IDictionary] $Override
     )
 
+    if (-not $PSBoundParameters.ContainsKey('Debug'))
+    {
+        $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')
+    }
+    if (-not $PSBoundParameters.ContainsKey('Verbose'))
+    {
+        $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
+    }
+
     $result = @{}
 
     foreach ($key in $Base.Keys) {
