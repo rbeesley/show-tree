@@ -5,37 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "PowerShell: Module Interactive Session",
             "type": "PowerShell",
             "request": "launch",
-            "name": "Debug ShowTree",
-            "script": "${workspaceFolder}/tools/Debug-ShowTree.ps1",
-            "args": [
-                // ".",
-                ".\\TestAttributes\\",
-                // "D:/show-tree/",
-                // "D:\\",
-                // "C:\\",
-                // "X:\\InvalidDrive",
-                // "C:\\InvalidPath",
-                // "-Mode 'Tree'",
-                // "-Mode 'List'",
-                "-Files",
-                "-Exclude SYMBOLS, .*",
-                // "-Include .vscode, .github",
-                // "-Exclude SYMBOLS, .git",
-                // "-Include .git*",
-                // "-Ascii",
-                // "-ShowHidden",
-                // "-ShowSystem",
-                // "-HideHidden",
-                // "-Mono",
-                "-Color",
-                // "-NoTargets",
-                "-Depth 6",
-                // "-DebugAttributes",
-            ],
-            "cwd": "${workspaceFolder}",
-            "internalConsoleOptions": "neverOpen"
+            "script": "Remove-Module ShowTree; Import-Module .\\ShowTree.psd1 -Force -Verbose"
         }
     ]
 }
