@@ -14,12 +14,26 @@
     3. Resolves Foreground/Background overrides based on the profile's StylePriority.
     
     Returns a PSCustomObject containing the resolved ANSI escape sequence.
+
+.PARAMETER Item
+    The ShowTree.TreeItem to style.
+
+.PARAMETER Colorize
+    If true, returns ANSI escape sequences. If false, returns empty strings.
+
+.PARAMETER StyleProfile
+    The style profile object containing the color definitions.
 #>
 function Get-ItemStyle {
+    [CmdletBinding()]
     param(
-        $Item,
-        $Colorize,
-        $StyleProfile = $null
+        [Parameter(Mandatory)]
+        [object] $Item,
+
+        [Parameter(Mandatory)]
+        [bool] $Colorize,
+
+        [object] $StyleProfile = $null
     )
 
     if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)

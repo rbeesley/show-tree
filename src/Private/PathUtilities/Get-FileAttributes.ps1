@@ -7,9 +7,16 @@
 .DESCRIPTION
     The Get-FileAttributes cmdlet expands a FileAttributes bitmask into a collection of individual flags,
     which is used by Get-ItemStyle to apply attribute-based styling overlays.
+
+.PARAMETER Attributes
+    The System.IO.FileAttributes bitmask to expand.
 #>
 function Get-FileAttributes {
-    param([IO.FileAttributes]$Attributes)
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [IO.FileAttributes]$Attributes
+    )
 
     if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)
     {

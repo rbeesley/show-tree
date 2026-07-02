@@ -8,12 +8,16 @@
     The Get-VolumeSerialNumber cmdlet calls the Win32 GetVolumeInformation API to retrieve
     the serial number of the volume containing the specified path, formatted to match tree.com.
     Used only in Tree.com compatibility mode.
+
+.PARAMETER Path
+    The path used to identify the volume. Defaults to the current directory.
 #>
 function Get-VolumeSerialNumber {
+    [CmdletBinding()]
     param (
         [string]$Path = "."
     )
-
+    
     if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)
     {
         $DebugPreference = $PSCmdlet.GetVariableValue('DebugPreference')

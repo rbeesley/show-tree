@@ -6,10 +6,16 @@
 
 .DESCRIPTION
     The Get-VolumeName cmdlet retrieves the filesystem label (volume name) for the drive associated
-    with the specified path. Used only in Tree.com compatibility mode. 
+    with the specified path. Used only in Tree.com compatibility mode.
+
+.PARAMETER Path
+    The path used to identify the drive/volume. Defaults to the current directory. 
 #>
 function Get-VolumeName {
-    param([string]$Path = ".")
+    [CmdletBinding()]
+    param(
+        [string]$Path = "."
+    )
 
     if (-not $PSBoundParameters.ContainsKey('Debug') -and $PSCmdlet)
     {

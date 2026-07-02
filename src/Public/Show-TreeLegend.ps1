@@ -101,7 +101,7 @@ function Show-TreeLegend {
     #
     Write-Output $ui.Types
 
-    Show-Sample "File"      (New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = [IO.FileAttributes]::Archive }) " " $StyleProfile
+    Show-Sample $ui.File      (New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -Native @{ FileAttributes = [IO.FileAttributes]::Archive }) " " $StyleProfile
     Write-Output $ui.States
     foreach ($state in $stateNames) {
         $item = New-TreeItem -FullPath 'file' -IsContainer $false -Kind 'File' -States @($state)
@@ -109,7 +109,7 @@ function Show-TreeLegend {
     }
     Write-Output ""
 
-    Show-Sample "Directory" (New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = [IO.FileAttributes]::Directory }) " " $StyleProfile
+    Show-Sample $ui.Directory (New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -Native @{ FileAttributes = [IO.FileAttributes]::Directory }) " " $StyleProfile
     Write-Output $ui.States
     foreach ($state in $stateNames) {
         $item = New-TreeItem -FullPath 'dir' -IsContainer $true -Kind 'Directory' -States @($state)

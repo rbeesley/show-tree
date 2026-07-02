@@ -31,12 +31,15 @@ function New-TreeRecord {
         $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
     }
 
+    $styleProfile = Get-ActiveShowTreeStyleProfile
+    $uiErrors = $styleProfile.UIStrings.Errors
+
     if ($RecordType -eq 'Item' -and $null -eq $TreeItem) {
-        throw "Tree record type 'Item' requires a TreeItem."
+        throw $uiErrors.MissingTreeItem
     }
 
     if ($null -eq $TreeLayout.PSTypeNames -or $TreeLayout.PSTypeNames -notcontains 'ShowTree.TreeLayout') {
-        throw "Tree record requires a ShowTree.TreeLayout layout object."
+        throw $uiErrors.MissingTreeLayout
     }
 
     [PSCustomObject]@{

@@ -31,43 +31,54 @@
     Excludes items and their descendants that match the specified glob patterns.
 
 .PARAMETER Color
-    Forces colorization in Tree mode. By default, Tree mode matches the original utility and is monochromatic.
+    Forces colorization. Used primarily in Tree mode to override the default monochromatic output.
+    Note: Defaults to ON for Normal/List modes and OFF for Tree mode.
 
-.PARAMETER Mono
-    Disables colorization in Normal or List modes.
+.PARAMETER NoColor
+    Disables ANSI color coding. (Alias: Mono, NoColor)
 
 .PARAMETER Files
-    Shows files when using Tree mode. (Alias: ShowFiles)
+    Shows files in the tree listing. (Alias: ShowFiles)
+    Note: Defaults to ON for Normal/List modes and OFF for Tree mode.
 
 .PARAMETER NoFiles
-    Hides files in Normal or List modes (where they are shown by default).
+    Forcefully hides files regardless of the active mode.
 
-.PARAMETER ShowHidden
-    Shows hidden items in Tree mode.
+.PARAMETER Hidden
+    Shows hidden items (files or directories marked with the Hidden attribute or dot-prefixed on Unix). (Alias: ShowHidden)
+    Note: Defaults to OFF for all modes.
 
-.PARAMETER HideHidden
-    Hides hidden items in Normal or List modes (where they are shown by default).
+.PARAMETER NoHidden
+    Forcefully hides hidden items regardless of the active mode. (Alias: HideHidden)
 
-.PARAMETER ShowSystem
-    Shows system items in Tree mode.
+.PARAMETER System
+    Shows system items (items marked with the System attribute on Windows). (Alias: ShowSystem)
+    Note: Defaults to OFF for all modes.
 
-.PARAMETER HideSystem
-    Hides system items in Normal or List modes (where they are shown by default).
+.PARAMETER NoSystem
+    Forcefully hides system items regardless of the active mode. (Alias: HideSystem)
 
-.PARAMETER ShowTargets
-    Displays the targets of symbolic links and junctions in List and Tree modes.
+.PARAMETER Targets
+    Displays the targets of symbolic links and junctions. (Alias: ShowTargets)
+    Note: Defaults to ON for Normal/List modes and OFF for Tree mode.
 
 .PARAMETER NoTargets
-    Suppresses symbolic link and junction targets in Normal mode.
+    Suppresses symbolic link and junction targets.
 
 .PARAMETER Gap
-    Adds gap lines between item groups in List or Tree modes.
+    Adds gap lines between item groups to improve visual clarity.
+    Note: Defaults to ON for Normal mode and OFF for List/Tree modes. In Tree mode, 
+    enabling Files will also enable a specific "Tree" gap policy.
 
 .PARAMETER NoGap
-    Removes gap lines in Normal or Tree modes.
+    Removes gap lines.
+
+.PARAMETER Compat
+    Enables strict compatibility mode when using -Mode Tree. This mimics the monochromatic, 
+    file-less, and target-less output of the classic tree.com utility.
 
 .PARAMETER MaxDepth
-    The maximum recursion depth. Defaults to 6. Use -1 or the -Recurse switch for unlimited depth.
+    The maximum recursion depth. Defaults to 6. Use -1 or the -Recurse switch for unlimited depth. (Alias: Depth)
 
 .PARAMETER Recurse
     Recursively traverses all subdirectories. Equivalent to -MaxDepth -1.
@@ -94,6 +105,10 @@
 .EXAMPLE
     Show-Tree -Mode Tree -Files -Color
     Displays a colorized, legacy-style tree including files.
+
+.EXAMPLE
+    Show-Tree -Hidden -NoGap
+    Shows hidden files in the current directory and suppresses gap lines.
 
 .EXAMPLE
     Show-Tree -Include "src\*", "*.md" -Exclude "node_modules\"
@@ -131,30 +146,38 @@ function Show-Tree {
         #
 
         # Colorization
-        [switch]$Color,      # Tree
-        [Alias('NoColor')]
-        [switch]$Mono,       # Normal/Listing
+        [switch]$Color,         # Tree
+        [Alias('Mono')]         # Normal/Listing
+        [switch]$NoColor,
 
         # Files
-        [Alias('ShowFiles')]
-        [switch]$Files,      # Tree
-        [switch]$NoFiles,    # Normal/Listing
+        [Alias('ShowFiles')]    # Tree
+        [switch]$Files,
+        [switch]$NoFiles,       # Normal/Listing
 
         # Hidden
-        [switch]$ShowHidden, # Tree
-        [switch]$HideHidden, # Normal/Listing
+        [Alias('ShowHidden')]   # Tree
+        [switch]$Hidden,
+        [Alias('HideHidden')]   # Normal/Listing
+        [switch]$NoHidden,
 
         # System
-        [switch]$ShowSystem, # Tree
-        [switch]$HideSystem, # Normal/Listing
+        [Alias('ShowSystem')]   # Tree
+        [switch]$System,
+        [Alias('HideSystem')]   # Normal/Listing
+        [switch]$NoSystem,
 
         # Reparse targets
-        [switch]$ShowTargets, # Listing
-        [switch]$NoTargets,   # Normal/Tree
+        [Alias('ShowTargets')]  # Listing
+        [switch]$Targets,
+        [switch]$NoTargets,     # Normal/Tree
 
         # Gap lines
-        [switch]$Gap,         # Tree
-        [switch]$NoGap,       # Normal/Tree
+        [switch]$Gap,           # Tree
+        [switch]$NoGap,         # Normal/Tree
+
+        # Strict compatibility
+        [switch]$Compat,
 
         # Depth
         [Alias('Depth')]
@@ -208,6 +231,10 @@ function Show-Tree {
         throw $uiErrors.PlatformRequiresLegend
     }
 
+    if ($Compat -and $Mode -ne 'Tree') {
+        throw $uiErrors.CompatRequiresTree
+    }
+
     if ($isLegendMode) {
         Show-TreeLegend `
             -StyleProfile $resolvedStyleProfile `
@@ -224,11 +251,11 @@ function Show-Tree {
     #
     # Validate paired switches
     #
-    if ($Color -and $Mono) { throw $uiErrors.ColorMonoConflict }
+    if ($Color -and $NoColor) { throw $uiErrors.ColorMonoConflict }
     if ($Files -and $NoFiles) { throw $uiErrors.FilesConflict }
-    if ($ShowHidden -and $HideHidden) { throw $uiErrors.HiddenConflict }
-    if ($ShowSystem -and $HideSystem) { throw $uiErrors.SystemConflict }
-    if ($ShowTargets -and $NoTargets) { throw $uiErrors.TargetsConflict }
+    if ($Hidden -and $NoHidden) { throw $uiErrors.HiddenConflict }
+    if ($System -and $NoSystem) { throw $uiErrors.SystemConflict }
+    if ($Targets -and $NoTargets) { throw $uiErrors.TargetsConflict }
     if ($Gap -and $NoGap) { throw $uiErrors.GapConflict }
 
     #
@@ -277,34 +304,42 @@ function Show-Tree {
     #
     switch ($Mode) {
         'Tree' {
-            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : $Recurse.IsPresent ? -1 : 6
-            $EffectiveColorize    = $Color.IsPresent
-            $EffectiveFiles       = $Files.IsPresent
-            $EffectiveHideHidden  = -not $ShowHidden.IsPresent
-            $EffectiveHideSystem  = -not $ShowSystem.IsPresent
-            $EffectiveShowTargets = $ShowTargets.IsPresent
-            $GapPolicy = if ($NoGap.IsPresent) { 'None' }
-                elseif ($Gap.IsPresent) { 'Show' }
-                elseif ($Mode -eq 'Tree' -and $Files.IsPresent) { 'Tree' }
-                else { 'None' }
+            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : ($Recurse.IsPresent ? -1 : 6)
+
+            # Defaults for Tree mode depend on Compat switch
+            $defaultColor   = $Compat.IsPresent ? $false : $true
+            $defaultFiles   = $Compat.IsPresent ? $false : $true
+            $defaultTargets = $Compat.IsPresent ? $false : $true
+            $defaultGap     = $Compat.IsPresent ? ($Files.IsPresent ? 'Tree' : 'None') : 'Show'
+
+            # Resolution
+            $EffectiveColorize    = $Color.IsPresent ? $true : ($NoColor.IsPresent ? $false : $defaultColor)
+            $EffectiveFiles       = $Files.IsPresent ? $true : ($NoFiles.IsPresent ? $false : $defaultFiles)
+            $EffectiveShowHidden  = $Hidden.IsPresent
+            $EffectiveShowSystem  = $System.IsPresent
+            $EffectiveShowTargets = $Targets.IsPresent ? $true : ($NoTargets.IsPresent ? $false : $defaultTargets)
+            $GapPolicy            = $Gap.IsPresent ? 'Show' : ($NoGap.IsPresent ? 'None' : $defaultGap)
         }
-        'List' {
-            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : $Recurse.IsPresent ? -1 : 6
-            $EffectiveColorize    = -not $Mono.IsPresent
-            $EffectiveFiles       = -not $NoFiles.IsPresent
-            $EffectiveHideHidden  = $HideHidden.IsPresent
-            $EffectiveHideSystem  = $HideSystem.IsPresent
-            $EffectiveShowTargets = $ShowTargets.IsPresent
-            $GapPolicy            = 'None'
-        }
-        'Normal' {
-            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : $Recurse.IsPresent ? -1 : 6
-            $EffectiveColorize    = -not $Mono.IsPresent
-            $EffectiveFiles       = -not $NoFiles.IsPresent
-            $EffectiveHideHidden  = $HideHidden.IsPresent
-            $EffectiveHideSystem  = $HideSystem.IsPresent
-            $EffectiveShowTargets = -not $NoTargets.IsPresent
-            $GapPolicy            = $NoGap.IsPresent ? 'None' : 'Show'
+        default {
+            # Normal and List modes
+            $EffectiveMaxDepth    = $PSBoundParameters.ContainsKey('MaxDepth') ? $MaxDepth : ($Recurse.IsPresent ? -1 : 6)
+
+            # Defaults for Modern modes
+            $defaultColor   = $true
+            $defaultFiles   = $true
+            $defaultTargets = ($Mode -eq 'Normal') # Normal shows targets by default, List does not
+            $defaultGap     = ($Mode -eq 'Normal') ? 'Show' : 'None'
+
+            # Resolution
+            $EffectiveColorize    = $NoColor.IsPresent ? $false : ($Color.IsPresent ? $true : $defaultColor)
+            $EffectiveFiles       = $NoFiles.IsPresent ? $false : ($Files.IsPresent ? $true : $defaultFiles)
+            $EffectiveShowHidden  = $Hidden.IsPresent
+            $EffectiveShowSystem  = $System.IsPresent
+            $EffectiveShowTargets = ($Mode -eq 'List') `
+                    ? ($Targets.IsPresent ? $true : ($NoTargets.IsPresent ? $false : $defaultTargets)) `
+                    : ($NoTargets.IsPresent ? $false : ($Targets.IsPresent ? $true : $defaultTargets))
+
+            $GapPolicy            = $Gap.IsPresent ? 'Show' : ($NoGap.IsPresent ? 'None' : $defaultGap)
         }
     }
 
@@ -343,7 +378,11 @@ function Show-Tree {
     #
     # Enumerate -> Select -> Render
     #
-    $providerMode = ($Mode -eq 'Tree') ? 'Win32' : 'PowerShell'
+    $providerMode = ($Mode -eq 'Tree' -and $Compat.IsPresent) ? 'Win32' : 'PowerShell'
+
+    if ($providerMode -eq 'Win32' -and -not $localIsWindows) {
+        throw $uiErrors.Win32WindowsOnly
+    }
 
     $getTreeItemParams = @{
         Path          = $resolvedPath
@@ -353,8 +392,8 @@ function Show-Tree {
         GapPolicy     = $GapPolicy
         Include       = $effectiveInclude
         Exclude       = $effectiveExclude
-        HideHidden    = $EffectiveHideHidden
-        HideSystem    = $EffectiveHideSystem
+        HideHidden    = -not $EffectiveShowHidden
+        HideSystem    = -not $EffectiveShowSystem
         DirectoryOnly = (-not $EffectiveFiles)
     }
 
@@ -373,7 +412,7 @@ function Show-Tree {
     #
     # Footer / Last Line logic
     #
-    # if ($Mode -ne 'Tree') {
+    if ($Mode -ne 'Tree') {
         Write-Output ""
-    # }
+    }
 }

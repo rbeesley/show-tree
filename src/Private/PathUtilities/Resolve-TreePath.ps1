@@ -42,7 +42,10 @@ function Resolve-TreePath {
     }
     catch {
         if ($Mode -ne 'Tree') {
-            $msg = "Cannot find path '$Path' because it does not exist."
+            $styleProfile = Get-ActiveShowTreeStyleProfile
+            $uiErrors = $styleProfile.UIStrings.Errors
+
+            $msg = $uiErrors.PathNotFound -f $Path
             $exception = New-Object System.Management.Automation.ItemNotFoundException $msg
             $category  = [System.Management.Automation.ErrorCategory]::ObjectNotFound
             

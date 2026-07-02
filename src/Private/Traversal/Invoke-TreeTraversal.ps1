@@ -105,7 +105,7 @@ function Invoke-TreeTraversal {
     }
 
     $children = @(
-        Get-ImmediateTreeChild `
+        Get-TreeChild `
             -Path $Path `
             -RootPath $RootPath `
             -Depth $CurrentDepth `

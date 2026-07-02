@@ -32,12 +32,10 @@ function New-TreeChildProvider {
         $VerbosePreference = $PSCmdlet.GetVariableValue('VerbosePreference')
     }
 
-    $localIsWindows = $IsWindows ? $IsWindows : $true
-    if ($ProviderMode -eq 'Win32' -and -not $localIsWindows) {
-        throw "Win32 tree child provider is only supported on Windows."
-    }
-    
-    switch ($ProviderMode) {
+    $styleProfile = Get-ActiveShowTreeStyleProfile
+    $uiErrors = $styleProfile.UIStrings.Errors
+
+    $provider = switch ($ProviderMode) {
         'Win32' {
             return [PSCustomObject]@{
                 PSTypeName   = 'ShowTree.TreeChildProvider'
@@ -301,4 +299,10 @@ function New-TreeChildProvider {
             }
         }
     }
+
+    if ($null -eq $provider.GetChildren) {
+        throw ($uiErrors.MissingGetChildren -f $provider.Name)
+    }
+
+    $provider
 }

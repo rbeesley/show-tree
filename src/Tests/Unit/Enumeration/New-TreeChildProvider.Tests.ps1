@@ -254,7 +254,7 @@ Describe 'New-TreeChildProvider' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `

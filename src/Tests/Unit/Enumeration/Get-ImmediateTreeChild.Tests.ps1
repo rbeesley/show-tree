@@ -1,4 +1,4 @@
-﻿# src/Tests/Unit/Enumeration/Get-ImmediateTreeChild.Tests.ps1
+﻿# src/Tests/Unit/Enumeration/Get-TreeChild.Tests.ps1
 
 BeforeAll {
     $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
@@ -15,7 +15,7 @@ BeforeAll {
     )
 }
 
-Describe 'Get-ImmediateTreeChild' {
+Describe 'Get-TreeChild' {
     Context 'PowerShell provider mode' {
         It 'converts immediate Get-ChildItem results into ShowTree.TreeItem objects' {
             InModuleScope ShowTree -Parameters @{ FixtureScripts = $script:FixtureScripts } {
@@ -42,7 +42,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 2 `
@@ -90,7 +90,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -138,7 +138,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -178,7 +178,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -214,7 +214,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -250,7 +250,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -287,7 +287,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -330,7 +330,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -368,7 +368,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -416,7 +416,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode PowerShell
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -466,7 +466,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode Win32
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -524,7 +524,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode Win32
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `
@@ -568,7 +568,7 @@ Describe 'Get-ImmediateTreeChild' {
 
                 $provider = New-TreeChildProvider -ProviderMode Win32
 
-                $items = @(Get-ImmediateTreeChild `
+                $items = @(Get-TreeChild `
                     -Path $rootPath `
                     -RootPath $rootPath `
                     -Depth 0 `

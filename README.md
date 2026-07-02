@@ -5,11 +5,11 @@
 
 A modern, PowerShell-native replacement for the classic `tree.com` command — redesigned for clarity, correctness, and modern workflows.
 
-ShowTree provides three display modes:
+Show-Tree supports three distinct display modes:
 
-- **Normal mode** (default): graphical Unicode tree with color, files, and depth control
-- **Tree mode** (`-Mode Tree`): faithful DOS `tree.com` compatibility
-- **Listing mode** (`-Mode List`): compact, indentation-only output ideal for piping, grepping, and exporting
+- **Normal**: (Default) A clean, modern Unicode tree view with gap lines and rich styling.
+- **Tree**: A legacy-compatible layout mimicking the classic `tree.com` utility, now enhanced with modern defaults like color and file support.
+- **List**: A flat listing of items that retains hierarchical context.
 
 ---
 
@@ -201,22 +201,51 @@ Show-Tree -HideHidden -HideSystem -Include '.config'
 
 ## Parameter Summary
 
-| Parameter                                   | Description                                                                                                          |
-|---------------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| `‑Mode Normal \| Tree \| List`              | Selects the output mode.                                                                                             |
-| `‑MaxDepth` / `‑Depth`                      | Maximum recursion depth (`‑1` = unlimited).                                                                          |
-| `‑Recurse`                                  | Shortcut for unlimited depth.                                                                                        |
-| `‑Color` / `‑Mono`                          | Force color on or off. For `tree.com` compatiblity, `‑Mono` for tree mode by default.                                |
-| `‑Files` / `‑NoFiles`                       | Control if files are shown.. For `tree.com` compatiblity, `‑NoFiles` for tree mode by default.                       |
-| `‑ShowTargets` / `‑NoTargets`               | Show or hide reparse point targets. `‑ShowTargets` for normal and tree modes by default.                             |
-| `‑ShowHidden` / `‑HideHidden`               | Control visibility of hidden items. For `tree.com` compatiblity, `‑HideHidden` for tree mode by default.             |
-| `‑ShowSystem` / `‑HideSystem`               | Control visibility of system items. For `tree.com` compatiblity, `‑HideSystem` for tree mode by default.             |
-| `‑Exclude` *pattern* / `‑Include` *pattern* | Glob patterns that explicitly exclude or include items. Exact matches override all other filters.                    |
-| `-Gap` / `‑NoGap`                           | Control gap lines. Gaps make it easier to distinguish between directories and files by adding additional whitespace. |
-| `‑Ascii`                                    | Use ASCII connectors instead of Unicode.                                                                             |
-| `‑Legend` / `-LegendAll`                    | Show the style legend.                                                                                               |
-| `‑Platform`                                 | Preview another platform's states in legend (Windows/Unix).                                                          |
-| `-Culture`                                  | Override culture for localized strings.                                                                              |
+| Parameter                                   | Description                                                                                        |
+|---------------------------------------------|----------------------------------------------------------------------------------------------------|
+| `‑Mode` <`Normal`\|`Tree`\|`List`>          | Selects the output mode. Defaults to `Normal`.                                                     |
+| `‑MaxDepth` / `‑Depth`                      | Maximum recursion depth (`‑1` = unlimited). Defaults to `6`.                                       |
+| `‑Recurse`                                  | Shortcut for unlimited depth.                                                                      |
+| `‑Color` / `‑NoColor`                       | Force color on or off. Defaults to ON for modern modes and modern Tree mode. (Alias: `‑Mono`)      |
+| `‑Files` / `‑NoFiles`                       | Control if files are shown. Defaults to ON for all modern modes.                                   |
+| `‑Targets` / `‑NoTargets`                   | Show or hide reparse point targets. ON by default for `Normal` and `Tree` modes.                   |
+| `‑Hidden` / `‑NoHidden`                     | Control visibility of hidden items. OFF by default.                                                |
+| `‑System` / `‑NoSystem`                     | Control visibility of system items. OFF by default.                                                |
+| `‑Exclude` *pattern* / `‑Include` *pattern* | Glob patterns that explicitly exclude or include items. Exact matches override all other filters.  |
+| `-Gap` / `‑NoGap`                           | Control gap lines. Defaults to `Show` for `Normal` and modern `Tree` modes, and `None` for `List`. |
+| `‑Compat`                                   | Enables strict legacy emulation for `‑Mode Tree` (Monochrome, folders-only, `tree.com` sorting).   |
+| `‑Ascii`                                    | Use ASCII connectors instead of Unicode.                                                           |
+| `‑Legend` / `-LegendAll`                    | Show the style legend.                                                                             |
+| `‑Platform`                                 | Preview another platform's states in legend (Windows/Unix).                                        |
+| `-Culture`                                  | Override culture for localized strings.                                                            |
+
+### Compatibility Mode
+
+While `-Mode Tree` provides a modern take on the classic layout, you can use the `-Compat` switch to enable strict legacy emulation. This is useful for scripts or logs that require the exact output format of the original Windows utility:
+
+```powershell
+# Modern Tree view (Color, Files, and Targets enabled by default)
+Show-Tree -Mode Tree
+
+# Strict Legacy Emulation (Monochrome, Folders-only, Win32 sorting)
+Show-Tree -Mode Tree -Compat
+```
+
+Note: The -Compat switch is only valid when using -Mode Tree.
+
+---
+
+## Documentation
+
+For detailed information on usage, parameters, and examples, see the [Wiki](https://github.com/rbeesley/show-tree/wiki) or use `Get-Help Show-Tree -Full`.
+
+### Technical Architecture
+
+If you are interested in the internal design or wish to contribute to the project, please refer to our technical guides:
+
+- [Core Architecture](docs/ARCHITECTURE.md): Redesign of the traversal and rendering engines.
+- [Build System](docs/BUILD-ARCHITECTURE.md): Task-driven workflow and cross-version transpilation.
+- [Test System](docs/TEST-ARCHITECTURE.md): Hash-based module caching and in-memory fixture trees.
 
 ---
 
@@ -280,7 +309,7 @@ Show-Tree C:\ -Mode List | Out-File listing.txt
 
 ---
 
-## Testing
+### Testing
 
 Install Pester 5.7.1 or better:
 
@@ -433,6 +462,16 @@ States = @{
 
 ---
 
+## Contributing
+
+Contributions are welcome! If you're looking to help improve ShowTree, please check out the [Architecture Guide](docs/ARCHITECTURE.md) for an overview of how the project is structured.
+
+### Reporting Issues
+
+Please use the [GitHub Issue Tracker](https://github.com/rbeesley/show-tree/issues) to report bugs or request features.
+
+---
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
@@ -443,6 +482,6 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 **Ryan Beesley**  
 Version 2.0.0  
-June 2026
+July 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.

@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
-## [2.0.0] - 2026-06-16
+## [2.0.0] - 2026-07-01
 
 ### Added
 - **Cross-Platform Support**: Fully validated on Linux (PowerShell 7+) alongside Windows (Desktop and Core).
@@ -30,7 +30,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - **Comprehensive Test Suite**: Significant expansion of Pester tests covering rendering, filtering, gap logic, and localization.
 
 ### Changed
-- Refactored project structure into `Public/`, `Private/`, and `Data/`.
+- **Project Structure**: Refactored project into a modern module structure (`Public/`, `Private/`, `Data/`, `Tests/`).
+- **Standardized Documentation**: All public and private functions now feature consistent, comprehensive comment-based help.
+- **API Consistency**: Standardized parameter naming (`$StyleProfile`, `$Colorize`) and internal data structures (`ShowTree.TreeItem`, `ShowTree.TreeRecord`, `ShowTree.TreeLayout`).
 - `New-TreeItem` is now a public function for use in custom providers or styling tests.
 - Improved gap logic to handle complex mixed file/directory structures more cleanly.
 
@@ -38,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Fixed several cross-platform path resolution issues.
 - Corrected attribute detection on Linux (Executable bits, Hidden files).
 - Improved handling of broken symbolic links.
+- Standardized file headers and formatting across the entire codebase.
 
 ### Removed
 - Removed legacy monolithic internal scripts in favor of modular private functions.

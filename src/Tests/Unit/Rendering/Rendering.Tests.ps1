@@ -1,4 +1,4 @@
-# src\Tests\Unit\Rendering\Rendering.Tests.ps1
+# src/Tests/Unit/Rendering/Rendering.Tests.ps1
 
 BeforeAll {
     $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."

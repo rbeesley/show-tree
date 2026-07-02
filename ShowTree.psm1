@@ -36,7 +36,7 @@ else {
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ActiveShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Get-ShowTreeStyleProfile.ps1')
 . (Join-Path $moduleSrcRoot 'Private\StyleProfile\Merge-ShowTreeHashtable.ps1')
-. (Join-Path $moduleSrcRoot 'Private\Traversal\Get-ImmediateTreeChild.ps1')
+. (Join-Path $moduleSrcRoot 'Private\Traversal\Get-TreeChild.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Traversal\Invoke-TreeTraversal.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Traversal\New-TreeChildProvider.ps1')
 . (Join-Path $moduleSrcRoot 'Private\Traversal\New-TreeLayout.ps1')

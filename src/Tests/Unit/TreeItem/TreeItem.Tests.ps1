@@ -1,4 +1,4 @@
-# src\Tests\Unit\TreeItem\TreeItem.Tests.ps1
+# src/Tests/Unit/TreeItem/TreeItem.Tests.ps1
 
 BeforeAll {
     $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."

@@ -59,12 +59,13 @@ task Build BuildIfNeeded, {
 }
 
 task BuildDist DiscoverPublicFunctions, {
-    $corePath = Join-Path $distPath 'Core'
-    $desktopPath = Join-Path $distPath 'Desktop'
+    $publishPath = Join-Path $distPath 'ShowTree'
+    $corePath = Join-Path $publishPath 'Core'
+    $desktopPath = Join-Path $publishPath 'Desktop'
 
     New-Item -Path $corePath -ItemType Directory -Force | Out-Null
     New-Item -Path $desktopPath -ItemType Directory -Force | Out-Null
-
+    
     $excludedRuntimeSourceDirectories = @(
         'Tests'
     )
@@ -128,46 +129,48 @@ task BuildDist DiscoverPublicFunctions, {
     Set-DistributionRootModuleExports `
         -Path (Join-Path $desktopPath 'ShowTree.psm1') `
         -FunctionsToExport $script:PublicFunctions
-    
+
     # Copy manifest to dist root and update it to point to routing psm1
-    $distManifestPath = Join-Path $distPath 'ShowTree.psd1'
+    $distManifestPath = Join-Path $publishPath 'ShowTree.psd1'
     Copy-Item -Path $manifestPath -Destination $distManifestPath
 
     # RootModule is already 'ShowTree.psm1' in the original manifest, which is what we want for the dist root too.
     # We should ensure CompatiblePSEditions includes both Core and Desktop in the dist manifest.
     $manifestContent = Get-Content $distManifestPath -Raw
-    $manifestContent = $manifestContent -replace "# CompatiblePSEditions = @\(\)", "CompatiblePSEditions = @('Core', 'Desktop')"
+    $manifestContent = $manifestContent -replace "CompatiblePSEditions = 'Core', 'Desktop'", "CompatiblePSEditions = @('Core', 'Desktop')"
     $manifestContent | Set-Content $distManifestPath -Encoding UTF8
 
-    # Copy manifests to subdirectories and update CompatiblePSEditions
+    # Copy manifests to subdirectories and update properties for each edition
     $coreManifestPath = Join-Path $corePath 'ShowTree.psd1'
     Copy-Item -Path $manifestPath -Destination $coreManifestPath
     $coreManifestContent = Get-Content $coreManifestPath -Raw
-    $coreManifestContent = $coreManifestContent -replace "# CompatiblePSEditions = @\(\)", "CompatiblePSEditions = @('Core')"
+    $coreManifestContent = $coreManifestContent -replace "CompatiblePSEditions = 'Core', 'Desktop'", "CompatiblePSEditions = @('Core')"
+    $coreManifestContent = $coreManifestContent -replace "PowerShellVersion = '5.1'", "PowerShellVersion = '7.0'"
     $coreManifestContent | Set-Content $coreManifestPath -Encoding UTF8
 
     $desktopManifestPath = Join-Path $desktopPath 'ShowTree.psd1'
     Copy-Item -Path $manifestPath -Destination $desktopManifestPath
     $desktopManifestContent = Get-Content $desktopManifestPath -Raw
-    $desktopManifestContent = $desktopManifestContent -replace "# CompatiblePSEditions = @\(\)", "CompatiblePSEditions = @('Desktop')"
+    $desktopManifestContent = $desktopManifestContent -replace "CompatiblePSEditions = 'Core', 'Desktop'", "CompatiblePSEditions = @('Desktop')"
+    # PowerShellVersion 5.1 is already correct for Desktop in the source manifest
     $desktopManifestContent | Set-Content $desktopManifestPath -Encoding UTF8
 
     # Create routing psm1 in dist root
     $routingContent = @'
-if ($PSEdition -eq 'Core') {
-    $path = Join-Path $PSScriptRoot 'Core\ShowTree.psd1'
-}
-else {
-    $path = Join-Path $PSScriptRoot 'Desktop\ShowTree.psd1'
-}
-Import-Module -Name $path -Global
+    if ($PSEdition -eq 'Core') {
+        $path = Join-Path $PSScriptRoot 'Core\ShowTree.psd1'
+    }
+    else {
+        $path = Join-Path $PSScriptRoot 'Desktop\ShowTree.psd1'
+    }
+    Import-Module -Name $path -Global
 '@
-    $routingContent | Set-Content (Join-Path $distPath 'ShowTree.psm1') -Encoding UTF8
+    $routingContent | Set-Content (Join-Path $publishPath 'ShowTree.psm1') -Encoding UTF8
 
     # Copy CHANGELOG.md, LICENSE, and README.md to dist root
-    Copy-Item -Path (Join-Path $moduleRoot 'CHANGELOG.md') -Destination $distPath
-    Copy-Item -Path (Join-Path $moduleRoot 'LICENSE') -Destination $distPath
-    Copy-Item -Path (Join-Path $moduleRoot 'README.md') -Destination $distPath
+    Copy-Item -Path (Join-Path $moduleRoot 'CHANGELOG.md') -Destination $publishPath
+    Copy-Item -Path (Join-Path $moduleRoot 'LICENSE') -Destination $publishPath
+    Copy-Item -Path (Join-Path $moduleRoot 'README.md') -Destination $publishPath
 }
 
 task BuildIfNeeded {

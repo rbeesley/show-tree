@@ -78,6 +78,7 @@ function Format-Tree {
             Get-ActiveShowTreeStyleProfile
         }
 
+        $uiErrors = $resolvedStyleProfile.UIStrings.Errors
         $reset = $Colorize ? $resolvedStyleProfile.Reset : ''
         $dim   = $Colorize ? $resolvedStyleProfile.Dim   : ''
     }
@@ -89,7 +90,7 @@ function Format-Tree {
             }
 
             if ($record.PSTypeNames -notcontains 'ShowTree.TreeRecord') {
-                throw "Format-Tree expects ShowTree.TreeRecord input."
+                throw $uiErrors.InvalidFormatInput
             }
 
             switch ($record.RecordType) {
@@ -102,7 +103,7 @@ function Format-Tree {
                     }
 
                     if ($null -eq $layout -or $layout.PSTypeNames -notcontains 'ShowTree.TreeLayout') {
-                        throw "Tree record '$($item.Name)' is missing ShowTree.TreeLayout metadata."
+                        throw ($uiErrors.MissingMetadata -f $item.Name)
                     }
 
                     $prefixes = ''
@@ -165,7 +166,7 @@ function Format-Tree {
                     $layout = $record.TreeLayout
 
                     if (-not $layout -or $layout.PSTypeNames -notcontains 'ShowTree.TreeLayout') {
-                        throw "Gap record is missing ShowTree.TreeLayout metadata."
+                        throw $uiErrors.MissingGapMetadata
                     }
 
                     $prefixes = ''

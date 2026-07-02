@@ -1,4 +1,4 @@
-# src\Tests\Unit\Rendering\TreeMode.Tests.ps1
+# src/Tests/Unit/Rendering/TreeMode.Tests.ps1
 
 BeforeAll {
     $script:TestRoot = Resolve-Path "$PSScriptRoot\..\.."
@@ -298,7 +298,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 }
             }
 
-            $output = @(Show-Tree $rootPath -Mode Tree)
+            $output = @(Show-Tree $rootPath -Mode Tree -Compat)
 
             $output | Should -Be @(
                 'Folder PATH listing for volume Test'
@@ -356,7 +356,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 }
             }
 
-            $output = @(Show-Tree $rootPath -Mode Tree -Gap)
+            $output = @(Show-Tree $rootPath -Mode Tree -Gap -Compat)
 
             $output | Should -Be @(
                 'Folder PATH listing for volume Test'
@@ -470,7 +470,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 }
             }
 
-            $output = @(Show-Tree $rootPath -Mode Tree -Files)
+            $output = @(Show-Tree $rootPath -Mode Tree -Files -Compat)
 
             $output | Should -Be @(
                 'Folder PATH listing for volume Test'

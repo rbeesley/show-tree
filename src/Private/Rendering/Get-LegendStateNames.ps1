@@ -1,4 +1,4 @@
-﻿# /src/Private/Rendering/Get-LegendStateNames.ps1
+﻿# src/Private/Rendering/Get-LegendStateNames.ps1
 
 <#
 .SYNOPSIS
@@ -7,9 +7,20 @@
 .DESCRIPTION
     Get-LegendStateNames provides the ordered list of states (like Hidden, ReadOnly, 
     Symlink) that should be displayed when rendering the color legend.
+
+.PARAMETER StyleProfile
+    The style profile to inspect for defined states.
+
+.PARAMETER Platform
+    The platform context for filtering states ('Current', 'Windows', 'Unix').
+
+.PARAMETER All
+    If set, returns all keys from the style profile's States dictionary.
 #>
 function Get-LegendStateNames {
+    [CmdletBinding()]
     param(
+        [Parameter(Mandatory)]
         $StyleProfile,
 
         [ValidateSet('Current', 'Windows', 'Unix')]

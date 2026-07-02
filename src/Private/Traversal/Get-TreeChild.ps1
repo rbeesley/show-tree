@@ -1,16 +1,15 @@
-﻿# src/Private/Traversal/Get-ImmediateTreeChild.ps1
+﻿# src/Private/Traversal/Get-TreeChild.ps1
 
 <#
 .SYNOPSIS
-    Enumerates the immediate children of a path.
+    Enumerates the children of a path.
 
 .DESCRIPTION
-    Get-ImmediateTreeChild uses the provided TreeChildProvider to fetch the files and 
-    directories directly under a path. It applies immediate filtering (like HideHidden) 
-    and sorts the results (usually files before directories) before returning them 
-    to the traversal engine.
+    Get-TreeChild uses the provided TreeChildProvider to fetch the files and 
+    directories directly under a path. It applies filtering (like HideHidden) 
+    and returns the visible items to the traversal engine.
 #>
-function Get-ImmediateTreeChild {
+function Get-TreeChild {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -45,7 +44,8 @@ function Get-ImmediateTreeChild {
     }
 
     if ($null -eq $Provider.GetChildren) {
-        throw "Tree child provider '$($Provider.Name)' does not define a GetChildren scriptblock."
+        $styleProfile = Get-ActiveShowTreeStyleProfile
+        throw ($styleProfile.UIStrings.Errors.MissingGetChildren -f $Provider.Name)
     }
 
     $raw = & $Provider.GetChildren $Path $Depth
