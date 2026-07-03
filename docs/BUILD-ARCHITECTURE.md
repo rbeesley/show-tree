@@ -48,7 +48,7 @@ Instead of limiting the source code to the "lowest common denominator" of syntax
 - **Ternary Operator**: `$a ? $b : $c` is transformed into a scoped script block: `(&{if($a){$b}else{$c}})`.
 - **Static New**: `[Type]::new()` calls are transformed into `New-Object` calls for environments where static constructors have stricter requirements.
 
-This allows ShowTree to be developed using modern best practices while remaining 100% compatible with **Windows PowerShell 5.1** and **PowerShell Core 6.0+**. Because this approach is modularly driven by rules, so it can be extended to support additional syntax transformations in the future.
+This allows ShowTree to be developed using modern best practices while remaining 100% compatible with **Windows PowerShell 5.1** and **PowerShell 7.0+**. Because this approach is modularly driven by rules, so it can be extended to support additional syntax transformations in the future.
 
 ## Distribution Workflow
 

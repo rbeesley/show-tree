@@ -51,15 +51,15 @@ The primary entry point is `build.ps1` in the project root. It handles requireme
 .\build.ps1 -Task Dist
 ```
 
----
+  ---
 
-### Key Tasks
+  ### Key Tasks
 
-- **Compile**: Transpiles source code to maintain compatibility with older PowerShell versions (e.g., converting ??= and ternary operators for PowerShell Core 6.x/7.0).
-- **Test**: Executes the Pester 5 test suite.
-- **Dist**: Packages the module into the dist/ folder for release.
+  - **Build**: Fingerprints the source and performs an incremental build, including transpilation for the Desktop edition.
+  - **Test**: Executes the Pester 5 test suite.
+  - **BuildDist**: Packages the module into the `dist/ShowTree` folder for release, ensuring PowerShell Gallery compatibility.
 
----
+  ---
 
 ## Test System
 

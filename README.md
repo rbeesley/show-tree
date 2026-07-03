@@ -219,6 +219,32 @@ Show-Tree -HideHidden -HideSystem -Include '.config'
 | `‑Platform`                                 | Preview another platform's states in legend (Windows/Unix).                                        |
 | `-Culture`                                  | Override culture for localized strings.                                                            |
 
+### Default Behaviors by Mode
+
+Show-Tree applies different default settings based on the selected `-Mode` to optimize for each use case.
+
+| Mode | Defaults applied |
+| :--- | :--- |
+| **Normal** | Color ON, Files ON, Targets ON, Gaps ON, Hidden/System OFF |
+| **Tree** | Color ON, Files ON, Targets ON, Gaps ON, Hidden/System OFF |
+| **List** | Color ON, Files ON, Targets OFF, Gaps OFF, Hidden/System OFF |
+| **Compat** | Monochrome, Folders-only, Targets OFF, Gaps (Partial/Legacy) |
+
+#### Gap Logic Quirks
+
+In modern modes (**Normal** and **Tree**), gaps are deterministic and added between groups to improve readability.
+
+In **Compatibility Mode** (`-Compat`), the gap behavior specifically mimics the original `tree.com` logic:
+
+1.  **No Gaps**: Enabled via `-NoGap`.
+2.  **Legacy Gaps**: (Default) Gaps only appear between directories and files. Note: Classic `tree.com` suppresses the final newline if the last item is a directory.
+3.  **Modern Gaps**: Enabled via `-Gap`. This overrides the legacy logic to use `Show-Tree`'s improved spacing, making it easier to distinguish directories at different nesting levels.
+
+#### Strategic Choices
+
+- **Hidden/System Items**: Disabled by default in all modes to match standard OS utility behavior (like `ls` or `dir`). Use `-Hidden` to include them.
+- **Link Targets**: Enabled for modern views to provide maximum context, but disabled for **List** mode to maintain a high-density, flat visualization.
+
 ### Compatibility Mode
 
 While `-Mode Tree` provides a modern take on the classic layout, you can use the `-Compat` switch to enable strict legacy emulation. This is useful for scripts or logs that require the exact output format of the original Windows utility:
@@ -268,10 +294,11 @@ Show-Tree
 Clone the repository and place the `ShowTree` folder into one of your module paths:
 
 - Current user:  
-  `~/Documents/PowerShell/Modules/`
+`~/.local/share/powershell/Modules/` (Linux)  
+`~/Documents/PowerShell/Modules/` (Windows)
 
 - All users:  
-  `C:\Program Files\PowerShell\7\Modules\`
+`C:\Program Files\PowerShell\7\Modules\`
 
 ---
 
@@ -309,53 +336,63 @@ Show-Tree C:\ -Mode List | Out-File listing.txt
 
 ---
 
-### Testing
-
-Install Pester 5.7.1 or better:
-
-```powershell
-Install-Module -Name Pester -Force -MinimumVersion 5.7.1
-```
-
-From the repo root, run:
-
-```powershell
-.\Run-Tests.ps1
-```
-
-You may also run an individual test file with this command:
-
-```powershell
-.\Run-TestFile.ps1 -Path <.[\Private|\Public]*.Tests.ps1>
-```
-
-From Visual Studio Code, and any time you've made changes you want to test, manually import the test module first by running the following in the PowerShell terminal window in Code:
-
-```powershell
-. .\Tests\Helpers\Import-ShowTreeUnderTest.ps1
-```
-
-This can also be done by making this file the focus in your editor and pressing the run button to the far right of the tabs. This has the added benefit of saving all modified files so that you are commiting them to the test state.
-
-Then you may use the Code Lens `Run Tests` / `Debug Tests` / `Run Test` / `Debug Test` buttons to have more grainular control over what you are testing.
-
-The Pester Test Explorer extension is not recommended for use as it handles the environment in a way which often conflicts.
-
----
-
 ## Style Profiles
 
-ShowTree v2.0 introduces a modular style profile system. You can customize colors for base types and specific item states.
+ShowTree v2.0 introduces a modular styling system. You can customize exactly how different file types and system states (like Hidden, Symlink, or Executable) appear in your terminal.
 
-### Example: Setting a custom profile
+### 1. Creating a Custom Profile
+
+Styles are defined using a nested hashtable. You only need to define the properties you want to change; everything else will fall back to the default profile.
 
 ```powershell
-$myStyle = @{
+$myCustomStyle = @{
+    # Base colors for the item Kinds
+    Base = @{
+        Directory = '95' # Light Magenta
+        File      = '37' # White
+    }
+    # State-based overlays
     States = @{
-        Executable = @{ Foreground = @{ File = '32' }; AnsiStyle = '1' }
+        # Make executables Green and Bold (SGR 1)
+        Executable = @{ 
+            Foreground = @{ File = '92' }
+            AnsiStyle  = '1' 
+        }
+        # Make hidden items Dim (SGR 2) and Italic (SGR 3)
+        Hidden = @{ AnsiStyle = '2;3' }
     }
 }
-Set-ShowTreeStyleProfile -InputObject $myStyle
+```
+
+### 2. Applying Your Style
+
+You can apply a style for the current session or a single command:
+
+```powershell
+# Option A: Set for the entire session
+Set-ShowTreeStyleProfile -InputObject $myCustomStyle
+
+# Option B: Use for a single command
+Show-Tree -StyleProfile $myCustomStyle
+```
+
+### 3. Persisting Styles (Profiles)
+
+To keep your styles across different PowerShell sessions, save your hashtable as a .psd1 file and load it in your PowerShell $PROFILE:
+
+**MyStyle.psd1**
+
+```powershell
+@{
+    Base = @{ Directory = '36' }
+    States = @{ Symlink = @{ AnsiStyle = '4' } }
+}
+```
+
+**Microsoft.PowerShell_profile.ps1**
+
+```powershell
+Set-ShowTreeStyleProfile -Path "C:\Path\To\MyStyle.psd1"
 ```
 
 ### State Styling Logic
@@ -459,6 +496,77 @@ States = @{
 ```
 
 `Directory` and `File` are kinds, not states, so they belong under `Base`, not `States`.
+
+---
+
+## Development Support
+
+The bootstrap process will install the required dependencies for building and testing the project.
+
+```powershell
+.\build.ps1 -Bootstrap
+```
+
+### Build
+
+Install InvokeBuild 5.14.23 or better (this is handled by the build bootstrap):
+
+```powershell
+Install-Module -Name InvokeBuild -Force -MinimumVersion 5.14.23
+```
+
+#### Available Build Tasks
+
+The build system uses `Invoke-Build`. You can run these via `.\build.ps1 -Task <TaskName>`.
+
+| Task | Dependencies | Description |
+| :--- | :--- | :--- |
+| **`Test`** | `ValidateManifest` | **(Default)** Validates the manifest and runs the Pester unit test suite. |
+| **`Build`** | `BuildIfNeeded` | Performs an incremental build. Only rebuilds `dist/` if source files have changed. |
+| **`ForceBuild`** | `Clean`, `BuildDist` | Wipes the `dist/` folder and performs a complete rebuild from scratch. |
+| **`TestAll`** | `Test`, `TestDist`, `TestDesktop` | Runs the full battery of tests: Unit tests, PS7 smoke tests, and Windows PowerShell 5.1 smoke tests. |
+| **`BuildDist`** | `DiscoverPublicFunctions` | Internal task that handles file copying, transpilation for Desktop, and manifest generation. |
+| **`Clean`** | *(None)* | Deletes the `dist/` folder and build artifacts. |
+| **`UpdateManifest`**| `DiscoverPublicFunctions` | Updates the root `ShowTree.psd1` with the latest public function exports. |
+
+> **Note**: To see the full task list and dependency tree directly from your terminal, run:  
+> `Invoke-Build -File .\build\tasks.build.ps1 -Task ?`
+ 
+The most basic build task is to build the project:
+
+```powershell
+.\build.ps1 -Task Build
+```
+
+---
+
+### Testing
+
+Install Pester 5.7.1 or better (this is handled by the build bootstrap):
+
+```powershell
+Install-Module -Name Pester -Force -MinimumVersion 5.7.1
+```
+
+The Pester Test Explorer extension for Visual Studio Code is useful for debugging and can be used to run the tests as well. In practice, I found that using F5 to start debugging with the Interactive Module Session, and then running the command you want from the embedded terminal is the most reliable way to get a full debugging experience. I recommend setting breakpoints, then pressing F5 to start the interactive session, and then running the command, as it seems like you won't hit breakpoints.
+
+You can also run the tests from the command line and if you aren't debugging, that can often be a quicker way to iterate.
+
+From the repo root, run:
+
+```powershell
+.\build.ps1 -Test [path]<TestName>[.Tests.ps1]
+```
+
+The path is optional as the build/test system will search for the test file in the `Tests` folder.
+
+You can run all the tests and do a complete build, creating a distribution with this command:
+
+```powershell
+.\build.ps1 -Task TestAll
+```
+
+This is the recommended way to create a distribution, as it will always make sure the code is fully built, all tests pass, and it requires a full build to make sure that the PowerShell Desktop version has been built.
 
 ---
 
