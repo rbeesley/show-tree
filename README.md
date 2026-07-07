@@ -61,73 +61,96 @@ PowerShell 5.1+ on Windows and PowerShell 7+ on Linux/macOS: Normal and Listing 
 
 ## Screenshots
 
-### High level view of modes
-
-![Comparison of modes](docs/modes.png)
-
 ### Normal Mode
 
 ![Normal mode](docs/normal-mode.png)  
+
 Normal mode is the standard way to use `Show-Tree`. It provides granular control and makes it a modern interpretation for `tree.com` for PowerShell.
 
-### Legacy `tree.com` is broken
+### List Mode
 
-![Legacy tree.com](docs/tree.com.png)  
-`tree.com` will follow all Junctions and Symlinks, and doesn't limit depth. This can get stuck in an unlimited recursion.
+![List mode](docs/list-mode.png)  
 
-### Tree Mode (legacy backwards compatibility)
-
-![Legacy tree mode](docs/tree-mode.png)  
-Tree mode follows the output and error messages of `tree.com` very closely. It also defaults to handle files the same way, but it can be customized.
+List mode gives you a tight listing of the files and directories on a system. It benefits the most from having color enabled to see folders and files at a glance, and minimally shows the tree structure, making it an ideal mode for downstream processing.
 
 ### Tree Mode (modern)
 
 ![Modern tree mode](docs/tree-mode-modern.png)  
-`Show-Tree . -Files` is the equivalient to `tree.com . /F`, but `-ShowHidden`, `-ShowSystem`, `-Color`, and other options give you a mode which retains the look and feel of a modern `tree.com`. By showing link targets and not following them, `Show-Tree` resolves one of the biggest problems with `tree.com` on modern systems.
 
-### Listing Mode
+Command line parameters give you a mode which retains the look and feel of a modern `tree.com` and leverages the rich parameters of `Show-Tree`.
 
-![Listing mode](docs/listing-mode.png)  
-Listing mode gives you a tight listing of the files and directories on a system. It benefits the most from having color enabeled to see folders and files at a glance, and minimally shows the tree structure, making it an ideal mode for downstream processing.
+### Tree Mode (legacy backwards compatibility)
+
+![Legacy tree mode](docs/tree-mode-compat.png)  
+
+Tree mode with the `-Compat` switch follows the output and error messages of `tree.com` very closely. `Show-Tree <Path> -Compat -Files` is the equivalient to `tree.com <Path> /F`.
+
+### Comparison with `tree.com`
+
+![tree.com](docs/tree.com.png)
+
+`tree.com` will follow all Junctions and Symlinks, and doesn't limit depth. By showing link targets and not following them, `Show-Tree` resolves one of the biggest problems with `tree.com` on modern systems, where `tree.com` can get stuck in an unlimited recursion.
+
+## Wide platform support
+
+### PowerShell Desktop 5.1 Windows 11
+
+#### `tree.com` vs `Show-Tree` Compatible Tree mode
+
+![tree.com vs Show-Tree -Mode Tree -Compat](docs/powershell-desktop-windows-11.png)
+
+### PowerShell Core 7.6.2 Windows 11
+
+#### `Show-Tree` Normal mode vs `Show-Tree` List Mode
+
+![Show-Tree -Mode Normal vs -Mode List](docs/powershell-core-windows-11.png)
+
+### PowerShell Core 7.6.2 Ubuntu 20.04
+
+#### `tree v2.1.1` vs `Show-Tree` Normal mode
+
+![tree v2.1.1 vs Show-Tree -Mode Normal](docs/powershell-core-ubuntu.png)
 
 ---
 
 ## Usage
 
-### Basic usage
+### Basic Examples
+
+Display the current directory:
 
 ```powershell
 Show-Tree
 ```
 
-### Show only directories
-
-```powershell
-Show-Tree -NoFiles
-```
-
-### Unlimited depth
+Unlimited depth:
 
 ```powershell
 Show-Tree -Recurse
 ```
 
-### DOS `tree.com` compatible mode
+DOS `tree.com` compatible mode:
 
 ```powershell
-Show-Tree -Mode Tree
+Show-Tree -Mode Tree -Compat
 ```
 
-### Compact listing mode
-
-```powershell
-Show-Tree -Mode List
-```
-
-### ASCII connectors
+ASCII connectors:
 
 ```powershell
 Show-Tree -Ascii
+```
+
+Compact listing for scripting:
+
+```powershell
+Show-Tree -Mode List | Select-String src
+```
+
+Export to a file:
+
+```powershell
+Show-Tree C:\ -Mode List | Out-File listing.txt
 ```
 
 ### Style and Legend
@@ -142,6 +165,8 @@ Show-Tree -LegendAll
 # Override culture for localized strings
 Show-Tree -Culture fr-FR
 ```
+
+Consult the [Parameter Summary table](#parameter-summary) for a complete list of parameters.
 
 ---
 
@@ -201,23 +226,24 @@ Show-Tree -HideHidden -HideSystem -Include '.config'
 
 ## Parameter Summary
 
-| Parameter                                   | Description                                                                                        |
-|---------------------------------------------|----------------------------------------------------------------------------------------------------|
-| `‑Mode` <`Normal`\|`Tree`\|`List`>          | Selects the output mode. Defaults to `Normal`.                                                     |
-| `‑MaxDepth` / `‑Depth`                      | Maximum recursion depth (`‑1` = unlimited). Defaults to `6`.                                       |
-| `‑Recurse`                                  | Shortcut for unlimited depth.                                                                      |
-| `‑Color` / `‑NoColor`                       | Force color on or off. Defaults to ON for modern modes and modern Tree mode. (Alias: `‑Mono`)      |
-| `‑Files` / `‑NoFiles`                       | Control if files are shown. Defaults to ON for all modern modes.                                   |
-| `‑Targets` / `‑NoTargets`                   | Show or hide reparse point targets. ON by default for `Normal` and `Tree` modes.                   |
-| `‑Hidden` / `‑NoHidden`                     | Control visibility of hidden items. OFF by default.                                                |
-| `‑System` / `‑NoSystem`                     | Control visibility of system items. OFF by default.                                                |
-| `‑Exclude` *pattern* / `‑Include` *pattern* | Glob patterns that explicitly exclude or include items. Exact matches override all other filters.  |
-| `-Gap` / `‑NoGap`                           | Control gap lines. Defaults to `Show` for `Normal` and modern `Tree` modes, and `None` for `List`. |
-| `‑Compat`                                   | Enables strict legacy emulation for `‑Mode Tree` (Monochrome, folders-only, `tree.com` sorting).   |
-| `‑Ascii`                                    | Use ASCII connectors instead of Unicode.                                                           |
-| `‑Legend` / `-LegendAll`                    | Show the style legend.                                                                             |
-| `‑Platform`                                 | Preview another platform's states in legend (Windows/Unix).                                        |
-| `-Culture`                                  | Override culture for localized strings.                                                            |
+| Parameter                                       | Description                                                                                        |
+|-------------------------------------------------|----------------------------------------------------------------------------------------------------|
+| `‑Mode` <`Normal`\|`Tree`\|`List`>              | Selects the output mode. Defaults to `Normal`.                                                     |
+| `‑MaxDepth` / `‑Depth`                          | Maximum recursion depth (`‑1` = unlimited). Defaults to `6`.                                       |
+| `‑Recurse`                                      | Shortcut for unlimited depth.                                                                      |
+| `‑Color` / `‑NoColor`                           | Force color on or off. Defaults to ON for modern modes including modern Tree mode.                 |
+| `‑Files` / `‑NoFiles`                           | Control if files are shown. Defaults to ON for all modern modes.                                   |
+| `‑Targets` / `‑NoTargets`                       | Show or hide reparse point targets. ON by default for `Normal` and `Tree` modes.                   |
+| `‑Hidden` / `‑NoHidden`                         | Control visibility of hidden items. OFF by default.                                                |
+| `‑System` / `‑NoSystem`                         | Control visibility of system items. OFF by default.                                                |
+| `‑Exclude` <*pattern*> / `‑Include` <*pattern*> | Glob patterns that explicitly exclude or include items. Exact matches override all other filters.  |
+| `-Gap` / `‑NoGap`                               | Control gap lines. Defaults to `Show` for `Normal` and modern `Tree` modes, and `None` for `List`. |
+| `‑Compat`                                       | Enables strict legacy emulation for `‑Mode Tree` (Monochrome, folders-only, `tree.com` sorting).   |
+| `‑Ascii`                                        | Use ASCII connectors instead of Extended ANSI or Unicode.                                          |
+| `‑Legend`                                       | Show the style legend.                                                                             |
+| `‑Platform` <`Current`\|`Windows`\|`Unix`>      | Preview another platform's states in legend (Windows/Unix).                                        |
+| `-LegendAll`                                    | Show the style legend for all states.                                                              |
+| `-Culture` <*bcp-47 language tag*>              | Override culture for localized strings.                                                            |
 
 ### Default Behaviors by Mode
 
@@ -237,7 +263,7 @@ In modern modes (**Normal** and **Tree**), gaps are deterministic and added betw
 In **Compatibility Mode** (`-Compat`), the gap behavior specifically mimics the original `tree.com` logic:
 
 1.  **No Gaps**: Enabled via `-NoGap`.
-2.  **Legacy Gaps**: (Default) Gaps only appear between directories and files. Note: Classic `tree.com` suppresses the final newline if the last item is a directory.
+2.  **Legacy Gaps**: (Default) Gaps only appear between directories and files. Note: Classic `tree.com` suppresses the final newline if the last item is a directory and this behavior is replicated with the `-Compat` switch.
 3.  **Modern Gaps**: Enabled via `-Gap`. This overrides the legacy logic to use `Show-Tree`'s improved spacing, making it easier to distinguish directories at different nesting levels.
 
 #### Strategic Choices
@@ -257,7 +283,19 @@ Show-Tree -Mode Tree
 Show-Tree -Mode Tree -Compat
 ```
 
-Note: The -Compat switch is only valid when using -Mode Tree.
+The `-Compat` switch is only valid when using `-Mode Tree`.
+
+#### Notes about Compatibility Mode
+
+It is also worth noting the slight differences between the classic `tree.com` and `Show-Tree -Mode Tree -Compat` output.
+
+The Volume Serial Number for `tree.com` is a legacy program from the DOS era, and its output format was never updated to reflect modern Windows storage APIs. For this reason it generates two separate values, the high DWORD of the NTFS Volume ID, an internal filesystem identifier that modern Windows APIs do not expose, and the actual Win32 volume serial number, formatted as `HIGHWORD:LOWWORD`. `Show‑Tree` follows modern Windows conventions rather than reproducing `tree.com`’s legacy formatting.
+
+The path for `tree.com` does not match the casing of the actual filesystem path. For `Show-Tree`, the path is displayed in the casing of the actual filesystem path.
+
+To match the sorting behavior of `tree.com`, `Show-Tree` uses the Win32 API directly to read the filesystem information using the same API as `tree.com` and sorts the same way. All other modes use the PowerShell APIs providing cross-platform compatibility.
+
+With these few exceptions, and especially in `-Ascii` mode, `Show-Tree` mimics `tree.com`’s output exactly, making it a drop-in replacement for `tree.com` in most cases.
 
 ---
 
@@ -269,7 +307,7 @@ For detailed information on usage, parameters, and examples, see the [Wiki](http
 
 If you are interested in the internal design or wish to contribute to the project, please refer to our technical guides:
 
-- [Core Architecture](docs/ARCHITECTURE.md): Redesign of the traversal and rendering engines.
+- [Core Architecture](docs/ARCHITECTURE.md): Design of the traversal and rendering engines.
 - [Build System](docs/BUILD-ARCHITECTURE.md): Task-driven workflow and cross-version transpilation.
 - [Test System](docs/TEST-ARCHITECTURE.md): Hash-based module caching and in-memory fixture trees.
 
@@ -299,40 +337,6 @@ Clone the repository and place the `ShowTree` folder into one of your module pat
 
 - All users:  
 `C:\Program Files\PowerShell\7\Modules\`
-
----
-
-## Examples
-
-Display the current directory:
-
-```powershell
-Show-Tree
-```
-
-Tree.com-style output:
-
-```powershell
-Show-Tree -Mode Tree
-```
-
-List everything under C:\ with unlimited depth:
-
-```powershell
-Show-Tree C:\ -Recurse
-```
-
-Compact listing for scripting:
-
-```powershell
-Show-Tree -Mode List | Select-String src
-```
-
-Export to a file:
-
-```powershell
-Show-Tree C:\ -Mode List | Out-File listing.txt
-```
 
 ---
 
@@ -589,7 +593,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Author
 
 **Ryan Beesley**  
-Version 2.0.0  
+Version 2.0.1  
 July 2026
 
 A modern, extensible reimplementation of the classic `tree.com` utility — with graphical output, automation-friendly modes, and a fully PowerShell-native design.
