@@ -43,8 +43,9 @@ $manifestPath    = Join-Path  $moduleRoot     'ShowTree.psd1'
 $rootModulePath  = Join-Path  $moduleRoot     'ShowTree.psm1'
 $publicPath      = Join-Path  $moduleSrcRoot  'Public'
 $distPath        = Join-Path  $moduleRoot     'dist'
+$publishPath     = Join-Path  $distPath       'ShowTree'
 $buildCachePath  = Join-Path  $PSScriptRoot   '.cache'
-$fingerprintPath = Join-Path $buildCachePath 'dist.fingerprint'
+$fingerprintPath = Join-Path  $buildCachePath 'dist.fingerprint'
 
 #
 # Tasks
@@ -59,7 +60,6 @@ task Build BuildIfNeeded, {
 }
 
 task BuildDist DiscoverPublicFunctions, {
-    $publishPath = Join-Path $distPath 'ShowTree'
     $corePath = Join-Path $publishPath 'Core'
     $desktopPath = Join-Path $publishPath 'Desktop'
 
@@ -291,7 +291,7 @@ task TestDesktop BuildIfNeeded, {
     }
 
     $smokeTestPath = Join-Path $PSScriptRoot 'Test-WindowsPowerShellDist.ps1'
-    $distManifestPath = Join-Path $distPath 'ShowTree.psd1'
+    $distManifestPath = Join-Path $publishPath 'ShowTree.psd1'
 
     & $powershellExe `
         -NoLogo `
@@ -306,14 +306,14 @@ task TestDesktop BuildIfNeeded, {
 }
 
 task TestDist BuildIfNeeded, {
-    $distManifestPath = Join-Path $distPath 'ShowTree.psd1'
+    $distManifestPath = Join-Path $publishPath 'ShowTree.psd1'
 
     Import-Module -Name $distManifestPath -Force -ErrorAction Stop
 
     try {
         Get-Command -Name Show-Tree -ErrorAction Stop | Out-Null
 
-        $output = Show-Tree -Path $distPath -NoFiles -Mono | Out-String
+        $output = Show-Tree -Path $publishPath -NoFiles -Mono | Out-String
         if ([string]::IsNullOrWhiteSpace($output)) {
             throw "Show-Tree dist smoke test produced no output."
         }
@@ -460,7 +460,7 @@ function Get-DistInputFingerprint {
 }
 
 function Test-DistIsCurrent {
-    if (-not (Test-Path -LiteralPath $distPath)) {
+    if (-not (Test-Path -LiteralPath $publishPath)) {
         return $false
     }
 

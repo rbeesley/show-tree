@@ -14,7 +14,7 @@ BeforeAll {
 
     InModuleScope ShowTree {
         $script:testStyleProfile = Get-ShowTreeStyleProfile
-        
+
         function script:Find-FixtureNodeByPath
         {
             param(
@@ -488,6 +488,7 @@ Describe "Show-Tree Tree mode gap policy" -Skip:(-not $IsWindows) {
                 '│   └───normal-dir'
                 '└───Files'
                 '        normal.txt'
+                ''
             )
         }
     }
@@ -516,8 +517,8 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
             $rootPath = $provider.RootPath
 
             # 3. Mock the resolution and provider factory
-            Mock Resolve-Path { 
-                [pscustomobject]@{ ProviderPath = $rootPath; Path = $rootPath } 
+            Mock Resolve-Path {
+                [pscustomobject]@{ ProviderPath = $rootPath; Path = $rootPath }
             }
             Mock New-TreeChildProvider { $provider }
 
@@ -570,8 +571,8 @@ Describe "Tree mode Win32 provider mapping" -Skip:(-not $IsWindows) {
             $rootPath = $provider.RootPath
 
             # 3. Mock the resolution and provider factory
-            Mock Resolve-Path { 
-                [pscustomobject]@{ ProviderPath = $rootPath; Path = $rootPath } 
+            Mock Resolve-Path {
+                [pscustomobject]@{ ProviderPath = $rootPath; Path = $rootPath }
             }
             Mock New-TreeChildProvider { $provider }
 

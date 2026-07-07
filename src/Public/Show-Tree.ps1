@@ -214,6 +214,7 @@ function Show-Tree {
     # Resolve Style Profile
     #
     $resolvedStyleProfile = Get-ActiveShowTreeStyleProfile
+    $script:lastRecordKind = $null
     if ($Culture) {
         $resolvedStyleProfile = Get-ShowTreeStyleProfile -Culture $Culture
     }
@@ -292,10 +293,10 @@ function Show-Tree {
                 $results.Add($p)
             }
         }
-        
+
         return $results.ToArray()
     }
-    
+
     $effectiveInclude = Resolve-FilterPaths -Patterns $Include
     $effectiveExclude = Resolve-FilterPaths -Patterns $Exclude
 
@@ -412,7 +413,8 @@ function Show-Tree {
     #
     # Footer / Last Line logic
     #
-    if ($Mode -ne 'Tree') {
+    $treeCompatQuirk = $Compat.IsPresent -and $script:lastRecordKind -eq 'Directory'
+    if (-not $treeCompatQuirk) {
         Write-Output ""
     }
 }

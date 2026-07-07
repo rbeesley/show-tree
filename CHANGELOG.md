@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [2.0.1] - 2026-07-07
+
+### Changed
+- Updated documentation to further clarify changes introduced in v2.0.0.
+
+### Fixed
+- Fixed a bug where `Show-Tree -Mode Tree -Compat` wasn't inserting a trailing newline when the last item was a file.
+- Fixed the build system to put the distribution folder in the correct location for publishing.
+
 ## [2.0.0] - 2026-07-01
 
 ### Added
