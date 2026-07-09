@@ -48,7 +48,7 @@ All implemented in PowerShell with no external dependencies other than the .NET 
 
 ## Platform Support
 
-PowerShell 5.1+ on Windows and PowerShell 7+ on Linux/macOS: Normal and Listing modes are expected to work, but cross-platform support is still being validated. Tree mode emulates low-level Windows `tree.com` behavior and is likely to only be supported on Windows.
+PowerShell 5.1+ on Windows and PowerShell 7+ on Linux/macOS: Normal, Listing, and Tree modes are expected to work, tested on Linux but still being validated for MacOS. Tree compatibility mode emulates low-level Windows `tree.com` behavior and is only supported on Windows.
 
 | Platform                         | Normal mode | Listing mode | Tree mode | Tree mode (Compat) |
 |----------------------------------|-------------|--------------|-----------|--------------------|
