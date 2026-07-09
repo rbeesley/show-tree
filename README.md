@@ -50,12 +50,12 @@ All implemented in PowerShell with no external dependencies other than the .NET 
 
 PowerShell 5.1+ on Windows and PowerShell 7+ on Linux/macOS: Normal and Listing modes are expected to work, but cross-platform support is still being validated. Tree mode emulates low-level Windows `tree.com` behavior and is likely to only be supported on Windows.
 
-| Platform                         | Normal mode | Listing mode | Tree mode     |
-|----------------------------------|-------------|--------------|---------------|
-| Windows PowerShell 5.1 (Desktop) | Supported   | Supported    | Supported     |
-| PowerShell 7+ on Windows (Core)  | Supported   | Supported    | Supported     |
-| PowerShell 7+ on Linux (Core)    | Supported   | Supported    | Not supported |
-| PowerShell 7+ on macOS (Core)    | Supported   | Supported    | Not supported |
+| Platform                         | Normal mode | Listing mode | Tree mode | Tree mode (Compat) |
+|----------------------------------|-------------|--------------|-----------|--------------------|
+| Windows PowerShell 5.1 (Desktop) | Supported   | Supported    | Supported | Supported          |
+| PowerShell 7+ on Windows (Core)  | Supported   | Supported    | Supported | Supported          |
+| PowerShell 7+ on Linux (Core)    | Supported   | Supported    | Supported | Not supported      |
+| PowerShell 7+ on macOS (Core)    | Supported   | Supported    | Supported | Not supported      |
 
 ---
 
