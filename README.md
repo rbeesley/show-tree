@@ -8,7 +8,7 @@ A modern, PowerShell-native replacement for the classic `tree.com` command — r
 Show-Tree supports three distinct display modes:
 
 - **Normal**: (Default) A clean, modern Unicode tree view with gap lines and rich styling.
-- **Tree**: A legacy-compatible layout mimicking the classic `tree.com` utility, now enhanced with modern defaults like color and file support.
+- **Tree**: A layout mimicking the classic `tree.com` utility, now enhanced with modern defaults like color and file support. There is also a compatiblity mode which is nearly a 1:1 match.
 - **List**: A flat listing of items that retains hierarchical context.
 
 ---
